@@ -23,10 +23,11 @@ fn default_auth() -> String {
 pub struct Machine {
     #[serde(default)]
     pub rustdesk_web_url: String,
-    /// Rendezvous host for a RustDesk destination. Empty uses the public server.
+    /// Rendezvous host for this destination. Empty falls back to the shared
+    /// setting, and then to the public server.
     #[serde(default)]
     pub rustdesk_server: String,
-    /// Base64 signing key of that rendezvous server. Empty uses the public one.
+    /// Base64 signing key of that server, on the same fallback.
     #[serde(default)]
     pub rustdesk_key: String,
     pub id: String,
@@ -78,6 +79,19 @@ pub struct Settings {
     pub max_actions: u32,
     #[serde(default)]
     pub performance: PerformanceSettings,
+    /// Default RustDesk rendezvous server and its key, as RustDesk itself
+    /// configures them once for every destination. A machine may override both.
+    #[serde(default)]
+    pub rustdesk: RustdeskServer,
+}
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RustdeskServer {
+    #[serde(default)]
+    pub server: String,
+    #[serde(default)]
+    pub key: String,
 }
 impl Settings {
     pub fn remove_profile(&mut self, id: &str) -> Result<Profile, String> {
@@ -107,6 +121,7 @@ impl Default for Settings {
             local_only: false,
             max_actions: 60,
             performance: PerformanceSettings::default(),
+            rustdesk: RustdeskServer::default(),
         }
     }
 }

@@ -121,10 +121,22 @@ impl Stream {
         self.send_bytes(message.encode_to_vec()).await
     }
 
+    /// Reads the next rendezvous message AgentSmith understands.
+    ///
+    /// A server may open with a key exchange, or with anything else added to
+    /// the protocol since; those decode with no recognised body and are skipped
+    /// rather than reported as an unexpected answer.
     pub async fn recv_rendezvous(&mut self) -> Result<proto::RendezvousMessage, String> {
-        let bytes = next_payload(&mut self.socket, &mut self.buffer, self.cipher.as_mut()).await?;
-        proto::RendezvousMessage::decode(&bytes[..])
-            .map_err(|_| "Resposta ilegível do servidor de encontro.".to_string())
+        for _ in 0..8 {
+            let bytes =
+                next_payload(&mut self.socket, &mut self.buffer, self.cipher.as_mut()).await?;
+            let message = proto::RendezvousMessage::decode(&bytes[..])
+                .map_err(|_| "Resposta ilegível do servidor de encontro.".to_string())?;
+            if message.union.is_some() {
+                return Ok(message);
+            }
+        }
+        Err("O servidor de encontro só enviou mensagens que este cliente não usa.".into())
     }
 
     pub async fn send(&mut self, message: proto::Message) -> Result<(), String> {

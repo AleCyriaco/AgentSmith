@@ -116,9 +116,10 @@ impl Remote {
         password: &str,
         helper: &Path,
         capture_interval_ms: u32,
+        rustdesk: &RustdeskServer,
     ) -> Result<(), String> {
         if m.protocol == "rustdesk" {
-            return self.connect_rustdesk(m, password).await;
+            return self.connect_rustdesk(m, password, rustdesk).await;
         }
         if m.protocol != "rdp" {
             return Err("Este conector está previsto na arquitetura, mas ainda não foi implementado nesta versão.".into());
@@ -262,7 +263,12 @@ impl Remote {
     }
     /// Opens a RustDesk session and keeps it running in its own task, feeding
     /// the same frame slot the RDP transport uses.
-    async fn connect_rustdesk(&self, m: &Machine, password: &str) -> Result<(), String> {
+    async fn connect_rustdesk(
+        &self,
+        m: &Machine,
+        password: &str,
+        fallback: &RustdeskServer,
+    ) -> Result<(), String> {
         self.disconnect().await?;
         let generation = self.generation.load(Ordering::SeqCst);
         // Connecting before spawning means a bad ID, a refused password or an
@@ -270,8 +276,10 @@ impl Remote {
         let session = session::Session::connect(&session::Options {
             id: m.host.trim().into(),
             password: password.into(),
-            rendezvous: m.rustdesk_server.clone(),
-            key: m.rustdesk_key.clone(),
+            // A machine may point at its own server; otherwise the shared one,
+            // and otherwise RustDesk's public server.
+            rendezvous: pick(&m.rustdesk_server, &fallback.server),
+            key: pick(&m.rustdesk_key, &fallback.key),
         })
         .await?;
         let (peer, mut events, mut commands) = session.split();
@@ -452,6 +460,16 @@ impl Remote {
         }
     }
 }
+/// The machine's own setting when it has one, else the shared fallback.
+fn pick(machine: &str, fallback: &str) -> String {
+    let machine = machine.trim();
+    if machine.is_empty() {
+        fallback.trim().to_string()
+    } else {
+        machine.to_string()
+    }
+}
+
 /// Wraps an RGBA image as the PNG data URL the interface and the vision
 /// pipeline already consume. Shared by both transports.
 fn encode_frame(rgba: Vec<u8>, width: u32, height: u32, sequence: u64) -> Option<Snapshot> {
@@ -654,6 +672,26 @@ mod tests {
         assert_eq!(remote.snapshot().unwrap().sequence, 2);
         remote.frame.lock().unwrap().as_mut().unwrap().captured_at = now() - 6000;
         assert!(remote.snapshot_if_new(1).is_err());
+    }
+    #[test]
+    fn a_machine_overrides_the_shared_server_and_both_fall_back_to_the_public_one() {
+        let shared = RustdeskServer {
+            server: "rs.equipe.example".into(),
+            key: "CHAVE_DA_EQUIPE".into(),
+        };
+        assert_eq!(pick(" rs.propria.example ", &shared.server), "rs.propria.example");
+        assert_eq!(pick("", &shared.server), "rs.equipe.example");
+        assert_eq!(pick("   ", &shared.key), "CHAVE_DA_EQUIPE");
+        // Neither level set: the session layer then uses RustDesk's public server.
+        assert!(pick("", "").is_empty());
+        assert!(crate::rustdesk::session::Options {
+            id: "123456789".into(),
+            password: String::new(),
+            rendezvous: pick("", ""),
+            key: pick("", ""),
+        }
+        .rendezvous_address()
+        .starts_with(crate::rustdesk::session::DEFAULT_RENDEZVOUS));
     }
     #[test]
     fn unknown_actions_cannot_execute() {

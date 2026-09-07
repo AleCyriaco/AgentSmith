@@ -511,7 +511,13 @@ async fn start_machine_connection(
     };
     state
         .remote
-        .connect(m, &password, &helper, capture_interval_ms)
+        .connect(
+            m,
+            &password,
+            &helper,
+            capture_interval_ms,
+            &state.store.settings()?.rustdesk,
+        )
         .await
 }
 #[tauri::command]

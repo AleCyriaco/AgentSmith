@@ -2439,14 +2439,6 @@
     "en": "Self-hosted server (optional)",
     "es": "Servidor propio (opcional)"
   },
-  "Deixe em branco para usar o servidor público do RustDesk.": {
-    "en": "Leave empty to use RustDesk's public server.",
-    "es": "Déjelo vacío para usar el servidor público de RustDesk."
-  },
-  "Chave pública em base64 do seu servidor. Obrigatória para autenticar um servidor próprio.": {
-    "en": "Your server's base64 public key. Required to authenticate a self-hosted server.",
-    "es": "Clave pública en base64 de su servidor. Obligatoria para autenticar un servidor propio."
-  },
   "Endereço do cliente web (opcional)": {
     "en": "Web client address (optional)",
     "es": "Dirección del cliente web (opcional)"
@@ -2470,5 +2462,45 @@
   "RDP e RustDesk oferecem controle com IA. O cliente web RustDesk continua disponível para controle manual. NanoKVM permanece em desenvolvimento.": {
     "en": "RDP and RustDesk both offer AI control. The RustDesk web client remains available for manual control. NanoKVM is still in development.",
     "es": "RDP y RustDesk ofrecen control con IA. El cliente web de RustDesk sigue disponible para el control manual. NanoKVM continúa en desarrollo."
+  },
+  "Servidor padrão": {
+    "en": "Default server",
+    "es": "Servidor predeterminado"
+  },
+  "Vale para toda máquina RustDesk que não indicar um servidor próprio. Em branco, usa o servidor público do RustDesk.": {
+    "en": "Applies to every RustDesk machine that does not name its own server. Left empty, RustDesk's public server is used.",
+    "es": "Se aplica a toda máquina RustDesk que no indique su propio servidor. Vacío, se usa el servidor público de RustDesk."
+  },
+  "Servidor de ID": {
+    "en": "ID server",
+    "es": "Servidor de ID"
+  },
+  "O mesmo endereço configurado no RustDesk em Settings → Network → ID/Relay server.": {
+    "en": "The same address configured in RustDesk under Settings → Network → ID/Relay server.",
+    "es": "La misma dirección configurada en RustDesk en Settings → Network → ID/Relay server."
+  },
+  "Chave do servidor": {
+    "en": "Server key",
+    "es": "Clave del servidor"
+  },
+  "A chave pública em base64 exibida junto do servidor de ID. Sem ela AgentSmith não autentica a máquina e não abre a sessão.": {
+    "en": "The base64 public key shown next to the ID server. Without it AgentSmith cannot authenticate the machine and will not open the session.",
+    "es": "La clave pública en base64 que aparece junto al servidor de ID. Sin ella AgentSmith no autentica la máquina y no abre la sesión."
+  },
+  " Salvar servidor": {
+    "en": "Save server",
+    "es": "Guardar servidor"
+  },
+  "Salvo": {
+    "en": "Saved",
+    "es": "Guardado"
+  },
+  "Sobrepõe o servidor padrão só para esta máquina. Em branco, usa o padrão.": {
+    "en": "Overrides the default server for this machine only. Left empty, the default is used.",
+    "es": "Sustituye el servidor predeterminado solo para esta máquina. Vacío, se usa el predeterminado."
+  },
+  "Chave pública em base64 do servidor indicado acima.": {
+    "en": "Base64 public key of the server named above.",
+    "es": "Clave pública en base64 del servidor indicado arriba."
   }
 }
