@@ -722,7 +722,8 @@ async fn generate_inner(
                 "--input-format",
                 "stream-json",
                 "--output-format",
-                "json",
+                "stream-json",
+                "--verbose",
             ]);
             if custom {
                 c.arg("--model").arg(&p.model);
@@ -814,14 +815,36 @@ fn nonempty(text: String) -> Result<String, String> {
     }
 }
 fn parse_claude(bytes: &[u8]) -> Result<String, String> {
-    let v: Value = serde_json::from_slice(bytes)
-        .map_err(|_| "O Claude Code retornou um formato inesperado. Atualize o componente.")?;
-    if v["is_error"] == true || v["subtype"].as_str().is_some_and(|s| s != "success") {
+    let invalid = "O Claude Code retornou um formato inesperado. Atualize o componente.";
+    // stream-json emits system, assistant and tool events before its final result.
+    // Only that result may reach the harness; intermediate messages are not actions.
+    let result: Value = if let Ok(single) = serde_json::from_slice::<Value>(bytes) {
+        single
+    } else {
+        let mut final_result = None;
+        for line in bytes
+            .split(|b| *b == b'\n')
+            .filter(|line| !line.iter().all(u8::is_ascii_whitespace))
+        {
+            let event: Value = serde_json::from_slice(line).map_err(|_| invalid)?;
+            if event["type"] == "result" {
+                if final_result.is_some() {
+                    return Err(invalid.into());
+                }
+                final_result = Some(event);
+            }
+        }
+        final_result.ok_or("O Claude Code não retornou uma resposta final.")?
+    };
+    if result.get("type").is_some_and(|kind| kind != "result") {
+        return Err("O Claude Code não retornou uma resposta final.".into());
+    }
+    if result["is_error"] == true || result["subtype"].as_str().is_some_and(|s| s != "success") {
         return Err(
             "O Claude Code não concluiu a resposta. Confira login, modelo e limites.".into(),
         );
     }
-    nonempty(v["result"].as_str().unwrap_or_default().into())
+    nonempty(result["result"].as_str().unwrap_or_default().into())
 }
 
 #[cfg(test)]
@@ -926,6 +949,21 @@ mod tests {
         assert!(parse_claude(br#"{"is_error":true,"result":"do something"}"#).is_err());
         assert!(parse_claude(br#"{"result":""}"#).is_err());
     }
+    #[test]
+    fn claude_stream_uses_only_the_final_result() {
+        let stream = concat!(
+            "{\"type\":\"system\",\"subtype\":\"init\"}\n",
+            "{\"type\":\"assistant\",\"message\":{\"content\":[{\"type\":\"text\",\"text\":\"intermediate action\"}]}}\n",
+            "{\"type\":\"result\",\"subtype\":\"success\",\"is_error\":false,\"result\":\"OK\"}\n"
+        );
+        assert_eq!(parse_claude(stream.as_bytes()).unwrap(), "OK");
+        assert!(parse_claude(br#"{"type":"assistant","result":"unsafe"}"#).is_err());
+        assert!(parse_claude(format!("{stream}{stream}").as_bytes()).is_err());
+        assert!(parse_claude(b"{\"type\":\"system\"}\n{\"type\":\"assistant\"}\n").is_err());
+        assert!(parse_claude(b"{\"type\":\"system\"}\n{\"type\":\"result\",\"subtype\":\"error_max_turns\",\"result\":\"unsafe\"}\n").is_err());
+        assert!(parse_claude(format!("{stream}not-json").as_bytes()).is_err());
+    }
+
     #[tokio::test]
     async fn process_drains_both_streams_and_rejects_nonzero() {
         let s = Scratch::new().unwrap();

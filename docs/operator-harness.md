@@ -1,4 +1,4 @@
-# Harness de operação — AgentSmith 0.12.3
+# Harness de operação — AgentSmith 0.12.4
 
 O contrato é comum aos adaptadores de API, clientes oficiais e modelos locais. Compatibilidade com o protocolo não garante competência visual ou latência: valide cada perfil com **Testar operador** e uma tarefa curta no Windows.
 
@@ -55,3 +55,10 @@ A suíte cobre seleção dos contratos, separação de coordenadas e IDs, priori
 ## Ritmo abaixo de 100 ms (0.12.3)
 
 Capturas aceitam de 20 a 2.000 ms em passos de 1 ms na interface, na configuração salva e no processo FreeRDP. A pausa adicional após ações aceita de 0 a 3.000 ms. O preset Turbo usa 50 ms, pausa zero e imagens de até 1.280 pixels; o padrão Equilibrado continua igual. Zero não dispensa a observação de uma nova imagem nem a verificação da ação. A frequência configurada é um alvo; transferência dos quadros, codificação, OCR, rede e inferência podem limitar o ritmo efetivo. Capturas não disparam chamadas de IA por si mesmas.
+
+
+## Login Claude: protocolo de entrada e saída (0.12.4)
+
+Claude Code 2.1.179 rejeita `--input-format stream-json --output-format json` antes da inferência. O adaptador passa a usar `stream-json` nos dois sentidos, com `--verbose` exigido para a saída de eventos. O leitor consome somente o evento final `result`, rejeitando eventos intermediários isolados, resultados duplicados, JSON malformado e resultados com erro. A compatibilidade com uma resposta JSON única é mantida.
+
+O teste real da conexão com a sessão existente respondeu OK em 2,9 segundos; não enviou ações ao Windows. Os testes de regressão cobrem a leitura do fluxo e impedem que texto intermediário seja tratado como resposta final. [Referência oficial da CLI](https://code.claude.com/docs/en/cli-reference).
