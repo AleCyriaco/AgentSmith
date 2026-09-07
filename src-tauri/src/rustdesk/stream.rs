@@ -69,7 +69,11 @@ pub struct Stream {
 
 impl Stream {
     pub async fn connect(address: &str) -> Result<Self, String> {
-        let socket = tokio::time::timeout(CONNECT_TIMEOUT, TcpStream::connect(address))
+        Self::connect_within(address, CONNECT_TIMEOUT).await
+    }
+
+    pub async fn connect_within(address: &str, limit: Duration) -> Result<Self, String> {
+        let socket = tokio::time::timeout(limit, TcpStream::connect(address))
             .await
             .map_err(|_| format!("Tempo esgotado ao conectar em {address}."))?
             .map_err(|_| format!("Não foi possível conectar em {address}."))?;

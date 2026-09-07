@@ -14,6 +14,8 @@ pub const DEFAULT_RENDEZVOUS: &str = "rs-ny.rustdesk.com";
 /// Returned when the machine wants a second factor and none was supplied, so
 /// the interface can ask for a code instead of showing a dead end.
 pub const SECOND_FACTOR_REQUIRED: &str = "second-factor";
+/// How long to try the machine's own address before falling back to a relay.
+pub const DIRECT_ATTEMPT: std::time::Duration = std::time::Duration::from_secs(3);
 /// Same, for a machine that does not keep trusted devices: a code will be
 /// wanted on every connection, and saying so beats a checkbox that does nothing.
 pub const SECOND_FACTOR_WITHOUT_TRUST: &str = "second-factor-no-trust";
@@ -264,8 +266,12 @@ impl Session {
                 }
                 let signed = response.pk.clone();
                 if let Some(peer) = address::decode(&response.socket_addr) {
+                    // The address is often on the machine's own LAN and cannot
+                    // be reached from here; a short attempt keeps the fall
+                    // back to the relay from costing every connection twelve
+                    // seconds.
                     crate::diag!("tentando conexão direta em {peer}");
-                    match Stream::connect(&peer.to_string()).await {
+                    match Stream::connect_within(&peer.to_string(), DIRECT_ATTEMPT).await {
                         Ok(direct) => return Ok((direct, signed, "direto")),
                         Err(error) => crate::diag!("direta falhou: {error}"),
                     }
@@ -366,8 +372,19 @@ impl Session {
             );
         }
         let peer_signing_key = crypto::verify_signed_identity(signed_peer_key, signer, id)?;
-        let Some(message::Union::SignedId(signed)) = stream.recv().await?.union else {
-            return Err("O par não iniciou o handshake com sua identidade.".into());
+        let signed = loop {
+            match stream.recv().await?.union {
+                Some(message::Union::SignedId(signed)) => break signed,
+                // Same probe as above, should it ever arrive this early.
+                Some(message::Union::TestDelay(delay)) if !delay.from_client => {
+                    stream
+                        .send(proto::Message {
+                            union: Some(message::Union::TestDelay(delay)),
+                        })
+                        .await?;
+                }
+                _ => return Err("O par não iniciou o handshake com sua identidade.".into()),
+            }
         };
         let peer_session_key =
             crypto::verify_signed_identity(&signed.id, &peer_signing_key, id)?;
@@ -398,6 +415,19 @@ impl Session {
         let mut answered_second_factor = false;
         loop {
             match stream.recv().await?.union {
+                // The machine starts probing latency the moment the link is up,
+                // so its first probe usually lands here, before the login is
+                // answered. It sends the next only once this one comes back;
+                // drop it and the machine never probes again, the session goes
+                // quiet, and half a minute later it closes for timeout.
+                Some(message::Union::TestDelay(delay)) if !delay.from_client => {
+                    crate::diag!("ping durante o login, ecoando");
+                    stream
+                        .send(proto::Message {
+                            union: Some(message::Union::TestDelay(delay)),
+                        })
+                        .await?;
+                }
                 Some(message::Union::LoginResponse(response)) => {
                   // The machine says on this same answer whether it can be
                   // asked to remember a device.
@@ -818,5 +848,86 @@ mod probe_tests {
         };
         assert!(!delay.from_client, "a máquina trataria isto como sondagem nossa e nunca enviaria a próxima");
         assert_eq!((delay.time, delay.last_delay, delay.target_bitrate), (7, 12, 800));
+    }
+}
+
+#[cfg(test)]
+mod login_probe_tests {
+    //! A machine that probes latency while the login is still pending must
+    //! get its probe back, or it never probes again. Played out against a fake
+    //! machine on a loopback socket, in the clear, since the cipher is not
+    //! what is under test.
+    use super::*;
+    use crate::rustdesk::codec;
+    use prost::Message as _;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    async fn send(socket: &mut tokio::net::TcpStream, message: proto::Message) {
+        socket
+            .write_all(&codec::encode(&message.encode_to_vec()).unwrap())
+            .await
+            .unwrap();
+    }
+
+    async fn receive(socket: &mut tokio::net::TcpStream, buffer: &mut Vec<u8>) -> proto::Message {
+        loop {
+            if let Some((head, len)) = codec::decode_header(buffer).unwrap() {
+                if buffer.len() >= head + len {
+                    let payload: Vec<u8> = buffer.drain(..head + len).skip(head).collect();
+                    return proto::Message::decode(&payload[..]).unwrap();
+                }
+            }
+            let mut chunk = [0u8; 4096];
+            let read = socket.read(&mut chunk).await.unwrap();
+            assert!(read > 0, "o cliente fechou");
+            buffer.extend_from_slice(&chunk[..read]);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_probe_sent_before_the_login_answer_is_echoed() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let machine = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buffer = Vec::new();
+            // Challenge, then a probe while the client is busy answering it.
+            send(&mut socket, proto::Message {
+                union: Some(message::Union::Hash(proto::Hash { salt: "s".into(), challenge: "c".into() })),
+            }).await;
+            let login = receive(&mut socket, &mut buffer).await;
+            assert!(matches!(login.union, Some(message::Union::LoginRequest(_))));
+            send(&mut socket, proto::Message {
+                union: Some(message::Union::TestDelay(proto::TestDelay { time: 41, from_client: false, last_delay: 0, target_bitrate: 0 })),
+            }).await;
+            let echo = receive(&mut socket, &mut buffer).await;
+            let Some(message::Union::TestDelay(delay)) = echo.union else {
+                panic!("o cliente não ecoou a sondagem enviada durante o login");
+            };
+            assert!(!delay.from_client && delay.time == 41);
+            // Only now does the machine answer the login.
+            send(&mut socket, proto::Message {
+                union: Some(message::Union::LoginResponse(proto::LoginResponse {
+                    union: Some(proto::login_response::Union::PeerInfo(proto::PeerInfo {
+                        hostname: "fake".into(),
+                        displays: vec![proto::DisplayInfo { width: 8, height: 8, ..Default::default() }],
+                        ..Default::default()
+                    })),
+                    enable_trusted_devices: false,
+                })),
+            }).await;
+        });
+        let mut stream = Stream::connect(&address.to_string()).await.unwrap();
+        let options = Options {
+            id: "1".into(),
+            password: "p".into(),
+            rendezvous: String::new(),
+            key: String::new(),
+            two_factor_code: String::new(),
+            trust_device: false,
+        };
+        let peer = Session::login(&mut stream, &options).await.unwrap();
+        assert_eq!(peer.hostname, "fake");
+        machine.await.unwrap();
     }
 }

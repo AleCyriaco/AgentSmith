@@ -11,6 +11,8 @@
 - Implement the wire format independently, with no RustDesk source copied or linked; AgentSmith stays MIT.
 - Answer a second-factor challenge: the interface asks for the current code, and offers to have the machine trust this Mac so later runs need none. Trusting is unticked by default and says plainly what it gives up, since it is a lasting reduction of that machine's protection.
 - Tell an undecodable frame from an invisible one. VP9 sends reference frames that decode to nothing all the time, and each was being answered with a request for a key frame, which restarts the machine's encoder; the picture kept dropping to a key frame and recovering. Ask for one only when a frame truly fails, and at most once every two seconds.
+- Echo the machine's latency probe at every stage, including while the login is still pending, where its first one lands. A dropped probe is never followed by another, and the picture was expiring for silence a few seconds into every session.
+- Try the machine's own address for three seconds, not twelve, before falling back to a relay.
 - Echo the machine's latency probe untouched, and present the device identity on every login. The first keeps the session alive — the machine sends one probe at a time and closes a silent connection after thirty seconds — and the second is what lets a machine that was asked to trust this Mac actually skip the second factor.
 - Convert and encode one frame per capture interval instead of every frame the machine sends, and optimise the development profile, since a two-million-pixel frame is unusably slow to convert in an unoptimised build.
 - Attach to a Windows session on a machine running more than one, since that choice cannot be put to a person during unattended work.
