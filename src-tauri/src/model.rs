@@ -71,6 +71,20 @@ pub struct Settings {
     #[serde(default)]
     pub performance: PerformanceSettings,
 }
+impl Settings {
+    pub fn remove_profile(&mut self, id: &str) -> Result<Profile, String> {
+        let index = self
+            .profiles
+            .iter()
+            .position(|p| p.id == id)
+            .ok_or("Perfil não encontrado.")?;
+        let profile = self.profiles.remove(index);
+        for route in self.routes.values_mut() {
+            route.retain(|entry| entry != id);
+        }
+        Ok(profile)
+    }
+}
 impl Default for Settings {
     fn default() -> Self {
         Self {
@@ -301,5 +315,41 @@ mod performance_tests {
             .validate()
             .is_err());
         }
+    }
+}
+
+#[cfg(test)]
+mod profile_removal_tests {
+    use super::*;
+    #[test]
+    fn removal_cleans_all_routes_and_preserves_other_profiles() {
+        let profile = |id: &str| Profile {
+            id: id.into(),
+            vendor: "openai".into(),
+            name: id.into(),
+            protocol: "openai".into(),
+            base_url: "official://openai".into(),
+            model: "default".into(),
+            vision: true,
+            enabled: true,
+            auth_method: "browser".into(),
+        };
+        let mut settings = Settings::default();
+        settings.profiles = vec![profile("a"), profile("b")];
+        for route in settings.routes.values_mut() {
+            *route = vec!["a".into(), "b".into()];
+        }
+        assert_eq!(settings.remove_profile("a").unwrap().id, "a");
+        assert_eq!(settings.profiles.len(), 1);
+        assert!(settings
+            .routes
+            .values()
+            .all(|r| r == &vec!["b".to_string()]));
+        let before = serde_json::to_value(&settings).unwrap();
+        assert!(settings.remove_profile("missing").is_err());
+        assert_eq!(serde_json::to_value(&settings).unwrap(), before);
+        settings.remove_profile("b").unwrap();
+        assert!(settings.profiles.is_empty());
+        assert!(settings.routes.values().all(Vec::is_empty));
     }
 }

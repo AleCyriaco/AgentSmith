@@ -210,6 +210,19 @@ fn save_settings(state: tauri::State<AppState>, settings: Settings) -> Result<()
     state.store.save_settings(&settings)
 }
 #[tauri::command]
+fn remove_profile(state: tauri::State<AppState>, id: String) -> Result<Settings, String> {
+    if state.busy.load(Ordering::SeqCst) {
+        return Err("Pause ou pare a tarefa antes de remover um perfil.".into());
+    }
+    let mut settings = state.store.settings()?;
+    let profile = settings.remove_profile(&id)?;
+    if profile.auth_method != "browser" && profile.vendor != "builtin" {
+        store::delete_secret(&profile.id, &profile.base_url)?;
+    }
+    state.store.save_settings(&settings)?;
+    Ok(settings)
+}
+#[tauri::command]
 async fn save_performance(
     state: tauri::State<'_, AppState>,
     performance: PerformanceSettings,
@@ -700,6 +713,7 @@ fn main() {
             browser_auth_cancel,
             test_browser_profile,
             save_settings,
+            remove_profile,
             save_performance,
             snapshot_if_new,
             save_credential,

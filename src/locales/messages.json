@@ -2286,5 +2286,41 @@
   "{0} propôs concluir a etapa; aguardando confirmação visual.": {
     "en": "{0} proposed completing the step; awaiting visual confirmation.",
     "es": "{0} propuso completar el paso; esperando confirmación visual."
+  },
+  "Remover perfil": {
+    "en": "Remove profile",
+    "es": "Eliminar perfil"
+  },
+  "Remover": {
+    "en": "Remove",
+    "es": "Eliminar"
+  },
+  "Removendo…": {
+    "en": "Removing…",
+    "es": "Eliminando…"
+  },
+  "O perfil e sua chave salva serão removidos. O histórico, os modelos baixados e o login compartilhado no cliente oficial serão mantidos.": {
+    "en": "The profile and its saved key will be removed. History, downloaded models and the shared login in the official client will be kept.",
+    "es": "Se eliminarán el perfil y su clave guardada. Se conservarán el historial, los modelos descargados y la sesión compartida del cliente oficial."
+  },
+  "As referências no roteamento de IA serão removidas; a alternativa existente passa a ser principal. Confira o roteamento antes de executar outra tarefa.": {
+    "en": "AI routing references will be removed; the existing fallback becomes primary. Check routing before running another task.",
+    "es": "Se eliminarán las referencias en el enrutamiento de IA; la alternativa existente pasa a ser principal. Revise el enrutamiento antes de ejecutar otra tarea."
+  },
+  "Perfil removido. Confira o roteamento de IA.": {
+    "en": "Profile removed. Check AI routing.",
+    "es": "Perfil eliminado. Revise el enrutamiento de IA."
+  },
+  "Pause ou pare a tarefa antes de remover um perfil.": {
+    "en": "Pause or stop the task before removing a profile.",
+    "es": "Pause o detenga la tarea antes de eliminar un perfil."
+  },
+  "Perfil não encontrado.": {
+    "en": "Profile not found.",
+    "es": "Perfil no encontrado."
+  },
+  "Não foi possível remover a chave deste perfil do Chaves do macOS.": {
+    "en": "Could not remove this profile’s key from macOS Keychain.",
+    "es": "No se pudo eliminar la clave de este perfil del Llavero de macOS."
   }
 }

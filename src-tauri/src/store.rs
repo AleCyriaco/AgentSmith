@@ -216,3 +216,20 @@ mod tests {
         let _ = std::fs::remove_file(path);
     }
 }
+
+#[cfg(target_os = "macos")]
+pub fn delete_secret(id: &str, binding: &str) -> Result<(), String> {
+    valid_id(id)?;
+    match security_framework::passwords::delete_generic_password(
+        "AgentSmith",
+        &secret_account(id, binding),
+    ) {
+        Ok(()) => Ok(()),
+        Err(e) if e.code() == -25300 => Ok(()),
+        Err(_) => Err("Não foi possível remover a chave deste perfil do Chaves do macOS.".into()),
+    }
+}
+#[cfg(not(target_os = "macos"))]
+pub fn delete_secret(_: &str, _: &str) -> Result<(), String> {
+    Err("Chaves nativas disponíveis apenas no macOS.".into())
+}
