@@ -1,4 +1,4 @@
-# Harness de operação — AgentSmith 0.12.2
+# Harness de operação — AgentSmith 0.12.3
 
 O contrato é comum aos adaptadores de API, clientes oficiais e modelos locais. Compatibilidade com o protocolo não garante competência visual ou latência: valide cada perfil com **Testar operador** e uma tarefa curta no Windows.
 
@@ -50,3 +50,8 @@ O adaptador Grok Build envia `_meta.outputSchema` em `session/prompt` e usa `_me
 Cada função tem seu contrato: plano, ação OCR, observação/ação combinada, verificação OCR, ação visual e verificação visual. O seletor pertence às instruções internas, não ao texto do roteiro ou da tela. Todos os objetos fecham campos extras; clique OCR exige `target` e clique visual exige `x`/`y`. A validação semântica local continua obrigatória. O modo de teste simples e o cliente Gemini mantêm seu protocolo anterior.
 
 A suíte cobre seleção dos contratos, separação de coordenadas e IDs, prioridade da saída estruturada sobre prosa e rejeição de metadados ausentes, erro ou cancelamento. Os testes ao vivo são sintéticos e não executam tarefas no Windows.
+
+
+## Ritmo abaixo de 100 ms (0.12.3)
+
+Capturas aceitam de 20 a 2.000 ms em passos de 1 ms na interface, na configuração salva e no processo FreeRDP. A pausa adicional após ações aceita de 0 a 3.000 ms. O preset Turbo usa 50 ms, pausa zero e imagens de até 1.280 pixels; o padrão Equilibrado continua igual. Zero não dispensa a observação de uma nova imagem nem a verificação da ação. A frequência configurada é um alvo; transferência dos quadros, codificação, OCR, rede e inferência podem limitar o ritmo efetivo. Capturas não disparam chamadas de IA por si mesmas.

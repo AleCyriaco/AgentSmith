@@ -129,8 +129,8 @@ impl Default for PerformanceSettings {
 }
 impl PerformanceSettings {
     pub fn validate(&self) -> Result<(), String> {
-        if !(100..=2000).contains(&self.capture_interval_ms)
-            || !(100..=3000).contains(&self.post_action_delay_ms)
+        if !(20..=2000).contains(&self.capture_interval_ms)
+            || self.post_action_delay_ms > 3000
             || ![0, 1280, 1600, 1920, 2560].contains(&self.vision_max_width)
         {
             return Err("Ritmo de captura, pausa ou tamanho de imagem inválido.".into());
@@ -300,9 +300,23 @@ mod performance_tests {
             serde_json::from_str(r#"{"title":"A","success":"B","status":"pending"}"#).unwrap();
         assert!(step.text_check.is_none());
         assert!(s.performance.validate().is_ok());
+        for (capture, pause) in [(20, 0), (50, 25), (99, 99), (2000, 3000)] {
+            let p = PerformanceSettings {
+                capture_interval_ms: capture,
+                post_action_delay_ms: pause,
+                ..PerformanceSettings::default()
+            };
+            assert!(p.validate().is_ok());
+            let restored: PerformanceSettings =
+                serde_json::from_str(&serde_json::to_string(&p).unwrap()).unwrap();
+            assert_eq!(restored.post_action_delay_ms, pause);
+            assert_eq!(restored.capture_interval_ms, capture);
+        }
+
         for (capture_interval_ms, post_action_delay_ms, vision_max_width) in [
             (0, 650, 1600),
-            (300, 0, 1600),
+            (300, 3001, 1600),
+            (19, 0, 1600),
             (2001, 650, 1600),
             (300, 650, 999),
         ] {

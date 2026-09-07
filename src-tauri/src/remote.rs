@@ -534,9 +534,20 @@ mod tests {
 }
 
 fn validate_capture_interval(interval: u32) -> Result<(), String> {
-    if (100..=2000).contains(&interval) {
+    if (20..=2000).contains(&interval) {
         Ok(())
     } else {
         Err("Intervalo de captura inválido.".into())
+    }
+}
+
+#[cfg(test)]
+#[test]
+fn capture_interval_accepts_fast_rates_and_rejects_unbounded_polling() {
+    for value in [20, 50, 99, 100, 2000] {
+        assert!(validate_capture_interval(value).is_ok());
+    }
+    for value in [0, 19, 2001] {
+        assert!(validate_capture_interval(value).is_err());
     }
 }

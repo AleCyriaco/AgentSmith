@@ -35,7 +35,7 @@ int main(void) {
  char host[1024],user[1024],domain[1024],pass[4096],portbuf[32],displaybuf[64];
  if(!line(host,sizeof(host))||!line(portbuf,sizeof(portbuf))||!line(user,sizeof(user))||!line(domain,sizeof(domain))||!line(pass,sizeof(pass))||!line(expected_fp,sizeof(expected_fp))||!line(displaybuf,sizeof(displaybuf)))return 2;
  unsigned width=0,height=0,scale=0,interval=300;char extra;
- if(sscanf(displaybuf,"%u %u %u %u %c",&width,&height,&scale,&interval,&extra)!=4 || interval<100 || interval>2000 || width<800 || width>2560 || height<600 || height>1440 || !(scale==100||scale==125||scale==150||scale==200)){status_msg("Resolução ou escala inválida.");return 2;}
+ if(sscanf(displaybuf,"%u %u %u %u %c",&width,&height,&scale,&interval,&extra)!=4 || interval<20 || interval>2000 || width<800 || width>2560 || height<600 || height>1440 || !(scale==100||scale==125||scale==150||scale==200)){status_msg("Resolução ou escala inválida.");return 2;}
  freerdp* f=freerdp_new();if(!f)return 2;if(!freerdp_context_new(f)){freerdp_free(f);return 2;}
  f->PostConnect=post_connect;f->VerifyCertificateEx=certificate;f->VerifyChangedCertificateEx=changed_certificate;
  rdpSettings* s=f->context->settings;
@@ -53,7 +53,7 @@ int main(void) {
   fd_set fd;FD_ZERO(&fd);FD_SET(0,&fd);struct timeval tv={0,0};
   for(int drained=0;drained<512;drained++){FD_ZERO(&fd);FD_SET(0,&fd);tv.tv_sec=0;tv.tv_usec=0;if(select(1,&fd,NULL,NULL,&tv)<=0)break;if(!line(cmd,sizeof(cmd))){running=FALSE;break;}unsigned a=0,b=0,c=0;
    if(strcmp(cmd,"quit")==0)running=FALSE;
-   else if(sscanf(cmd,"interval %u",&a)==1 && a>=100 && a<=2000)interval=a;
+   else if(sscanf(cmd,"interval %u",&a)==1 && a>=20 && a<=2000)interval=a;
    else if(sscanf(cmd,"mouse %u %u %u",&a,&b,&c)==3 && a<=65535 && b<(unsigned)f->context->gdi->width && c<(unsigned)f->context->gdi->height)freerdp_input_send_mouse_event(f->context->input,(UINT16)a,(UINT16)b,(UINT16)c);
    else if(sscanf(cmd,"key %u %u",&a,&b)==2 && a<=511)freerdp_input_send_keyboard_event_ex(f->context->input,b!=0,FALSE,a);
    else if(sscanf(cmd,"unicode %u %u",&a,&b)==2 && a<=65535)freerdp_input_send_unicode_keyboard_event(f->context->input,b?0:KBD_FLAGS_RELEASE,(UINT16)a);

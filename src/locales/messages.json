@@ -659,10 +659,6 @@
     "en": "Capture interval",
     "es": "Intervalo entre capturas"
   },
-  "100 a 2.000 ms. Menor intervalo deixa a visualização mais fluida e usa mais CPU.": {
-    "en": "100 to 2,000 ms. Shorter intervals make the view smoother and use more CPU.",
-    "es": "De 100 a 2.000 ms. Un intervalo menor ofrece más fluidez y usa más CPU."
-  },
   "Intervalo entre capturas em milissegundos": {
     "en": "Capture interval in milliseconds",
     "es": "Intervalo entre capturas en milisegundos"
@@ -674,10 +670,6 @@
   "Pausa após cada ação": {
     "en": "Pause after each action",
     "es": "Pausa después de cada acción"
-  },
-  "100 a 3.000 ms. O aplicativo também aguarda uma nova imagem antes de continuar.": {
-    "en": "100 to 3,000 ms. The app also waits for a new image before continuing.",
-    "es": "De 100 a 3.000 ms. La aplicación también espera una imagen nueva antes de continuar."
   },
   "Pausa após cada ação em milissegundos": {
     "en": "Pause after each action in milliseconds",
@@ -2358,5 +2350,21 @@
   "Observando e decidindo em uma chamada": {
     "en": "Observing and deciding in one call",
     "es": "Observando y decidiendo en una llamada"
+  },
+  "Turbo": {
+    "en": "Turbo",
+    "es": "Turbo"
+  },
+  "20 a 2.000 ms. Menor intervalo deixa a visualização mais fluida e usa mais CPU.": {
+    "en": "20 to 2,000 ms. Shorter intervals make the view smoother and use more CPU.",
+    "es": "De 20 a 2.000 ms. Un intervalo menor ofrece más fluidez y usa más CPU."
+  },
+  "0 a 3.000 ms. Zero remove a pausa extra; o aplicativo ainda aguarda uma nova imagem.": {
+    "en": "0 to 3,000 ms. Zero removes the extra pause; the app still waits for a new image.",
+    "es": "De 0 a 3.000 ms. Cero elimina la pausa adicional; la aplicación aún espera una imagen nueva."
+  },
+  "Esses ajustes reduzem as esperas do aplicativo. OCR, rede e resposta do modelo têm tempos próprios; mais capturas não geram mais chamadas à IA.": {
+    "en": "These settings reduce app delays. OCR, network and model response take their own time; more captures do not trigger more AI calls.",
+    "es": "Estos ajustes reducen las esperas de la aplicación. El OCR, la red y la respuesta del modelo tienen sus propios tiempos; más capturas no generan más llamadas a la IA."
   }
 }
