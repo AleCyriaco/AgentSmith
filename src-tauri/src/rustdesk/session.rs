@@ -199,12 +199,21 @@ impl Session {
             return Err("Informe o ID RustDesk da máquina.".into());
         }
         let signer = options.signing_key()?;
+        crate::diag!("encontro em {} para o ID {id}", options.rendezvous_address());
         let (mut stream, signed_peer_key, path) = Self::reach_peer(options, id)
             .await
-            .map_err(|error| format!("Encontro: {error}"))?;
+            .map_err(|error| {
+                crate::diag!("encontro falhou: {error}");
+                format!("Encontro: {error}")
+            })?;
+        crate::diag!("par alcançado via {path}, identidade assinada de {} bytes", signed_peer_key.len());
         Self::handshake(&mut stream, &signed_peer_key, &signer, id)
             .await
-            .map_err(|error| format!("Handshake ({path}): {error}"))?;
+            .map_err(|error| {
+                crate::diag!("handshake falhou: {error}");
+                format!("Handshake ({path}): {error}")
+            })?;
+        crate::diag!("handshake concluído, sessão cifrada");
         // The second-factor prompt travels unwrapped so the interface can
         // recognise it; every other failure names its stage.
         let peer = match Self::login(&mut stream, options).await {
@@ -246,13 +255,19 @@ impl Session {
             .await?;
         match server.recv_rendezvous().await?.union {
             Some(rendezvous_message::Union::PunchHoleResponse(response)) => {
+                crate::diag!(
+                    "resposta de encontro: endereço {} bytes, relay '{}', nat {:?}, chave {} bytes",
+                    response.socket_addr.len(), response.relay_server, response.union, response.pk.len()
+                );
                 if response.socket_addr.is_empty() {
                     return Err(punch_failure(&response));
                 }
                 let signed = response.pk.clone();
                 if let Some(peer) = address::decode(&response.socket_addr) {
-                    if let Ok(direct) = Stream::connect(&peer.to_string()).await {
-                        return Ok((direct, signed, "direto"));
+                    crate::diag!("tentando conexão direta em {peer}");
+                    match Stream::connect(&peer.to_string()).await {
+                        Ok(direct) => return Ok((direct, signed, "direto")),
+                        Err(error) => crate::diag!("direta falhou: {error}"),
                     }
                 }
                 // The direct path is blocked by NAT; fall back to the relay.
@@ -261,6 +276,7 @@ impl Session {
             }
             // The peer itself asked for a relay and the server already paired one.
             Some(rendezvous_message::Union::RelayResponse(response)) => {
+                crate::diag!("o par pediu retransmissão por '{}'", response.relay_server);
                 if !response.refuse_reason.is_empty() {
                     return Err(response.refuse_reason);
                 }
@@ -403,6 +419,7 @@ impl Session {
                             .into());
                         }
                         answered_second_factor = true;
+                        crate::diag!("enviando segundo fator, confiar={}", options.trust_device);
                         stream
                             .send(proto::Message {
                                 union: Some(message::Union::Auth2fa(proto::Auth2Fa {
@@ -468,6 +485,7 @@ impl Session {
         let Some((sid, _)) = peer.session else {
             return Ok(());
         };
+        crate::diag!("escolhendo sessão do Windows sid {sid}");
         stream
             .send(proto::Message {
                 union: Some(message::Union::Misc(proto::Misc {

@@ -107,6 +107,7 @@ impl Remote {
         }
     }
     pub async fn disconnect(&self) -> Result<(), String> {
+        crate::diag!("disconnect() chamado");
         self.epoch.fetch_add(1, Ordering::SeqCst);
         self.generation.fetch_add(1, Ordering::SeqCst);
         if let Some(Transport::Rdp(mut c)) = self.connection.lock().await.take() {
@@ -286,6 +287,10 @@ impl Remote {
     ) -> Result<(), String> {
         self.disconnect().await?;
         let generation = self.generation.load(Ordering::SeqCst);
+        crate::rustdesk::diag::start(&format!(
+            "{} (ID {}) · ritmo {capture_interval_ms} ms",
+            m.name, m.host
+        ));
         // Connecting before spawning means a bad ID, a refused password or an
         // offline machine reaches the operator as an error, not as a silent wait.
         let session = session::Session::connect(&session::Options {
@@ -347,6 +352,7 @@ impl Remote {
         // only one per interval is converted and encoded for display.
         let interval = std::time::Duration::from_millis(capture_interval_ms.max(20) as u64);
         tokio::spawn(async move {
+            crate::diag!("transporte iniciado, pedindo quadro-chave");
             let _ = commands.request_refresh().await;
             let mut decoder: Option<(Codec, Decoder)> = None;
             let mut shown: Option<std::time::Instant> = None;
@@ -359,8 +365,13 @@ impl Remote {
                 tokio::select! {
                     inputs = inbox.recv() => {
                         // The sender is dropped on disconnect, which ends the task.
-                        let Some(inputs) = inputs else { return };
+                        let Some(inputs) = inputs else {
+                            crate::diag!("desconexão pedida pela interface");
+                            return
+                        };
+                        crate::diag!("entrada: {} evento(s)", inputs.len());
                         if let Err(error) = commands.send(&inputs).await {
+                            crate::diag!("entrada falhou: {error}");
                             break error;
                         }
                     }
@@ -371,16 +382,22 @@ impl Remote {
                           contact.store(now(), Ordering::SeqCst);
                       }
                       match event {
-                        Err(error) => break error,
+                        Err(error) => {
+                            crate::diag!("leitura falhou: {error}");
+                            break error
+                        }
                         Ok(Event::Closed(reason)) => {
+                            crate::diag!("par encerrou: {reason}");
                             break format!("O par RustDesk encerrou a sessão: {reason}")
                         }
                         Ok(Event::Ping(delay)) => {
+                            crate::diag!("ping (atraso {} ms, bitrate {})", delay.last_delay, delay.target_bitrate);
                             if let Err(error) = commands.pong(delay).await {
+                                crate::diag!("eco do ping falhou: {error}");
                                 break error;
                             }
                         }
-                        Ok(Event::Idle) => {}
+                        Ok(Event::Idle) => crate::diag!("mensagem sem imagem"),
                         Ok(Event::Video { codec, data, key }) => {
                             // A codec switch mid-stream needs its own decoder.
                             if !matches!(&decoder, Some((current, _)) if *current == codec) {
@@ -391,25 +408,33 @@ impl Remote {
                             }
                             let Some((_, active)) = decoder.as_mut() else { continue };
                             let due = shown.is_none_or(|last| last.elapsed() >= interval);
+                            let started = std::time::Instant::now();
+                            let bytes = data.len();
                             let picture = match active.decode(&data, due) {
                                 Ok(Some(picture)) => picture,
                                 // Nothing to show: an invisible reference
                                 // frame, or a conversion skipped by the pace.
                                 // Both are routine and cost nothing.
-                                Ok(None) => continue,
+                                Ok(None) => {
+                                    crate::diag!("vídeo {codec:?} {bytes} B chave={key} due={due} → sem imagem ({} ms)", started.elapsed().as_millis());
+                                    continue
+                                }
                                 // A frame that cannot be decoded leaves the
                                 // screen behind until a key frame arrives, so
                                 // ask for one — sparingly, since each request
                                 // restarts the machine's encoder. A key frame
                                 // that itself fails is not cured by another.
-                                Err(_) => {
+                                Err(error) => {
+                                    crate::diag!("vídeo {codec:?} {bytes} B chave={key} due={due} → FALHOU: {error}");
                                     if !key && refreshed.elapsed() >= std::time::Duration::from_secs(2) {
                                         refreshed = std::time::Instant::now();
+                                        crate::diag!("pedindo quadro-chave");
                                         let _ = commands.request_refresh().await;
                                     }
                                     continue;
                                 }
                             };
+                            let decoded_ms = started.elapsed().as_millis();
                             shown = Some(std::time::Instant::now());
                             seq += 1;
                             let encoded = tokio::task::spawn_blocking(move || {
@@ -421,6 +446,16 @@ impl Remote {
                             if gen.load(Ordering::SeqCst) != generation {
                                 return;
                             }
+                            match &encoded {
+                                Some(snapshot) => crate::diag!(
+                                    "vídeo {codec:?} {bytes} B chave={key} → quadro #{seq} {}×{} publicado · decodificar {decoded_ms} ms · PNG {} KB em {} ms",
+                                    snapshot.width,
+                                    snapshot.height,
+                                    snapshot.data_url.len() / 1024,
+                                    started.elapsed().as_millis().saturating_sub(decoded_ms)
+                                ),
+                                None => crate::diag!("vídeo {codec:?} {bytes} B → PNG falhou"),
+                            }
                             if encoded.is_some() {
                                 *frame.lock().unwrap() = encoded;
                             }
@@ -430,10 +465,13 @@ impl Remote {
                 }
             };
             if gen.load(Ordering::SeqCst) == generation {
+                crate::diag!("transporte encerrado com erro: {ended}");
                 let mut current = info.lock().unwrap();
                 current.status = "error".into();
                 current.message = ended;
                 *frame.lock().unwrap() = None;
+            } else {
+                crate::diag!("transporte substituído por outra conexão");
             }
         });
         Ok(())
@@ -459,9 +497,17 @@ impl Remote {
             return Ok(None);
         }
         let guard = self.frame.lock().unwrap();
-        let f = guard.as_ref().ok_or("Aguardando imagem do Windows.")?;
-        if self.silence() > 5000 {
+        let Some(f) = guard.as_ref() else {
+            crate::diag!("interface pediu quadro: ainda não há nenhum");
+            return Err("Aguardando imagem do Windows.".into());
+        };
+        let silence = self.silence();
+        if silence > 5000 {
+            crate::diag!("interface pediu quadro: DESCARTADO por silêncio de {silence} ms (quadro #{})", f.sequence);
             return Err("A imagem está desatualizada.".into());
+        }
+        if f.sequence != sequence {
+            crate::diag!("interface recebeu quadro #{} (tinha #{sequence}, silêncio {silence} ms)", f.sequence);
         }
         Ok((f.sequence != sequence).then(|| f.clone()))
     }
@@ -487,7 +533,9 @@ impl Remote {
             .unwrap()
             .clone()
             .ok_or("Aguardando a primeira imagem do Windows.")?;
-        if self.silence() > 5000 {
+        let silence = self.silence();
+        if silence > 5000 {
+            crate::diag!("executor pediu quadro: DESCARTADO por silêncio de {silence} ms");
             return Err("A imagem está desatualizada; verifique a conexão.".into());
         }
         Ok(f)
