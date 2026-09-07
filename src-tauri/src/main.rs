@@ -4,6 +4,7 @@ mod executor;
 mod llm;
 mod local_engine;
 mod model;
+mod observation;
 mod ocr;
 mod plan_edit;
 mod reading_test;

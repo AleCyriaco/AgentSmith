@@ -80,6 +80,7 @@ impl Default for Settings {
                 ("planner".into(), vec![]),
                 ("operator".into(), vec![]),
                 ("verifier".into(), vec![]),
+                ("vision".into(), vec![]),
             ]),
             local_only: false,
             max_actions: 60,
@@ -215,7 +216,7 @@ pub fn validate_settings(s: &Settings) -> Result<(), String> {
             return Err("Campo de conexão inválido.".into());
         }
     }
-    for role in ["planner", "operator", "verifier"] {
+    for role in ["planner", "operator", "verifier", "vision"] {
         if let Some(route) = s.routes.get(role) {
             let mut unique = std::collections::HashSet::new();
             for id in route {

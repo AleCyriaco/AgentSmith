@@ -2158,5 +2158,105 @@
   "Nova versão do plano criada. A execução anterior foi preservada no histórico.": {
     "en": "New plan version created. The previous execution was preserved in history.",
     "es": "Nueva versión del plan creada. La ejecución anterior se conservó en el historial."
+  },
+  "v0.11.0 · Prévia": {
+    "en": "v0.11.0 · Preview",
+    "es": "v0.11.0 · Vista previa"
+  },
+  "Planejar, Operar e Verificar aceitam modelos de texto. O OCR lê a tela; o apoio visual recebe imagens quando necessário.": {
+    "en": "Plan, Operate and Verify accept text models. OCR reads the screen; visual assistance receives images when needed.",
+    "es": "Planificar, Operar y Verificar aceptan modelos de texto. OCR lee la pantalla; el apoyo visual recibe imágenes cuando es necesario."
+  },
+  "Usa os textos do OCR para escolher a próxima ação.": {
+    "en": "Uses OCR text to choose the next action.",
+    "es": "Usa los textos del OCR para elegir la siguiente acción."
+  },
+  "Confere o resultado pelos textos; critérios exatos são conferidos pelo motor.": {
+    "en": "Checks results from text; exact criteria are checked by the engine.",
+    "es": "Comprueba el resultado con textos; el motor comprueba los criterios exactos."
+  },
+  "Permite usar este perfil no apoio visual. O teste de conexão verifica a resposta de texto.": {
+    "en": "Allows this profile to provide visual assistance. The connection test checks text responses.",
+    "es": "Permite usar este perfil como apoyo visual. La prueba de conexión verifica la respuesta de texto."
+  },
+  "Com OCR ativado, o modelo recebe textos e posições. Imagens são enviadas ao apoio visual quando necessário. Leituras são reutilizadas enquanto a área observada não mudar. Desativar OCR usa o caminho visual.": {
+    "en": "With OCR enabled, the model receives text and positions. Images go to visual assistance when needed. Readings are reused while the observed area stays unchanged. Disabling OCR uses the visual path.",
+    "es": "Con OCR activo, el modelo recibe textos y posiciones. Las imágenes se envían al apoyo visual cuando es necesario. Las lecturas se reutilizan mientras el área observada no cambie. Desactivar OCR usa la vía visual."
+  },
+  "Apoio visual": {
+    "en": "Visual assistance",
+    "es": "Apoyo visual"
+  },
+  "Usado quando o OCR não basta ou a tela não apresenta progresso.": {
+    "en": "Used when OCR is insufficient or the screen shows no progress.",
+    "es": "Se usa cuando OCR no basta o la pantalla no muestra progreso."
+  },
+  "Aceita imagens. Sem seleção, usa os perfis visuais já atribuídos a Operar ou Verificar.": {
+    "en": "Accepts images. If unselected, uses visual profiles already assigned to Operate or Verify.",
+    "es": "Acepta imágenes. Sin selección, usa perfiles visuales ya asignados a Operar o Verificar."
+  },
+  "Texto estruturado · imagens apenas no apoio visual": {
+    "en": "Structured text · images only for visual assistance",
+    "es": "Texto estructurado · imágenes solo en el apoyo visual"
+  },
+  "Conferindo texto esperado na região": {
+    "en": "Checking expected text in region",
+    "es": "Comprobando texto esperado en la región"
+  },
+  "Verificando com OCR e modelo de texto": {
+    "en": "Verifying with OCR and text model",
+    "es": "Verificando con OCR y modelo de texto"
+  },
+  "Escolhendo ação com OCR e modelo de texto": {
+    "en": "Choosing action with OCR and text model",
+    "es": "Eligiendo acción con OCR y modelo de texto"
+  },
+  "Consultando apoio visual": {
+    "en": "Consulting visual assistance",
+    "es": "Consultando apoyo visual"
+  },
+  "Observação OCR reutilizada: região sem alterações.": {
+    "en": "OCR observation reused: region unchanged.",
+    "es": "Observación OCR reutilizada: región sin cambios."
+  },
+  "Observação OCR reutilizada: tela sem alterações.": {
+    "en": "OCR observation reused: screen unchanged.",
+    "es": "Observación OCR reutilizada: pantalla sin cambios."
+  },
+  "OCR da região: {0} ms · {1} textos.": {
+    "en": "Region OCR: {0} ms · {1} texts.",
+    "es": "OCR de la región: {0} ms · {1} textos."
+  },
+  "{0} · verificação por texto: {1}s · sem imagem.": {
+    "en": "{0} · text verification: {1}s · no image.",
+    "es": "{0} · verificación por texto: {1}s · sin imagen."
+  },
+  "{0} · próxima ação por texto: {1}s · sem imagem.": {
+    "en": "{0} · next action from text: {1}s · no image.",
+    "es": "{0} · siguiente acción por texto: {1}s · sin imagen."
+  },
+  "Apoio visual solicitado: {0}": {
+    "en": "Visual assistance requested: {0}",
+    "es": "Apoyo visual solicitado: {0}"
+  },
+  "Etapa {0} verificada por {1} com OCR: {2}": {
+    "en": "Step {0} verified by {1} with OCR: {2}",
+    "es": "Paso {0} verificado por {1} con OCR: {2}"
+  },
+  "Esta etapa precisa de apoio visual. Selecione um modelo com visão em Roteamento de IA → Apoio visual.": {
+    "en": "This step needs visual assistance. Select a vision model in AI routing → Visual assistance.",
+    "es": "Este paso necesita apoyo visual. Seleccione un modelo con visión en Enrutamiento de IA → Apoyo visual."
+  },
+  "A tela não apresentou progresso após três entradas. Revise a tarefa antes de retomar.": {
+    "en": "The screen showed no progress after three inputs. Review the task before resuming.",
+    "es": "La pantalla no mostró progreso tras tres entradas. Revise la tarea antes de reanudar."
+  },
+  "OCR indisponível; solicitando apoio visual.": {
+    "en": "OCR unavailable; requesting visual assistance.",
+    "es": "OCR no disponible; solicitando apoyo visual."
+  },
+  "O caminho de texto não produziu uma decisão válida; solicitando apoio visual.": {
+    "en": "The text path did not produce a valid decision; requesting visual assistance.",
+    "es": "La vía de texto no produjo una decisión válida; solicitando apoyo visual."
   }
 }

@@ -492,7 +492,11 @@ pub async fn generate(
     // Own the child across awaits so cancellation also stops pending inference.
     let mut s = slot.take().unwrap();
     let (_, mut body) = crate::llm::request_body(p, system, prompt, image)?;
-    body["max_tokens"] = json!(if image.is_some() { 512 } else { 4096 });
+    body["max_tokens"] = json!(if image.is_some() || system.contains("[compact-output]") {
+        512
+    } else {
+        4096
+    });
     body["temperature"] = json!(0.1);
     body["cache_prompt"] = json!(false);
     let result=async {

@@ -1,5 +1,7 @@
 # AgentSmith para macOS
 
+> Atualização 0.11.0: Operar e Verificar usam OCR + texto por padrão, com apoio visual sob demanda. Consulte [o fluxo atual e sua validação](ocr-text-first.md). As seções de versões anteriores abaixo documentam a evolução.
+
 **Prévia 0.10.0: Apple Silicon, macOS 26 ou posterior.**
 
 Abra `AgentSmith.app`. A aba do navegador é apenas uma prévia visual e não tem acesso aos recursos nativos.

@@ -2,7 +2,7 @@
 
 Desktop macOS para planejamento e operação visual de máquinas Windows, com múltiplos provedores de LLM.
 
-Prévia 0.10.0. Este build foi produzido para Apple Silicon/macOS 26+ porque as bibliotecas FreeRDP disponíveis nesta máquina têm esse deployment target. A aplicação não foi homologada em versões anteriores nem Intel.
+Prévia 0.11.0. Este build foi produzido para Apple Silicon/macOS 26+ porque as bibliotecas FreeRDP disponíveis nesta máquina têm esse deployment target. A aplicação não foi homologada em versões anteriores nem Intel.
 
 ## Desenvolvimento
 
@@ -98,4 +98,19 @@ Excluir pede confirmação do plano selecionado e remove sua entrada do históri
 
 ## Repositório
 
-O repositório contém o código da versão 0.10.0 e os scripts para reconstruir os componentes nativos. Dependências instaladas, modelos baixados, aplicativos compilados, credenciais e dados locais de execução não são versionados. Consulte [Primeiros passos](docs/getting-started.md) e [Arquitetura](docs/architecture.md).
+O repositório contém o código da versão 0.11.0 e os scripts para reconstruir os componentes nativos. Dependências instaladas, modelos baixados, aplicativos compilados, credenciais e dados locais de execução não são versionados. Consulte [Primeiros passos](docs/getting-started.md) e [Arquitetura](docs/architecture.md).
+
+
+## OCR + texto primeiro — 0.11.0
+
+Operar e Verificar agora aceitam perfis de texto. Com OCR ativado, a captura é convertida localmente em JSON com texto, confiança e posições; as consultas principais não incluem imagem. O operador escolhe IDs observados para cliques, e o motor calcula as coordenadas. IDs ausentes, baixa confiança e respostas inválidas solicitam apoio visual.
+
+Em **Roteamento de IA → Apoio visual**, selecione um modelo que aceite imagens. Na ausência de uma seleção explícita, os perfis visuais já configurados em Operar/Verificar continuam disponíveis como apoio, sem mudar as preferências salvas. Modelo de texto pode ser local ou em nuvem. Os modelos multimodais instalados também podem responder apenas a texto; esta versão não adiciona novos pesos ao catálogo.
+
+Falta de informação, pedido do modelo, falha de OCR/resposta de texto ou uma entrada sem mudança nos pixels ativa o apoio visual. Três entradas sem mudança encerram a tentativa com pedido de atenção. Isso detecta tela inalterada, não todo tipo de progresso semântico. Ícones, foco e campos vazios frequentemente precisam de visão. Nenhuma decisão em cache é reexecutada.
+
+Critérios explícitos de texto exato continuam sendo conferidos diretamente pelo motor, agora lendo primeiro somente a região definida. Essa regra nunca é substituída por uma opinião do LLM. As demais condições usam o verificador textual com IDs de evidência; respostas incertas passam à visão. OCR e LLMs podem errar: não há promessa de melhoria de acerto sem medir tarefas reais.
+
+O cache mantém no máximo duas observações em memória durante uma execução. Compara pixels exatos da região e resolução antes de reutilizar; alterações fora de uma região não invalidam sua leitura, mas exigem nova observação para a tela inteira. Pausar/retomar, reiniciar e um novo ciclo criam um novo cache. Capturas não são salvas em arquivos. Antes de enviar ações do caminho textual ou confirmar sucesso, o motor confere novamente a captura para descartar respostas antigas.
+
+Veja [o fluxo e a validação da versão](docs/ocr-text-first.md).

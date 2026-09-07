@@ -64,7 +64,7 @@ pub fn request_body(
             }
             Ok((
                 format!("{base}/responses"),
-                json!({"model":p.model,"store":false,"instructions":system,"input":[{"role":"user","content":c}],"max_output_tokens":if image.is_some(){1024}else{8192}}),
+                json!({"model":p.model,"store":false,"instructions":system,"input":[{"role":"user","content":c}],"max_output_tokens":if image.is_some() || system.contains("[compact-output]"){1024}else{8192}}),
             ))
         }
         "anthropic" => {
@@ -74,7 +74,7 @@ pub fn request_body(
             }
             Ok((
                 format!("{base}/messages"),
-                json!({"model":p.model,"system":system,"max_tokens":if image.is_some(){1024}else{8192},"messages":[{"role":"user","content":c}]}),
+                json!({"model":p.model,"system":system,"max_tokens":if image.is_some() || system.contains("[compact-output]"){1024}else{8192},"messages":[{"role":"user","content":c}]}),
             ))
         }
         "bedrock" => {
@@ -88,7 +88,7 @@ pub fn request_body(
             }
             Ok((
                 url.to_string(),
-                json!({"system":[{"text":system}],"messages":[{"role":"user","content":c}],"inferenceConfig":{"maxTokens":if image.is_some(){1024}else{8192}}}),
+                json!({"system":[{"text":system}],"messages":[{"role":"user","content":c}],"inferenceConfig":{"maxTokens":if image.is_some() || system.contains("[compact-output]"){1024}else{8192}}}),
             ))
         }
         "chat" => {
@@ -99,7 +99,7 @@ pub fn request_body(
             };
             Ok((
                 format!("{base}/chat/completions"),
-                json!({"model":p.model,"messages":[{"role":"system","content":system},{"role":"user","content":c}],"stream":false,"max_tokens":if image.is_some(){1024}else{8192}}),
+                json!({"model":p.model,"messages":[{"role":"system","content":system},{"role":"user","content":c}],"stream":false,"max_tokens":if image.is_some() || system.contains("[compact-output]"){1024}else{8192}}),
             ))
         }
         _ => Err("Formato de API não suportado.".into()),
@@ -280,6 +280,34 @@ pub async fn routed(
         errors.join(" • ")
     })
 }
+// Existing visual assignments remain the fallback until a dedicated route is chosen.
+pub fn visual_settings(s: &Settings) -> Settings {
+    let mut result = s.clone();
+    let configured = s
+        .routes
+        .get("vision")
+        .filter(|ids| !ids.is_empty())
+        .cloned();
+    let ids = configured.unwrap_or_else(|| {
+        ["operator", "verifier"]
+            .iter()
+            .flat_map(|role| s.routes.get(*role).into_iter().flatten().cloned())
+            .collect()
+    });
+    let mut unique = std::collections::HashSet::new();
+    result.routes.insert(
+        "vision".into(),
+        ids.into_iter()
+            .filter(|id| {
+                unique.insert(id.clone())
+                    && s.profiles
+                        .iter()
+                        .any(|p| &p.id == id && p.enabled && p.vision)
+            })
+            .collect(),
+    );
+    result
+}
 pub fn parse_json<T: serde::de::DeserializeOwned>(text: &str) -> Result<T, String> {
     let text = text.trim();
     let text = if let Some(t) = text
@@ -310,6 +338,39 @@ mod tests {
             vision: true,
             enabled: true,
             auth_method: "api_key".into(),
+        }
+    }
+    #[test]
+    fn visual_fallback_preserves_routes_and_filters_text_profiles() {
+        let mut s = Settings::default();
+        let mut text = profile("chat");
+        text.id = "text".into();
+        text.vision = false;
+        let mut vision = profile("chat");
+        vision.id = "visual".into();
+        s.profiles = vec![text, vision];
+        s.routes
+            .insert("operator".into(), vec!["text".into(), "visual".into()]);
+        s.routes.insert("verifier".into(), vec!["visual".into()]);
+        let fallback = visual_settings(&s);
+        assert_eq!(fallback.routes["vision"], vec!["visual"]);
+        assert_eq!(s.routes["vision"], Vec::<String>::new());
+        assert_eq!(fallback.routes["operator"], s.routes["operator"]);
+        s.routes.insert("vision".into(), vec!["text".into()]);
+        assert!(visual_settings(&s).routes["vision"].is_empty());
+        s.routes.insert("vision".into(), vec!["visual".into()]);
+        s.profiles[1].enabled = false;
+        assert!(visual_settings(&s).routes["vision"].is_empty());
+    }
+    #[test]
+    fn compact_text_requests_have_no_image_and_bounded_output() {
+        for protocol in ["chat", "responses", "anthropic", "bedrock"] {
+            let mut p = profile(protocol);
+            p.vision = false;
+            let (_, body) = request_body(&p, "system [compact-output]", "OCR JSON", None).unwrap();
+            assert!(!body.to_string().contains("image"));
+            assert!(body.to_string().contains("1024"));
+            assert!(!body.to_string().contains("8192"));
         }
     }
     #[test]

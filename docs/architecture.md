@@ -1,5 +1,7 @@
 # AgentSmith — arquitetura e escopo da primeira versão
 
+> Atualização 0.11.0: Operar e Verificar usam OCR + texto por padrão, com apoio visual sob demanda. Consulte [o fluxo atual e sua validação](ocr-text-first.md). As seções de versões anteriores abaixo documentam a evolução.
+
 Atualizado em 6 de setembro de 2026.
 
 ## Decisões principais

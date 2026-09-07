@@ -7,3 +7,6 @@
 .language-picker select{width:130px;font-size:11px;padding:6px 7px;background:#f6f1fb;border-color:#e1d4ef;color:#604873}
 .detached-language{display:flex;justify-content:flex-end;padding:5px 12px;background:#f8f5fc;flex-shrink:0}
 @media(max-width:1200px){.sidebar nav button{font-size:11px;gap:8px}.header-right{gap:10px}.language-picker select{width:117px}}
+
+.routing-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(min-width:1700px){.routing-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}

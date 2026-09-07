@@ -146,6 +146,62 @@ pub fn frame_compatible(a: &Snapshot, b: &Snapshot) -> bool {
         .count();
     changed * 100 < a.width() as usize * a.height() as usize * 8
 }
+enum TextChoice {
+    Done(String, String),
+    Action(Action, String),
+    Vision(String),
+}
+async fn text_choice(
+    store: &Store,
+    run: &mut Run,
+    s: &Settings,
+    context: &str,
+    read: &crate::ocr::Reading,
+    explicit_rule: bool,
+) -> Result<TextChoice, String> {
+    use crate::observation::{Decision, VerdictStatus};
+    let system = format!("{SYSTEM} [compact-output]");
+    let context = format!("{context}{}", crate::observation::context(read));
+    let evidence = if explicit_rule {
+        "O motor ainda não confirmou o texto exato na região. Não declare sucesso e não altere o critério.".to_string()
+    } else {
+        run.status = "verifying".into();
+        report(store, run, "Verificando com OCR e modelo de texto")?;
+        let prompt = format!("{context}\nConfira a condição SOMENTE pelos textos observados. Se depender de ícones, layout visual, foco ou estado não capturado, use need_vision. Um rótulo de botão não comprova conclusão. Retorne {{\"status\":\"verified|not_verified|need_vision\",\"evidence\":\"até 160 caracteres\",\"element_ids\":[0]}}. Para verified cite IDs que sustentam diretamente o resultado, nunca apenas o nome da ação.");
+        let started = std::time::Instant::now();
+        let (text, provider) = llm::routed(s, "verifier", &system, &prompt, None).await?;
+        run.log.push(format!(
+            "{provider} · verificação por texto: {:.1}s · sem imagem.",
+            started.elapsed().as_secs_f64()
+        ));
+        let verdict: crate::observation::Verdict =
+            operator_response(&text, &provider, "verificação por texto")?;
+        if !verdict.supported(read) {
+            return Ok(TextChoice::Vision(
+                "Evidência OCR insuficiente ou incerta.".into(),
+            ));
+        }
+        match verdict.status {
+            VerdictStatus::Verified => return Ok(TextChoice::Done(verdict.evidence, provider)),
+            VerdictStatus::NeedVision => return Ok(TextChoice::Vision(verdict.evidence)),
+            VerdictStatus::NotVerified => verdict.evidence,
+        }
+    };
+    run.status = "running".into();
+    report(store, run, "Escolhendo ação com OCR e modelo de texto")?;
+    let prompt = format!("{context}\nVerificação: {evidence}\nEscolha UMA ação. Clique apenas em texto identificado por ID: {{\"kind\":\"click\",\"target\":0}}, double_click ou right_click com target; {{\"kind\":\"key\",\"keys\":[\"win\",\"r\"]}}; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":1}}; {{\"kind\":\"need_vision\",\"reason\":\"informação visual que falta\"}}; {{\"kind\":\"blocked\",\"reason\":\"falta de autorização ou informação do usuário\"}}. Se não conseguir localizar um elemento, use need_vision. Não use blocked por limitação do OCR. Use atalhos Windows conhecidos; não invente coordenadas. Antes de digitar assegure foco por atalho explícito ou peça visão. Não repita uma ação cujo resultado ainda seja incerto. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Sem ferramenta de shell.");
+    let started = std::time::Instant::now();
+    let (text, provider) = llm::routed(s, "operator", &system, &prompt, None).await?;
+    run.log.push(format!(
+        "{provider} · próxima ação por texto: {:.1}s · sem imagem.",
+        started.elapsed().as_secs_f64()
+    ));
+    let decision: Decision = operator_response(&text, &provider, "operação por texto")?;
+    Ok(match decision.action(read) {
+        Ok(action) => TextChoice::Action(action, provider),
+        Err(reason) => TextChoice::Vision(reason),
+    })
+}
 async fn execute(
     store: &Store,
     remote: &Remote,
@@ -156,14 +212,16 @@ async fn execute(
     for role in ["operator", "verifier"] {
         if !s.routes.get(role).is_some_and(|ids| {
             ids.iter().any(|id| {
-                s.profiles.iter().any(|p| {
-                    &p.id == id && p.enabled && p.vision && llm::endpoint(p, s.local_only).is_ok()
-                })
+                s.profiles
+                    .iter()
+                    .any(|p| &p.id == id && p.enabled && llm::endpoint(p, s.local_only).is_ok())
             })
         }) {
-            return Err(format!("Configure um modelo com visão para {role}."));
+            return Err(format!("Configure um modelo para {role}."));
         }
     }
+    let visual_settings = llm::visual_settings(s);
+    let mut observations = crate::observation::Cache::default();
     for index in 0..run.steps.len() {
         if run.steps[index].status == "done" {
             continue;
@@ -174,6 +232,8 @@ async fn execute(
         let mut focus: Option<crate::vision::Region> = None;
         let mut crop_age = 0;
         let mut saw_ocr_nonmatch = false;
+        let mut previous_input: Option<Snapshot> = None;
+        let mut stagnant = 0;
         loop {
             if remote.epoch.load(Ordering::SeqCst) != epoch {
                 return Err("Execução pausada pelo operador.".into());
@@ -188,28 +248,45 @@ async fn execute(
                 return Err("Limite de ações atingido. Revise o histórico e ajuste o limite antes de retomar.".into());
             }
             let frame = remote.snapshot()?;
-            let reading = if s.performance.native_ocr || run.steps[index].text_check.is_some() {
-                report(store, run, "Lendo textos com OCR nativo")?;
-                let read =
-                    checked(remote, epoch, async { Ok(crate::ocr::read(&frame).await) }).await?;
-                match read {
-                    Ok(read) => {
-                        run.log.push(format!(
-                            "OCR nativo: {} ms · {} textos.",
-                            read.elapsed_ms,
-                            read.lines.len()
-                        ));
-                        Some(read)
-                    }
-                    Err(error) => {
-                        if run.steps[index].text_check.is_some() {
-                            return Err(error);
-                        }
-                        run.log
-                            .push(format!("OCR indisponível; usando o modelo visual: {error}"));
-                        None
-                    }
+            let unchanged_after_input = previous_input.as_ref().is_some_and(|previous| {
+                crate::vision::region_unchanged(
+                    previous,
+                    &frame,
+                    crate::vision::Region::full(&frame),
+                )
+            });
+            if previous_input.take().is_some() {
+                stagnant = if unchanged_after_input {
+                    stagnant + 1
+                } else {
+                    0
+                };
+            }
+            if stagnant >= 3 {
+                return Err("A tela não apresentou progresso após três entradas. Revise a tarefa antes de retomar.".into());
+            }
+            // A narrow explicit criterion can be checked without reading the entire desktop.
+            let rule_reading = if let Some(rule) = &run.steps[index].text_check {
+                if rule.screen_width != frame.width || rule.screen_height != frame.height {
+                    return Err(
+                        "A resolução mudou. Ajuste a região da verificação OCR antes de retomar."
+                            .into(),
+                    );
                 }
+                let region = rule.region;
+                report(store, run, "Conferindo texto esperado na região")?;
+                let (read, reused) =
+                    checked(remote, epoch, observations.read(&frame, region)).await?;
+                run.log.push(if reused {
+                    "Observação OCR reutilizada: região sem alterações.".into()
+                } else {
+                    format!(
+                        "OCR da região: {} ms · {} textos.",
+                        read.elapsed_ms,
+                        read.lines.len()
+                    )
+                });
+                Some(read)
             } else {
                 None
             };
@@ -221,7 +298,7 @@ async fn execute(
                             .into(),
                     );
                 }
-                let matched = reading.as_ref().is_some_and(|r| rule.matches(r));
+                let matched = rule_reading.as_ref().is_some_and(|r| rule.matches(r));
                 if !matched {
                     saw_ocr_nonmatch = true;
                 }
@@ -242,30 +319,6 @@ async fn execute(
                     break;
                 }
             }
-            let prepared = crate::vision::prepare(
-                &frame,
-                s.performance.vision_max_width,
-                if s.performance.allow_crops {
-                    focus.filter(|_| crop_age < 2)
-                } else {
-                    None
-                },
-            )?;
-            let sent_frame = &prepared.frame;
-            let ocr_context = reading
-                .as_ref()
-                .map(|r| crate::ocr::context(r, &prepared))
-                .unwrap_or_default();
-            run.status = "verifying".into();
-            report(
-                store,
-                run,
-                format!(
-                    "Conferindo a tela · etapa {} de {}",
-                    index + 1,
-                    run.steps.len()
-                ),
-            )?;
             let context=format!("Roteiro autorizado: {}\nEtapa atual: {}\nCondição de sucesso: {}\nEtapas anteriores: {}\nHistórico recente: {}",run.instructions,run.steps[index].title,run.steps[index].success,serde_json::to_string(&run.steps[..index]).unwrap_or_default(),run.log.iter().rev().take(5).cloned().collect::<Vec<_>>().join(" | "));
             let context=format!("{context}\nResponda apenas com os campos JSON pedidos. Evidência ou impedimento: no máximo 160 caracteres.");
             let context = if let Some(repetition) = &run.repetition {
@@ -273,100 +326,252 @@ async fn execute(
             } else {
                 context
             };
-            let prompt=format!("{context}{ocr_context}\nVerifique na imagem se a condição de sucesso JÁ está cumprida. Em caso de dúvida, verified=false. Não confunda um botão com uma confirmação de operação concluída. Formato: {{\"verified\":false,\"evidence\":\"Fato visível ou motivo da incerteza\"}}.");
-            let (verdict, provider) = if let Some(rule) = &text_check {
-                (Verdict{verified:false,evidence:format!("A regra exige o texto exato {:?} na região definida. OCR ainda não confirmou uma nova ocorrência. No loop, faça o resultado mudar antes de conferi-lo novamente.",rule.expected)},"OCR nativo".to_string())
-            } else {
-                let started = std::time::Instant::now();
-                let (text, provider) = checked(
+            let reading = if s.performance.native_ocr {
+                report(store, run, "Lendo textos com OCR nativo")?;
+                match checked(
                     remote,
                     epoch,
-                    llm::routed(s, "verifier", SYSTEM, &prompt, Some(&sent_frame.data_url)),
+                    observations.read(&frame, crate::vision::Region::full(&frame)),
                 )
-                .await?;
-                run.log.push(format!(
-                    "{provider} · verificação: {:.1}s · imagem {} × {}.",
-                    started.elapsed().as_secs_f64(),
-                    sent_frame.width,
-                    sent_frame.height
-                ));
-                let verdict: Verdict = operator_response(&text, &provider, "verificação")?;
-                (verdict, provider)
-            };
-            if verdict.verified {
-                if verdict.evidence.trim().is_empty() {
-                    return Err("O verificador não forneceu evidência.".into());
+                .await
+                {
+                    Ok((read, reused)) => {
+                        run.log.push(if reused {
+                            "Observação OCR reutilizada: tela sem alterações.".into()
+                        } else {
+                            format!(
+                                "OCR nativo: {} ms · {} textos.",
+                                read.elapsed_ms,
+                                read.lines.len()
+                            )
+                        });
+                        Some(read)
+                    }
+                    Err(error) => {
+                        if remote.epoch.load(Ordering::SeqCst) != epoch {
+                            return Err(error);
+                        }
+                        run.log
+                            .push("OCR indisponível; solicitando apoio visual.".into());
+                        None
+                    }
                 }
-                run.steps[index].status = "done".into();
-                run.steps[index].evidence = Some(verdict.evidence.clone());
-                run.log.push(format!(
-                    "Etapa {} verificada por {}: {}",
-                    index + 1,
-                    provider,
-                    verdict.evidence
-                ));
-                checkpoint(store, run)?;
-                break;
+            } else {
+                None
+            };
+            if crop_age >= 2 {
+                focus = None;
             }
-            run.status = "running".into();
-            report(
-                store,
-                run,
-                format!(
-                    "Escolhendo a próxima ação · etapa {} de {}",
-                    index + 1,
-                    run.steps.len()
-                ),
-            )?;
-            let current = remote.snapshot()?;
-            let prepared = crate::vision::prepare(
-                &current,
-                s.performance.vision_max_width,
-                if s.performance.allow_crops {
-                    focus.filter(|_| crop_age < 2)
-                } else {
-                    None
-                },
-            )?;
-            let sent_frame = &prepared.frame;
-            let crop_hint = if s.performance.allow_crops {
-                "Se precisar de detalhe, use {\"kind\":\"inspect\",\"x\":0,\"y\":0,\"width\":300,\"height\":200} para ampliar uma região da imagem; não envia entrada ao Windows. A visão geral retorna após duas ações ou após teclado/rolagem. Coordenadas em pixels da imagem enviada, NÃO normalizadas em 0–1000."
+            let choice = if unchanged_after_input || waits >= 2 || focus.is_some() {
+                TextChoice::Vision(
+                    "Sem progresso após entrada/esperas ou há um recorte solicitado.".into(),
+                )
+            } else if let Some(read) = reading
+                .as_ref()
+                .filter(|read| read.lines.iter().any(|l| l.confidence >= 0.8))
+            {
+                match checked(
+                    remote,
+                    epoch,
+                    text_choice(store, run, s, &context, read, text_check.is_some()),
+                )
+                .await
+                {
+                    Ok(choice) => choice,
+                    Err(error) => {
+                        if remote.epoch.load(Ordering::SeqCst) != epoch {
+                            return Err(error);
+                        }
+                        run.log.push("O caminho de texto não produziu uma decisão válida; solicitando apoio visual.".into());
+                        TextChoice::Vision("Resposta de texto indisponível ou inválida.".into())
+                    }
+                }
             } else {
-                "Não solicite recortes."
+                TextChoice::Vision("OCR sem informação suficiente.".into())
             };
-            let current_ocr = if frame.data_url == current.data_url {
-                reading
-                    .as_ref()
-                    .map(|r| crate::ocr::context(r, &prepared))
-                    .unwrap_or_default()
-            } else {
-                String::new()
+            let (action, provider, prepared, current, text_path) = match choice {
+                TextChoice::Done(evidence, provider) => {
+                    if !crate::vision::region_unchanged(
+                        &frame,
+                        &remote.snapshot()?,
+                        crate::vision::Region::full(&frame),
+                    ) {
+                        continue;
+                    }
+                    run.steps[index].status = "done".into();
+                    run.steps[index].evidence = Some(evidence.clone());
+                    run.log.push(format!(
+                        "Etapa {} verificada por {} com OCR: {}",
+                        index + 1,
+                        provider,
+                        evidence
+                    ));
+                    checkpoint(store, run)?;
+                    break;
+                }
+                TextChoice::Action(action, provider) => {
+                    let prepared = crate::vision::Prepared {
+                        frame: frame.clone(),
+                        region: crate::vision::Region::full(&frame),
+                    };
+                    (action, provider, prepared, frame.clone(), true)
+                }
+                TextChoice::Vision(reason) => {
+                    run.log.push(format!("Apoio visual solicitado: {reason}"));
+                    if visual_settings
+                        .routes
+                        .get("vision")
+                        .is_none_or(|ids| ids.is_empty())
+                    {
+                        return Err("Esta etapa precisa de apoio visual. Selecione um modelo com visão em Roteamento de IA → Apoio visual.".into());
+                    }
+                    report(store, run, "Consultando apoio visual")?;
+                    let prepared = crate::vision::prepare(
+                        &frame,
+                        s.performance.vision_max_width,
+                        if s.performance.allow_crops {
+                            focus.filter(|_| crop_age < 2)
+                        } else {
+                            None
+                        },
+                    )?;
+                    let sent_frame = &prepared.frame;
+                    let ocr_context = reading
+                        .as_ref()
+                        .map(|r| crate::ocr::context(r, &prepared))
+                        .unwrap_or_default();
+                    run.status = "verifying".into();
+                    report(
+                        store,
+                        run,
+                        format!(
+                            "Conferindo a tela · etapa {} de {}",
+                            index + 1,
+                            run.steps.len()
+                        ),
+                    )?;
+                    let prompt=format!("{context}{ocr_context}\nVerifique na imagem se a condição de sucesso JÁ está cumprida. Em caso de dúvida, verified=false. Não confunda um botão com uma confirmação de operação concluída. Formato: {{\"verified\":false,\"evidence\":\"Fato visível ou motivo da incerteza\"}}.");
+                    let (verdict, provider) = if let Some(rule) = &text_check {
+                        (Verdict{verified:false,evidence:format!("A regra exige o texto exato {:?} na região definida. OCR ainda não confirmou uma nova ocorrência. No loop, faça o resultado mudar antes de conferi-lo novamente.",rule.expected)},"OCR nativo".to_string())
+                    } else {
+                        let started = std::time::Instant::now();
+                        let (text, provider) = checked(
+                            remote,
+                            epoch,
+                            llm::routed(
+                                &visual_settings,
+                                "vision",
+                                SYSTEM,
+                                &prompt,
+                                Some(&sent_frame.data_url),
+                            ),
+                        )
+                        .await?;
+                        run.log.push(format!(
+                            "{provider} · verificação: {:.1}s · imagem {} × {}.",
+                            started.elapsed().as_secs_f64(),
+                            sent_frame.width,
+                            sent_frame.height
+                        ));
+                        let verdict: Verdict = operator_response(&text, &provider, "verificação")?;
+                        (verdict, provider)
+                    };
+                    if verdict.verified {
+                        if !crate::vision::region_unchanged(
+                            &frame,
+                            &remote.snapshot()?,
+                            prepared.region,
+                        ) {
+                            continue;
+                        }
+                        if verdict.evidence.trim().is_empty() {
+                            return Err("O verificador não forneceu evidência.".into());
+                        }
+                        run.steps[index].status = "done".into();
+                        run.steps[index].evidence = Some(verdict.evidence.clone());
+                        run.log.push(format!(
+                            "Etapa {} verificada por {}: {}",
+                            index + 1,
+                            provider,
+                            verdict.evidence
+                        ));
+                        checkpoint(store, run)?;
+                        break;
+                    }
+                    run.status = "running".into();
+                    report(
+                        store,
+                        run,
+                        format!(
+                            "Escolhendo a próxima ação · etapa {} de {}",
+                            index + 1,
+                            run.steps.len()
+                        ),
+                    )?;
+                    let current = remote.snapshot()?;
+                    let prepared = crate::vision::prepare(
+                        &current,
+                        s.performance.vision_max_width,
+                        if s.performance.allow_crops {
+                            focus.filter(|_| crop_age < 2)
+                        } else {
+                            None
+                        },
+                    )?;
+                    let sent_frame = &prepared.frame;
+                    let crop_hint = if s.performance.allow_crops {
+                        "Se precisar de detalhe, use {\"kind\":\"inspect\",\"x\":0,\"y\":0,\"width\":300,\"height\":200} para ampliar uma região da imagem; não envia entrada ao Windows. A visão geral retorna após duas ações ou após teclado/rolagem. Coordenadas em pixels da imagem enviada, NÃO normalizadas em 0–1000."
+                    } else {
+                        "Não solicite recortes."
+                    };
+                    let current_ocr = if frame.data_url == current.data_url {
+                        reading
+                            .as_ref()
+                            .map(|r| crate::ocr::context(r, &prepared))
+                            .unwrap_or_default()
+                    } else {
+                        String::new()
+                    };
+                    let context=format!("{context}{current_ocr}\n{crop_hint}\nA imagem cobre a região x={}, y={}, largura={}, altura={} da sessão, redimensionada para {}x{}. Use SOMENTE coordenadas na imagem enviada. Não some o deslocamento da região.",prepared.region.x,prepared.region.y,prepared.region.width,prepared.region.height,sent_frame.width,sent_frame.height);
+                    let prompt=format!("{context}\nVerificação: {}\nImagem atual: {}x{} pixels. Escolha UMA próxima ação. Coordenadas no tamanho original da imagem. Não use coordenadas do desktop do Mac. Formatos aceitos: {{\"kind\":\"click\",\"x\":10,\"y\":20}}, double_click ou right_click com x/y; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"key\",\"keys\":[\"ctrl\",\"s\"]}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":2}}; {{\"kind\":\"blocked\",\"reason\":\"impedimento\"}}. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Sem comandos de shell como ferramenta. Respeite o roteiro original; se uma ação já pode ter sido aplicada, confira antes de repetir.",verdict.evidence,sent_frame.width,sent_frame.height);
+                    let started = std::time::Instant::now();
+                    let (text, provider) = checked(
+                        remote,
+                        epoch,
+                        llm::routed(
+                            &visual_settings,
+                            "vision",
+                            SYSTEM,
+                            &prompt,
+                            Some(&sent_frame.data_url),
+                        ),
+                    )
+                    .await?;
+                    run.log.push(format!(
+                        "{provider} · próxima ação: {:.1}s · imagem {} × {}.",
+                        started.elapsed().as_secs_f64(),
+                        sent_frame.width,
+                        sent_frame.height
+                    ));
+                    let action = prepared.action(
+                        operator_response::<Action>(&text, &provider, "operação")?,
+                        &current,
+                    )?;
+                    (action, provider, prepared, current, false)
+                }
             };
-            let context=format!("{context}{current_ocr}\n{crop_hint}\nA imagem cobre a região x={}, y={}, largura={}, altura={} da sessão, redimensionada para {}x{}. Use SOMENTE coordenadas na imagem enviada. Não some o deslocamento da região.",prepared.region.x,prepared.region.y,prepared.region.width,prepared.region.height,sent_frame.width,sent_frame.height);
-            let prompt=format!("{context}\nVerificação: {}\nImagem atual: {}x{} pixels. Escolha UMA próxima ação. Coordenadas no tamanho original da imagem. Não use coordenadas do desktop do Mac. Formatos aceitos: {{\"kind\":\"click\",\"x\":10,\"y\":20}}, double_click ou right_click com x/y; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"key\",\"keys\":[\"ctrl\",\"s\"]}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":2}}; {{\"kind\":\"blocked\",\"reason\":\"impedimento\"}}. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Sem comandos de shell como ferramenta. Respeite o roteiro original; se uma ação já pode ter sido aplicada, confira antes de repetir.",verdict.evidence,sent_frame.width,sent_frame.height);
-            let started = std::time::Instant::now();
-            let (text, provider) = checked(
-                remote,
-                epoch,
-                llm::routed(s, "operator", SYSTEM, &prompt, Some(&sent_frame.data_url)),
-            )
-            .await?;
-            run.log.push(format!(
-                "{provider} · próxima ação: {:.1}s · imagem {} × {}.",
-                started.elapsed().as_secs_f64(),
-                sent_frame.width,
-                sent_frame.height
-            ));
-            let action = prepared.action(
-                operator_response::<Action>(&text, &provider, "operação")?,
-                &current,
-            )?;
             run.action_count += 1;
             if let Some(repetition) = &mut run.repetition {
                 repetition.total_actions += 1;
             }
             let latest = remote.snapshot()?;
-            if !frame_compatible(&current, &latest)
+            if (text_path
+                && !crate::vision::region_unchanged(
+                    &current,
+                    &latest,
+                    crate::vision::Region::full(&current),
+                ))
+                || !frame_compatible(&current, &latest)
                 || (prepared.region != crate::vision::Region::full(&current)
                     && !crate::vision::region_unchanged(&current, &latest, prepared.region))
             {
@@ -443,6 +648,7 @@ async fn execute(
                         return Err("Período de repetição encerrado.".into());
                     }
                     remote.act(input, epoch).await?;
+                    previous_input = Some(current.clone());
                     let label = match input {
                         Action::TypeText { text } => {
                             format!("digitação de {} caracteres", text.chars().count())
@@ -841,6 +1047,163 @@ mod tests {
             updated_at: now(),
             progress: None,
         }
+    }
+    #[tokio::test]
+    async fn ocr_text_pipeline_sends_no_images_and_escalates_uncertainty() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let responses = vec![
+            r#"{"status":"not_verified","evidence":"Salvar ainda visível","element_ids":[0]}"#,
+            r#"{"kind":"click","target":0}"#,
+            r#"{"status":"verified","evidence":"Salvar visível","element_ids":[0]}"#,
+            r#"{"status":"need_vision","evidence":"Preciso verificar um ícone","element_ids":[]}"#,
+            r#"{"kind":"key","keys":["win","r"]}"#,
+            r#"{"status":"not_verified","evidence":"Campo não identificado","element_ids":[]}"#,
+            r#"{"kind":"need_vision","reason":"Campo vazio não está no OCR"}"#,
+            r#"{"status":"verified","evidence":"ID inventado","element_ids":[55]}"#,
+        ];
+        let server = tokio::spawn(async move {
+            for (index, response) in responses.into_iter().enumerate() {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut data = Vec::new();
+                let mut buf = [0; 4096];
+                let body = loop {
+                    let n = socket.read(&mut buf).await.unwrap();
+                    assert!(n > 0);
+                    data.extend_from_slice(&buf[..n]);
+                    if let Some(at) = data.windows(4).position(|b| b == b"\r\n\r\n") {
+                        let headers = String::from_utf8_lossy(&data[..at]).to_lowercase();
+                        let length: usize = headers
+                            .lines()
+                            .find_map(|s| s.strip_prefix("content-length: "))
+                            .unwrap()
+                            .parse()
+                            .unwrap();
+                        if data.len() >= at + 4 + length {
+                            break serde_json::from_slice::<serde_json::Value>(
+                                &data[at + 4..at + 4 + length],
+                            )
+                            .unwrap();
+                        }
+                    }
+                };
+                assert_eq!(body["model"], "fixture-text-only");
+                assert!(body["messages"][1]["content"].is_string());
+                let prompt = body["messages"][1]["content"].as_str().unwrap();
+                assert!(prompt.contains("Observação OCR JSON"));
+                assert!(!prompt.contains("data:image"));
+                assert_eq!(body["max_tokens"], 1024);
+                if index == 4 {
+                    assert!(prompt.contains("motor ainda não confirmou"));
+                    assert!(prompt.contains("Escolha UMA ação"));
+                }
+                let result =
+                    serde_json::json!({"choices":[{"message":{"content":response}}]}).to_string();
+                socket.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{result}",result.len()).as_bytes()).await.unwrap();
+            }
+        });
+        let store = Store::new(std::path::Path::new(":memory:")).unwrap();
+        let mut run = test_run("text-fixture", "running");
+        let mut settings = Settings::default();
+        settings.local_only = true;
+        let id = uuid::Uuid::new_v4().to_string();
+        settings.profiles.push(Profile {
+            id: id.clone(),
+            name: "Texto fixture".into(),
+            vendor: "local".into(),
+            protocol: "chat".into(),
+            base_url: format!("http://{address}"),
+            model: "fixture-text-only".into(),
+            vision: false,
+            enabled: true,
+            auth_method: "api_key".into(),
+        });
+        settings.routes.insert("operator".into(), vec![id.clone()]);
+        settings.routes.insert("verifier".into(), vec![id]);
+        let read = crate::ocr::Reading {
+            width: 100,
+            height: 80,
+            elapsed_ms: 1,
+            lines: vec![crate::ocr::Line {
+                text: "Salvar".into(),
+                confidence: 1.,
+                x: 10,
+                y: 20,
+                width: 40,
+                height: 20,
+            }],
+        };
+        tokio::time::timeout(std::time::Duration::from_secs(15), async {
+            assert!(matches!(
+                text_choice(
+                    &store,
+                    &mut run,
+                    &settings,
+                    "Roteiro autorizado: abrir Salvar",
+                    &read,
+                    false
+                )
+                .await
+                .unwrap(),
+                TextChoice::Action(Action::Click { x: 30, y: 30 }, _)
+            ));
+            assert!(matches!(
+                text_choice(
+                    &store,
+                    &mut run,
+                    &settings,
+                    "Roteiro autorizado: conferir texto Salvar",
+                    &read,
+                    false
+                )
+                .await
+                .unwrap(),
+                TextChoice::Done(_, _)
+            ));
+            assert!(matches!(
+                text_choice(&store, &mut run, &settings, "Conferir ícone", &read, false)
+                    .await
+                    .unwrap(),
+                TextChoice::Vision(_)
+            ));
+            assert!(matches!(
+                text_choice(
+                    &store,
+                    &mut run,
+                    &settings,
+                    "Regra explícita pendente",
+                    &read,
+                    true
+                )
+                .await
+                .unwrap(),
+                TextChoice::Action(Action::Key { .. }, _)
+            ));
+            assert!(matches!(
+                text_choice(&store, &mut run, &settings, "Preencher campo", &read, false)
+                    .await
+                    .unwrap(),
+                TextChoice::Vision(_)
+            ));
+            assert!(matches!(
+                text_choice(
+                    &store,
+                    &mut run,
+                    &settings,
+                    "Conferir resultado",
+                    &read,
+                    false
+                )
+                .await
+                .unwrap(),
+                TextChoice::Vision(_)
+            ));
+            server.await.unwrap();
+        })
+        .await
+        .unwrap();
+        assert_eq!(run.action_count, 3); // choosing an action alone never executes it
     }
     #[tokio::test]
     async fn weekly_boundary_keeps_executor_epoch_and_stop_cancels_the_next_window() {
