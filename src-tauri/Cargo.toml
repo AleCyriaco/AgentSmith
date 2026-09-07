@@ -28,6 +28,8 @@ ed25519-dalek = "2"
 crypto_box = "0.9"
 crypto_secretbox = "0.1"
 rand = "0.8"
+tokio-tungstenite = "0.24"
+futures-util = "0.3"
 
 # A frame is two million pixels: converting and encoding one is unusably slow
 # in an unoptimised build, which is what `tauri dev` runs.

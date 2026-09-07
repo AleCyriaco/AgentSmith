@@ -1053,7 +1053,46 @@ pub async fn stop(
     }
     Ok(())
 }
-fn finish(store: &Store, run: &mut Run, control: &Mutex<Control>, busy: &AtomicBool) {
+/// What the operator is told when a task ends, and whether it is a question.
+///
+/// Only a blocked task asks anything: it is the one case where a person can
+/// still change the outcome. The rest are notices.
+pub fn outcome(run: &Run) -> (String, String) {
+    let detail = run
+        .progress
+        .as_ref()
+        .map(|p| p.message.clone())
+        .unwrap_or_default();
+    let confirmed = run.steps.iter().filter(|s| s.status == "done").count();
+    let title = match run.status.as_str() {
+        "completed" => format!("Tarefa concluída · {}", run.title),
+        "blocked" => format!("Tarefa parada e precisa de atenção · {}", run.title),
+        "cancelled" => format!("Tarefa parada · {}", run.title),
+        "paused" => format!("Tarefa pausada · {}", run.title),
+        "expired" => format!("Período encerrado · {}", run.title),
+        other => format!("Tarefa {other} · {}", run.title),
+    };
+    let detail = format!(
+        "{}/{} etapas confirmadas · {} ações.{}",
+        confirmed,
+        run.steps.len(),
+        run.action_count,
+        if detail.is_empty() {
+            String::new()
+        } else {
+            format!("\n\n{detail}")
+        }
+    );
+    (title, detail)
+}
+
+fn finish(
+    store: &Store,
+    run: &mut Run,
+    control: &Mutex<Control>,
+    busy: &AtomicBool,
+    simplex: &Arc<crate::simplex::Simplex>,
+) {
     let mut guard = control.lock().unwrap();
     if guard
         .active
@@ -1065,6 +1104,11 @@ fn finish(store: &Store, run: &mut Run, control: &Mutex<Control>, busy: &AtomicB
     let _ = checkpoint(store, run);
     guard.active = None;
     busy.store(false, Ordering::SeqCst);
+    // Told after the task is settled and the interface is free, so a slow or
+    // absent operator channel cannot hold up the run that just ended.
+    let (title, detail) = outcome(run);
+    let simplex = simplex.clone();
+    tokio::spawn(async move { simplex.notify(&title, &detail).await });
 }
 fn restart_copy(source: &Run) -> Run {
     let mut run = source.clone();
@@ -1086,18 +1130,20 @@ pub async fn restart(
     remote: Arc<Remote>,
     busy: Arc<AtomicBool>,
     control: Arc<Mutex<Control>>,
+    simplex: Arc<crate::simplex::Simplex>,
     id: String,
 ) -> Result<Run, String> {
-    launch_mode(store, remote, busy, control, id, true, None).await
+    launch_mode(store, remote, busy, control, simplex, id, true, None).await
 }
 pub async fn launch(
     store: Arc<Store>,
     remote: Arc<Remote>,
     busy: Arc<AtomicBool>,
     control: Arc<Mutex<Control>>,
+    simplex: Arc<crate::simplex::Simplex>,
     id: String,
 ) -> Result<(), String> {
-    launch_mode(store, remote, busy, control, id, false, None)
+    launch_mode(store, remote, busy, control, simplex, id, false, None)
         .await
         .map(|_| ())
 }
@@ -1106,17 +1152,36 @@ pub async fn repeat(
     remote: Arc<Remote>,
     busy: Arc<AtomicBool>,
     control: Arc<Mutex<Control>>,
+    simplex: Arc<crate::simplex::Simplex>,
     id: String,
     options: crate::repetition::RepeatOptions,
 ) -> Result<Run, String> {
     let repetition = options.resolve(now())?;
-    launch_mode(store, remote, busy, control, id, true, Some(repetition)).await
+    launch_mode(store, remote, busy, control, simplex, id, true, Some(repetition)).await
 }
+/// Breaks the type recursion: a resume re-enters the same launch, and an
+/// `async fn` that awaits itself cannot be proven to be `Send`.
+type Launch = std::pin::Pin<Box<dyn std::future::Future<Output = Result<Run, String>> + Send>>;
+
+fn relaunch(
+    store: Arc<Store>,
+    remote: Arc<Remote>,
+    busy: Arc<AtomicBool>,
+    control: Arc<Mutex<Control>>,
+    simplex: Arc<crate::simplex::Simplex>,
+    id: String,
+) -> Launch {
+    Box::pin(launch_mode(
+        store, remote, busy, control, simplex, id, false, None,
+    ))
+}
+
 async fn launch_mode(
     store: Arc<Store>,
     remote: Arc<Remote>,
     busy: Arc<AtomicBool>,
     control: Arc<Mutex<Control>>,
+    simplex: Arc<crate::simplex::Simplex>,
     id: String,
     restart: bool,
     repetition: Option<crate::repetition::RepeatState>,
@@ -1184,7 +1249,28 @@ async fn launch_mode(
             run.log.push(e);
         }
         let _ = remote.release().await;
-        finish(&store, &mut run, &control, &busy);
+        let blocked = run.status == "blocked";
+        let question = crate::simplex::Question {
+            run_id: run.id.clone(),
+            title: run.title.clone(),
+            detail: run
+                .progress
+                .as_ref()
+                .map(|p| p.message.clone())
+                .unwrap_or_default(),
+        };
+        finish(&store, &mut run, &control, &busy, &simplex);
+        // A blocked task is the one case a person can still decide, so it is
+        // put to the operator instead of only announced. Asking happens after
+        // the task is settled, so a resume starts from a clean state.
+        if blocked {
+            tokio::spawn(async move {
+                if simplex.ask(&question).await == Some(crate::simplex::Answer::Continue) {
+                    let _ = relaunch(store, remote, busy, control, simplex, question.run_id)
+                        .await;
+                }
+            });
+        }
     });
     Ok(started_run)
 }
@@ -1535,7 +1621,7 @@ mod tests {
         assert!(result.is_err());
         assert!(run.repetition.as_ref().unwrap().starts_at > now());
         assert_eq!(run.repetition.as_ref().unwrap().cycle, 0);
-        finish(&store, &mut run, &control, &busy);
+        finish(&store, &mut run, &control, &busy, &Arc::new(crate::simplex::Simplex::new()));
         assert_eq!(store.run("weekly").unwrap().status, "cancelled");
         assert!(!busy.load(Ordering::SeqCst));
     }
@@ -1674,6 +1760,7 @@ mod tests {
             remote.clone(),
             busy.clone(),
             control.clone(),
+            Arc::new(crate::simplex::Simplex::new()),
             "original".into()
         )
         .await
@@ -1686,6 +1773,7 @@ mod tests {
             remote,
             busy.clone(),
             control,
+            Arc::new(crate::simplex::Simplex::new()),
             "original".into()
         )
         .await
@@ -1717,7 +1805,7 @@ mod tests {
         .unwrap();
         assert!(result.is_err());
         run.status = "completed".into(); // A last verification may have finished concurrently.
-        finish(&store, &mut run, &control, &busy);
+        finish(&store, &mut run, &control, &busy, &Arc::new(crate::simplex::Simplex::new()));
         let saved = store.run(&run.id).unwrap();
         assert_eq!(saved.status, "cancelled");
         assert_eq!(saved.action_count, 3);
@@ -1729,6 +1817,7 @@ mod tests {
             Arc::new(remote),
             Arc::new(busy),
             Arc::new(control),
+            Arc::new(crate::simplex::Simplex::new()),
             run.id
         )
         .await
@@ -1769,6 +1858,31 @@ mod tests {
         .unwrap();
         assert_eq!(store.run("done").unwrap().status, "completed");
     }
+    #[test]
+    fn the_operator_is_told_what_happened_and_how_far_it_got() {
+        let mut run = test_run("r1", "completed");
+        run.title = "Abrir Calculadora".into();
+        run.action_count = 5;
+        let step = |status: &str| Step {
+            text_check: None,
+            title: "etapa".into(),
+            success: "critério".into(),
+            status: status.into(),
+            evidence: None,
+        };
+        run.steps = vec![step("done"), step("pending")];
+        let (title, detail) = outcome(&run);
+        assert!(title.contains("concluída") && title.contains("Abrir Calculadora"));
+        assert!(detail.contains("1/2 etapas confirmadas"));
+        assert!(detail.contains("5 ações"));
+        // A blocked task says why, since that is what a decision rests on.
+        run.status = "blocked".into();
+        run.progress = Some(RunProgress { message: "A etapa 2 não encontrou a caixa.".into(), started_at: 0 });
+        let (title, detail) = outcome(&run);
+        assert!(title.contains("precisa de atenção"));
+        assert!(detail.contains("não encontrou a caixa"));
+    }
+
     #[tokio::test]
     async fn pause_cancels_pending_model_request() {
         let r = Remote::new();

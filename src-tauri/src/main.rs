@@ -11,6 +11,7 @@ mod ocr;
 mod plan_edit;
 mod reading_test;
 mod remote;
+mod simplex;
 mod repetition;
 mod rustdesk;
 mod store;
@@ -142,6 +143,7 @@ struct AppState {
     busy: Arc<AtomicBool>,
     execution: Arc<Mutex<executor::Control>>,
     auth: browser_auth::AuthManager,
+    simplex: Arc<simplex::Simplex>,
 }
 #[tauri::command]
 fn browser_auth_status(
@@ -549,6 +551,45 @@ async fn start_machine_connection(
         )
         .await
 }
+/// Starts the operator channel against the saved server address. The address
+/// carries a secret, so it lives in the Keychain and never in the settings.
+#[tauri::command]
+async fn simplex_start(state: tauri::State<'_, AppState>) -> Result<simplex::Status, String> {
+    let server = tauri::async_runtime::spawn_blocking(|| {
+        store::optional_secret("simplex", "simplex://server")
+    })
+    .await
+    .map_err(|_| "Não foi possível acessar o Chaves.")??
+    .unwrap_or_default();
+    state.simplex.start(&server).await
+}
+#[tauri::command]
+async fn simplex_stop(state: tauri::State<'_, AppState>) -> Result<simplex::Status, String> {
+    state.simplex.stop().await;
+    Ok(state.simplex.status().await)
+}
+#[tauri::command]
+async fn simplex_status(state: tauri::State<'_, AppState>) -> Result<simplex::Status, String> {
+    Ok(state.simplex.status().await)
+}
+/// Saves the SMP server address and restarts the channel on it.
+#[tauri::command]
+async fn simplex_save_server(
+    state: tauri::State<'_, AppState>,
+    server: String,
+) -> Result<simplex::Status, String> {
+    let server = server.trim().to_string();
+    if !server.is_empty() && !server.starts_with("smp://") {
+        return Err("Informe o endereço smp:// do seu servidor SimpleX.".into());
+    }
+    let saved = server.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        store::save_secret("simplex", "simplex://server", &saved)
+    })
+    .await
+    .map_err(|_| "Não foi possível acessar o Chaves.")??;
+    state.simplex.start(&server).await
+}
 #[tauri::command]
 async fn disconnect_machine(state: tauri::State<'_, AppState>) -> Result<(), String> {
     state.remote.disconnect().await
@@ -585,6 +626,7 @@ async fn start_run(state: tauri::State<'_, AppState>, id: String) -> Result<(), 
         state.remote.clone(),
         state.busy.clone(),
         state.execution.clone(),
+        state.simplex.clone(),
         id,
     )
     .await
@@ -601,6 +643,7 @@ async fn repeat_run(
         state.remote.clone(),
         state.busy.clone(),
         state.execution.clone(),
+        state.simplex.clone(),
         id,
         options,
     )
@@ -614,6 +657,7 @@ async fn restart_run(state: tauri::State<'_, AppState>, id: String) -> Result<Ru
         state.remote.clone(),
         state.busy.clone(),
         state.execution.clone(),
+        state.simplex.clone(),
         id,
     )
     .await
@@ -790,12 +834,17 @@ fn main() {
                 busy: Arc::new(AtomicBool::new(false)),
                 execution: Arc::new(Mutex::new(executor::Control::default())),
                 auth: browser_auth::AuthManager::default(),
+                simplex: Arc::new(simplex::Simplex::new()),
             });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             open_prodigy_site,
             open_rustdesk_client,
+            simplex_start,
+            simplex_stop,
+            simplex_status,
+            simplex_save_server,
             load_settings,
             local_engine_status,
             local_model_download,
