@@ -72,9 +72,10 @@ impl Decoder {
     /// picture is also going to be shown: when it is not, the colour
     /// conversion — by far the expensive half — is skipped.
     ///
-    /// `Ok(None)` means no picture came out, which is normal for a stream
-    /// still waiting on a key frame, and is also what a skipped conversion
-    /// returns.
+    /// `Ok(None)` means the frame decoded but has nothing to show — VP9 does
+    /// this routinely for its invisible reference frames, and it is also what
+    /// a skipped conversion returns. `Err` means the frame could not be
+    /// decoded, which is the only case that warrants asking for a key frame.
     pub fn decode(&mut self, data: &[u8], wanted: bool) -> Result<Option<Picture>, String> {
         if data.is_empty() {
             return Ok(None);
@@ -82,6 +83,9 @@ impl Decoder {
         let mut frame = RawFrame::default();
         let decoded =
             unsafe { agentsmith_vpx_decode(self.handle, data.as_ptr(), data.len(), &mut frame) };
+        if decoded < 0 {
+            return Err("O quadro não pôde ser decodificado.".into());
+        }
         if decoded == 0 {
             return Ok(None);
         }
@@ -260,11 +264,14 @@ mod tests {
     fn hostile_bitstreams_are_refused_without_a_picture() {
         let mut decoder = Decoder::new(Codec::Vp9).unwrap();
         for wanted in [true, false] {
+            // Nothing to decode is not a failure; garbage is one, and is
+            // reported as such so a key frame can be asked for — but never
+            // panics and never yields a picture.
             assert!(decoder.decode(&[], wanted).unwrap().is_none());
-            assert!(decoder.decode(&[0xFF; 64], wanted).unwrap().is_none());
-            assert!(decoder.decode(b"nao e um quadro vp9", wanted).unwrap().is_none());
+            assert!(decoder.decode(&[0xFF; 64], wanted).is_err());
+            assert!(decoder.decode(b"nao e um quadro vp9", wanted).is_err());
         }
         let mut vp8 = Decoder::new(Codec::Vp8).unwrap();
-        assert!(vp8.decode(&[0x00; 3], true).unwrap().is_none());
+        assert!(vp8.decode(&[0x00; 3], true).is_err());
     }
 }

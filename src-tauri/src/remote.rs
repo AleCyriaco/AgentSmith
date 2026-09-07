@@ -350,6 +350,7 @@ impl Remote {
             let _ = commands.request_refresh().await;
             let mut decoder: Option<(Codec, Decoder)> = None;
             let mut shown: Option<std::time::Instant> = None;
+            let mut refreshed = std::time::Instant::now();
             let mut seq = 0u64;
             let ended = loop {
                 if gen.load(Ordering::SeqCst) != generation {
@@ -390,15 +391,24 @@ impl Remote {
                             }
                             let Some((_, active)) = decoder.as_mut() else { continue };
                             let due = shown.is_none_or(|last| last.elapsed() >= interval);
-                            let Ok(Some(picture)) = active.decode(&data, due) else {
-                                // A frame that yields no picture costs one
-                                // picture, not the session. A delta frame leaves
-                                // the screen behind until a key frame arrives,
-                                // so ask for one instead of waiting.
-                                if due && !key {
-                                    let _ = commands.request_refresh().await;
+                            let picture = match active.decode(&data, due) {
+                                Ok(Some(picture)) => picture,
+                                // Nothing to show: an invisible reference
+                                // frame, or a conversion skipped by the pace.
+                                // Both are routine and cost nothing.
+                                Ok(None) => continue,
+                                // A frame that cannot be decoded leaves the
+                                // screen behind until a key frame arrives, so
+                                // ask for one — sparingly, since each request
+                                // restarts the machine's encoder. A key frame
+                                // that itself fails is not cured by another.
+                                Err(_) => {
+                                    if !key && refreshed.elapsed() >= std::time::Duration::from_secs(2) {
+                                        refreshed = std::time::Instant::now();
+                                        let _ = commands.request_refresh().await;
+                                    }
+                                    continue;
                                 }
-                                continue;
                             };
                             shown = Some(std::time::Instant::now());
                             seq += 1;

@@ -10,8 +10,9 @@
 //!
 //! Optional: `RUSTDESK_SERVER` and `RUSTDESK_KEY` for a self-hosted server,
 //! `RUSTDESK_2FA` with the current six-digit code when the machine asks for a
-//! second factor, and `RUSTDESK_SEND_INPUT=1` to also move the pointer on the
-//! remote machine.
+//! second factor, `RUSTDESK_SEND_INPUT=1` to also move the pointer on the
+//! remote machine, and `RUSTDESK_SOAK_SECS=120` to then hold the session still
+//! and measure how long the machine ever goes quiet.
 #![cfg(test)]
 use crate::rustdesk::{
     decoder::Decoder,
@@ -184,6 +185,57 @@ async fn rustdesk_live_session_connects_decodes_and_accepts_input() {
         );
     } else {
         println!("→ entrada não enviada (defina RUSTDESK_SEND_INPUT=1 para mover o ponteiro)");
+    }
+    // Soak: hold the session with nothing happening and measure how long the
+    // machine ever goes quiet. The picture is dropped after five silent
+    // seconds, so any gap near that is the fault being looked for.
+    if let Ok(secs) = std::env::var("RUSTDESK_SOAK_SECS").map(|v| v.parse::<u64>().unwrap_or(0)) {
+        if secs > 0 {
+            println!("→ imersão: {secs}s parado, medindo o silêncio entre mensagens");
+            let started = std::time::Instant::now();
+            let mut last = std::time::Instant::now();
+            let (mut pings, mut frames, mut idle, mut skipped) = (0u32, 0u32, 0u32, 0u32);
+            let mut worst = std::time::Duration::ZERO;
+            let mut worst_at = 0u64;
+            while started.elapsed().as_secs() < secs {
+                let event = tokio::time::timeout(std::time::Duration::from_secs(40), events.next()).await;
+                let gap = last.elapsed();
+                last = std::time::Instant::now();
+                if gap > worst {
+                    worst = gap;
+                    worst_at = started.elapsed().as_secs();
+                }
+                if gap.as_millis() > 2000 {
+                    println!("  ! silêncio de {}ms aos {}s", gap.as_millis(), started.elapsed().as_secs());
+                }
+                match event {
+                    Err(_) => panic!("40s sem nenhuma mensagem da máquina"),
+                    Ok(Err(error)) => panic!("fluxo interrompido aos {}s: {error}", started.elapsed().as_secs()),
+                    Ok(Ok(Event::Ping(delay))) => {
+                        pings += 1;
+                        commands.pong(delay).await.expect("resposta de latência");
+                    }
+                    Ok(Ok(Event::Video { codec, data, .. })) => {
+                        frames += 1;
+                        if let Some((current, active)) = decoder.as_mut() {
+                            if *current == codec {
+                                match active.decode(&data, false) {
+                                    Ok(_) => {}
+                                    Err(_) => skipped += 1,
+                                }
+                            }
+                        }
+                    }
+                    Ok(Ok(Event::Closed(reason))) => panic!("a máquina encerrou aos {}s: {reason}", started.elapsed().as_secs()),
+                    Ok(Ok(Event::Idle)) => idle += 1,
+                }
+            }
+            println!(
+                "✓ imersão de {secs}s: {pings} pings · {frames} quadros ({skipped} ilegíveis) · {idle} outras · maior silêncio {}ms aos {worst_at}s",
+                worst.as_millis()
+            );
+            assert!(worst.as_millis() < 5000, "a máquina ficou {}ms em silêncio; a imagem cairia", worst.as_millis());
+        }
     }
     println!("✓ sessão RustDesk validada de ponta a ponta");
 }

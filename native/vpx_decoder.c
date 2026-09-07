@@ -47,16 +47,21 @@ void agentsmith_vpx_free(agentsmith_vpx *decoder) {
     free(decoder);
 }
 
-// 1 when `out` describes planes owned by the decoder and valid until its next call.
+// 1 when `out` describes planes owned by the decoder and valid until its next
+// call; 0 when the frame decoded but has nothing to show, which VP9 does
+// routinely for its invisible reference frames; -1 when the frame could not be
+// decoded at all. Callers must not treat 0 as a failure: asking the machine for
+// a key frame on every invisible frame restarts its encoder over and over.
 int agentsmith_vpx_decode(agentsmith_vpx *decoder, const uint8_t *data, size_t length,
                           agentsmith_vpx_frame *out) {
-    if (!decoder || !decoder->ready || !out || !data || !length || length > 0x7FFFFFFF) return 0;
+    if (!decoder || !decoder->ready || !out || !data || !length || length > 0x7FFFFFFF) return -1;
     if (vpx_codec_decode(&decoder->codec, data, (unsigned int)length, NULL, 0) != VPX_CODEC_OK)
-        return 0;
+        return -1;
     vpx_codec_iter_t iterator = NULL;
     const vpx_image_t *image = vpx_codec_get_frame(&decoder->codec, &iterator);
-    if (!image || !image->d_w || !image->d_h) return 0;
-    if (image->fmt & VPX_IMG_FMT_HIGHBITDEPTH) return 0;
+    if (!image) return 0;
+    if (!image->d_w || !image->d_h) return -1;
+    if (image->fmt & VPX_IMG_FMT_HIGHBITDEPTH) return -1;
     out->width = (int)image->d_w;
     out->height = (int)image->d_h;
     out->y = image->planes[VPX_PLANE_Y];
@@ -68,5 +73,5 @@ int agentsmith_vpx_decode(agentsmith_vpx *decoder, const uint8_t *data, size_t l
     out->x_shift = (int)image->x_chroma_shift;
     out->y_shift = (int)image->y_chroma_shift;
     out->full_range = image->range == VPX_CR_FULL_RANGE;
-    return !!(out->y && out->u && out->v);
+    return (out->y && out->u && out->v) ? 1 : -1;
 }
