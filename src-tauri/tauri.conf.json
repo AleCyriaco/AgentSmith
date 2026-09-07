@@ -1,0 +1,47 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AgentSmith",
+  "version": "0.10.0",
+  "identifier": "com.agentsmith.desktop",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "AgentSmith",
+        "width": 1440,
+        "height": 920,
+        "minWidth": 1080,
+        "minHeight": 720,
+        "backgroundColor": "#211a2c"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "app"
+    ],
+    "icon": [
+      "icons/icon.icns",
+      "icons/icon.png"
+    ],
+    "resources": {
+      "resources/rdp/": "rdp/",
+      "resources/vision/": "vision/",
+      "resources/ocr/": "ocr/"
+    },
+    "macOS": {
+      "minimumSystemVersion": "26.0"
+    },
+    "shortDescription": "Seu operador de computadores Windows",
+    "category": "Productivity"
+  }
+}

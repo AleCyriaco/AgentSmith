@@ -1,0 +1,7 @@
+.header-navigation{display:flex;align-items:center;gap:14px;min-width:0}
+.sidebar-toggle{width:32px;height:32px;flex-shrink:0;color:#564864}
+.sidebar-toggle:focus-visible{outline:2px solid #543d6c;outline-offset:2px}
+.app-shell.sidebar-collapsed>.sidebar{display:none}
+.app-shell.sidebar-collapsed>.main-shell{margin-left:0}
+.header-navigation .breadcrumbs{min-width:0}
+@media(max-width:800px){.header-navigation{gap:8px}.header-navigation .breadcrumbs{gap:7px}}

@@ -1,0 +1,2162 @@
+{
+  "Central de operação": {
+    "en": "Operations center",
+    "es": "Centro de operaciones"
+  },
+  "Máquinas": {
+    "en": "Machines",
+    "es": "Máquinas"
+  },
+  "Provedores e modelos": {
+    "en": "Providers and models",
+    "es": "Proveedores y modelos"
+  },
+  "Roteamento de IA": {
+    "en": "AI routing",
+    "es": "Enrutamiento de IA"
+  },
+  "Como funciona": {
+    "en": "How it works",
+    "es": "Cómo funciona"
+  },
+  "Pronta para revisar": {
+    "en": "Ready for review",
+    "es": "Lista para revisar"
+  },
+  "Em execução": {
+    "en": "Running",
+    "es": "En ejecución"
+  },
+  "Verificando": {
+    "en": "Verifying",
+    "es": "Verificando"
+  },
+  "Aguardando ciclo": {
+    "en": "Waiting for next cycle",
+    "es": "Esperando el ciclo"
+  },
+  "Período encerrado": {
+    "en": "Schedule ended",
+    "es": "Período finalizado"
+  },
+  "Pausada": {
+    "en": "Paused",
+    "es": "Pausada"
+  },
+  "Precisa de atenção": {
+    "en": "Needs attention",
+    "es": "Necesita atención"
+  },
+  "Concluída": {
+    "en": "Completed",
+    "es": "Completada"
+  },
+  "Parada": {
+    "en": "Stopped",
+    "es": "Detenida"
+  },
+  "Conectado": {
+    "en": "Connected",
+    "es": "Conectado"
+  },
+  "Conectando": {
+    "en": "Connecting",
+    "es": "Conectando"
+  },
+  "Desconectado": {
+    "en": "Disconnected",
+    "es": "Desconectado"
+  },
+  "Falha de conexão": {
+    "en": "Connection failed",
+    "es": "Error de conexión"
+  },
+  "Fechar": {
+    "en": "Close",
+    "es": "Cerrar"
+  },
+  "AGENTSMITH / CONFIGURAÇÃO": {
+    "en": "AGENTSMITH / SETTINGS",
+    "es": "AGENTSMITH / CONFIGURACIÓN"
+  },
+  "Esta é a visualização da interface. Abra o aplicativo AgentSmith para usar os recursos nativos.": {
+    "en": "This is the interface preview. Open the AgentSmith app to use native features.",
+    "es": "Esta es la vista previa. Abre la aplicación AgentSmith para usar las funciones nativas."
+  },
+  "Cadastre e selecione uma máquina.": {
+    "en": "Add and select a machine.",
+    "es": "Añade y selecciona una máquina."
+  },
+  "Roteiro criado. Confira as etapas e inicie quando estiver pronto.": {
+    "en": "Plan created. Review the steps and start when ready.",
+    "es": "Plan creado. Revisa los pasos e inicia cuando estés listo."
+  },
+  "Automação pausada. O controle manual será liberado assim que a ação em andamento terminar.": {
+    "en": "Automation paused. Manual control will be available once the current action finishes.",
+    "es": "Automatización pausada. El control manual estará disponible cuando termine la acción en curso."
+  },
+  "Roteiro reiniciado desde a primeira etapa. A execução anterior permanece no histórico.": {
+    "en": "Plan restarted from the first step. The previous run remains in history.",
+    "es": "Plan reiniciado desde el primer paso. La ejecución anterior permanece en el historial."
+  },
+  "Parada solicitada. As ações já enviadas ao Windows são preservadas.": {
+    "en": "Stop requested. Actions already sent to Windows are preserved.",
+    "es": "Parada solicitada. Las acciones ya enviadas a Windows se conservan."
+  },
+  "Perfil salvo. Use “Testar” para conferir a conexão com o modelo.": {
+    "en": "Profile saved. Use “Test” to check the model connection.",
+    "es": "Perfil guardado. Usa «Probar» para comprobar la conexión con el modelo."
+  },
+  "Máquina cadastrada.": {
+    "en": "Machine saved.",
+    "es": "Máquina guardada."
+  },
+  "Conectando com a senha salva no Chaves do macOS.": {
+    "en": "Connecting with the password saved in macOS Keychain.",
+    "es": "Conectando con la contraseña guardada en el Llavero de macOS."
+  },
+  "Não configurado": {
+    "en": "Not configured",
+    "es": "Sin configurar"
+  },
+  "Máquina não encontrada.": {
+    "en": "Machine not found.",
+    "es": "Máquina no encontrada."
+  },
+  "Ritmo atualizado. O tempo do modelo aparecerá no histórico.": {
+    "en": "Pace updated. Model response times will appear in history.",
+    "es": "Ritmo actualizado. El tiempo del modelo aparecerá en el historial."
+  },
+  "Dispensar": {
+    "en": "Dismiss",
+    "es": "Descartar"
+  },
+  "Navegação principal": {
+    "en": "Main navigation",
+    "es": "Navegación principal"
+  },
+  "Workspace pessoal": {
+    "en": "Personal workspace",
+    "es": "Espacio personal"
+  },
+  "OPERAÇÃO REMOTA COM IA": {
+    "en": "AI REMOTE OPERATIONS",
+    "es": "OPERACIÓN REMOTA CON IA"
+  },
+  "IA somente neste Mac": {
+    "en": "AI only on this Mac",
+    "es": "IA solo en este Mac"
+  },
+  "Execução neste Mac": {
+    "en": "Runs on this Mac",
+    "es": "Ejecución en este Mac"
+  },
+  "Você define o objetivo.": {
+    "en": "You set the goal.",
+    "es": "Tú defines el objetivo."
+  },
+  "Smith cuida dos próximos passos.": {
+    "en": "Smith handles the next steps.",
+    "es": "Smith se encarga de los siguientes pasos."
+  },
+  "Expandir barra lateral": {
+    "en": "Expand sidebar",
+    "es": "Expandir barra lateral"
+  },
+  "Recolher barra lateral": {
+    "en": "Collapse sidebar",
+    "es": "Contraer barra lateral"
+  },
+  "Workspace": {
+    "en": "Workspace",
+    "es": "Espacio de trabajo"
+  },
+  "Sessão ativa": {
+    "en": "Active session",
+    "es": "Sesión activa"
+  },
+  "Nenhuma sessão ativa": {
+    "en": "No active session",
+    "es": "Ninguna sesión activa"
+  },
+  "Visualização da interface · Os recursos de conexão e IA funcionam no aplicativo para macOS.": {
+    "en": "Interface preview · Connection and AI features work in the macOS app.",
+    "es": "Vista previa · Las funciones de conexión e IA funcionan en la aplicación para macOS."
+  },
+  "SEU OPERADOR DIGITAL": {
+    "en": "YOUR DIGITAL OPERATOR",
+    "es": "TU OPERADOR DIGITAL"
+  },
+  "Vamos colocar o trabalho em movimento.": {
+    "en": "Let's get work moving.",
+    "es": "Pongamos el trabajo en marcha."
+  },
+  "Conecte um Windows, entregue um roteiro e acompanhe cada etapa.": {
+    "en": "Connect to Windows, provide a plan and follow every step.",
+    "es": "Conecta un Windows, entrega un plan y sigue cada paso."
+  },
+  "Configurar IA": {
+    "en": "Configure AI",
+    "es": "Configurar IA"
+  },
+  "máquinas cadastradas": {
+    "en": "registered machines",
+    "es": "máquinas registradas"
+  },
+  "RDP + conectores futuros": {
+    "en": "RDP + future connectors",
+    "es": "RDP + futuros conectores"
+  },
+  "perfis de modelo": {
+    "en": "model profiles",
+    "es": "perfiles de modelo"
+  },
+  "Nuvem, local ou híbrido": {
+    "en": "Cloud, local or hybrid",
+    "es": "Nube, local o híbrido"
+  },
+  "tarefas concluídas": {
+    "en": "completed tasks",
+    "es": "tareas completadas"
+  },
+  "Com verificação por etapa": {
+    "en": "Every step verified",
+    "es": "Con verificación por paso"
+  },
+  "PRÓXIMA MISSÃO": {
+    "en": "NEXT MISSION",
+    "es": "PRÓXIMA MISIÓN"
+  },
+  "O que vamos fazer?": {
+    "en": "What shall we do?",
+    "es": "¿Qué vamos a hacer?"
+  },
+  "Descreva o objetivo ou cole seu passo a passo.\n\nEx.: abra o sistema de atendimento, localize o chamado 4582 e altere o responsável para Carlos. Confirme que foi salvo.": {
+    "en": "Describe your goal or paste your step-by-step instructions.\n\nExample: open the support system, find ticket 4582 and assign it to Carlos. Confirm it was saved.",
+    "es": "Describe el objetivo o pega tus instrucciones paso a paso.\n\nEj.: abre el sistema de atención, busca el caso 4582 y asígnalo a Carlos. Confirma que se guardó."
+  },
+  "caracteres": {
+    "en": "characters",
+    "es": "caracteres"
+  },
+  "Preparando roteiro…": {
+    "en": "Preparing plan…",
+    "es": "Preparando plan…"
+  },
+  "Preparar roteiro": {
+    "en": "Prepare plan",
+    "es": "Preparar plan"
+  },
+  "Smith prepara as etapas. Você inicia a execução.": {
+    "en": "Smith prepares the steps. You start the run.",
+    "es": "Smith prepara los pasos. Tú inicias la ejecución."
+  },
+  "Executar": {
+    "en": "Run",
+    "es": "Ejecutar"
+  },
+  "Retomar": {
+    "en": "Resume",
+    "es": "Reanudar"
+  },
+  "Pausar": {
+    "en": "Pause",
+    "es": "Pausar"
+  },
+  "Encerrar esta tarefa. Esc durante a execução.": {
+    "en": "Stop this task. Esc during execution.",
+    "es": "Detener esta tarea. Esc durante la ejecución."
+  },
+  "Parando…": {
+    "en": "Stopping…",
+    "es": "Deteniendo…"
+  },
+  "Parar": {
+    "en": "Stop",
+    "es": "Detener"
+  },
+  "Pause ou pare a execução antes de reiniciar.": {
+    "en": "Pause or stop the run before restarting.",
+    "es": "Pausa o detén la ejecución antes de reiniciar."
+  },
+  "Executar o mesmo roteiro desde a primeira etapa, mantendo o histórico anterior.": {
+    "en": "Run the same plan from the first step, keeping the previous history.",
+    "es": "Ejecutar el mismo plan desde el primer paso, conservando el historial anterior."
+  },
+  "Reiniciando…": {
+    "en": "Restarting…",
+    "es": "Reiniciando…"
+  },
+  "Reiniciar": {
+    "en": "Restart",
+    "es": "Reiniciar"
+  },
+  "Repetir": {
+    "en": "Repeat",
+    "es": "Repetir"
+  },
+  "ações": {
+    "en": "actions",
+    "es": "acciones"
+  },
+  " no ciclo": {
+    "en": " in this cycle",
+    "es": " en el ciclo"
+  },
+  "Do objetivo ao resultado,": {
+    "en": "From goal to result,",
+    "es": "Del objetivo al resultado,"
+  },
+  "um passo verificado de cada vez.": {
+    "en": "one verified step at a time.",
+    "es": "un paso verificado a la vez."
+  },
+  "Observar": {
+    "en": "Observe",
+    "es": "Observar"
+  },
+  "Agir": {
+    "en": "Act",
+    "es": "Actuar"
+  },
+  "Verificar": {
+    "en": "Verify",
+    "es": "Verificar"
+  },
+  "Histórico de trabalho": {
+    "en": "Work history",
+    "es": "Historial de trabajo"
+  },
+  "Progresso salvo neste Mac": {
+    "en": "Progress saved on this Mac",
+    "es": "Progreso guardado en este Mac"
+  },
+  "As ações e verificações das suas tarefas vão aparecer aqui.": {
+    "en": "Your tasks' actions and checks will appear here.",
+    "es": "Las acciones y verificaciones de tus tareas aparecerán aquí."
+  },
+  "AMBIENTES DE TRABALHO": {
+    "en": "WORK ENVIRONMENTS",
+    "es": "ENTORNOS DE TRABAJO"
+  },
+  "Suas máquinas, em um só lugar.": {
+    "en": "Your machines, all in one place.",
+    "es": "Tus máquinas, en un solo lugar."
+  },
+  "Cadastre o destino e escolha a forma de acesso.": {
+    "en": "Add the destination and choose how to connect.",
+    "es": "Registra el destino y elige la forma de acceso."
+  },
+  "Adicionar máquina": {
+    "en": "Add machine",
+    "es": "Añadir máquina"
+  },
+  "Usuário a configurar": {
+    "en": "User not configured",
+    "es": "Usuario sin configurar"
+  },
+  "Conector nativo": {
+    "en": "Native connector",
+    "es": "Conector nativo"
+  },
+  "Em desenvolvimento": {
+    "en": "In development",
+    "es": "En desarrollo"
+  },
+  "Conectar": {
+    "en": "Connect",
+    "es": "Conectar"
+  },
+  "Editar": {
+    "en": "Edit",
+    "es": "Editar"
+  },
+  "Adicionar um Windows": {
+    "en": "Add a Windows machine",
+    "es": "Añadir un Windows"
+  },
+  "Endereço, credenciais e conexão": {
+    "en": "Address, credentials and connection",
+    "es": "Dirección, credenciales y conexión"
+  },
+  "Primeiro conector: Microsoft RDP": {
+    "en": "First connector: Microsoft RDP",
+    "es": "Primer conector: Microsoft RDP"
+  },
+  "RustDesk, NanoKVM, NanoKVM Pro e NanoKVM-USB têm lugar na arquitetura. Seus conectores ainda serão implementados.": {
+    "en": "RustDesk, NanoKVM, NanoKVM Pro and NanoKVM-USB have a place in the architecture. Their connectors are still to be implemented.",
+    "es": "RustDesk, NanoKVM, NanoKVM Pro y NanoKVM-USB tienen lugar en la arquitectura. Sus conectores aún están pendientes."
+  },
+  "INTELIGÊNCIA À SUA ESCOLHA": {
+    "en": "INTELLIGENCE, YOUR CHOICE",
+    "es": "INTELIGENCIA A TU ELECCIÓN"
+  },
+  "Um Smith. Diferentes inteligências.": {
+    "en": "One Smith. Different intelligences.",
+    "es": "Un Smith. Diferentes inteligencias."
+  },
+  "Use um ou vários provedores, com modelos diferentes para cada função.": {
+    "en": "Use one or more providers, with different models for each role.",
+    "es": "Usa uno o varios proveedores, con distintos modelos para cada función."
+  },
+  "10 provedores + modelos locais": {
+    "en": "10 providers + local models",
+    "es": "10 proveedores + modelos locales"
+  },
+  "Seus perfis de modelo": {
+    "en": "Your model profiles",
+    "es": "Tus perfiles de modelo"
+  },
+  "Chaves guardadas no macOS": {
+    "en": "Keys stored in macOS",
+    "es": "Claves guardadas en macOS"
+  },
+  "Login · ": {
+    "en": "Login · ",
+    "es": "Inicio de sesión · "
+  },
+  "Modelo automático": {
+    "en": "Automatic model",
+    "es": "Modelo automático"
+  },
+  "Visão habilitada": {
+    "en": "Vision enabled",
+    "es": "Visión habilitada"
+  },
+  "Texto": {
+    "en": "Text",
+    "es": "Texto"
+  },
+  "Testar": {
+    "en": "Test",
+    "es": "Probar"
+  },
+  "Editar ": {
+    "en": "Edit ",
+    "es": "Editar "
+  },
+  "Estados Unidos": {
+    "en": "United States",
+    "es": "Estados Unidos"
+  },
+  "No seu Mac": {
+    "en": "On your Mac",
+    "es": "En tu Mac"
+  },
+  "Privacidade e controle local": {
+    "en": "Privacy and local control",
+    "es": "Privacidad y control local"
+  },
+  "Seleção inicial de fornecedores": {
+    "en": "Initial provider selection",
+    "es": "Selección inicial de proveedores"
+  },
+  "Servidor local": {
+    "en": "Local server",
+    "es": "Servidor local"
+  },
+  "Login ou API key": {
+    "en": "Login or API key",
+    "es": "Inicio de sesión o clave API"
+  },
+  "API própria": {
+    "en": "Provider API",
+    "es": "API propia"
+  },
+  "Capacidade pertence ao modelo, não ao nome do provedor.": {
+    "en": "Capabilities belong to the model, not the provider's name.",
+    "es": "La capacidad depende del modelo, no del nombre del proveedor."
+  },
+  "Planejamento aceita texto. Operação e verificação exigem um modelo com visão. Os IDs são configuráveis para acompanhar o catálogo da sua conta.": {
+    "en": "Planning accepts text. Operation and verification require a vision model. IDs are configurable to match your account's catalog.",
+    "es": "La planificación acepta texto. Operar y verificar requieren un modelo con visión. Los ID se pueden configurar según el catálogo de tu cuenta."
+  },
+  "AS PESSOAS CERTAS, EM CADA PAPEL": {
+    "en": "THE RIGHT PEOPLE, IN EACH ROLE",
+    "es": "LAS PERSONAS ADECUADAS, EN CADA FUNCIÓN"
+  },
+  "Escolha quem pensa e quem confere.": {
+    "en": "Choose who thinks and who checks.",
+    "es": "Elige quién piensa y quién verifica."
+  },
+  "Use o mesmo modelo em tudo ou distribua o trabalho entre perfis.": {
+    "en": "Use the same model for everything or distribute work across profiles.",
+    "es": "Usa el mismo modelo para todo o distribuye el trabajo entre perfiles."
+  },
+  "Somente local": {
+    "en": "Local only",
+    "es": "Solo local"
+  },
+  "Permite apenas endpoints neste Mac. Nunca usa nuvem como alternativa.": {
+    "en": "Allows only endpoints on this Mac. Never falls back to the cloud.",
+    "es": "Permite solo endpoints en este Mac. Nunca usa la nube como alternativa."
+  },
+  "Planejar": {
+    "en": "Plan",
+    "es": "Planificar"
+  },
+  "Transforma seu objetivo em etapas verificáveis.": {
+    "en": "Turns your goal into verifiable steps.",
+    "es": "Convierte tu objetivo en pasos verificables."
+  },
+  "Operar": {
+    "en": "Operate",
+    "es": "Operar"
+  },
+  "Observa a tela e escolhe a próxima ação.": {
+    "en": "Observes the screen and chooses the next action.",
+    "es": "Observa la pantalla y elige la siguiente acción."
+  },
+  "Confere se o resultado esperado aconteceu.": {
+    "en": "Checks whether the expected result occurred.",
+    "es": "Comprueba si se obtuvo el resultado esperado."
+  },
+  "Modelo principal": {
+    "en": "Primary model",
+    "es": "Modelo principal"
+  },
+  "Alternativa se indisponível": {
+    "en": "Fallback if unavailable",
+    "es": "Alternativa si no está disponible"
+  },
+  "Selecionar perfil": {
+    "en": "Select profile",
+    "es": "Seleccionar perfil"
+  },
+  "Sem alternativa": {
+    "en": "No fallback",
+    "es": "Sin alternativa"
+  },
+  "Texto estruturado": {
+    "en": "Structured text",
+    "es": "Texto estructurado"
+  },
+  "Requer modelo com visão": {
+    "en": "Requires a vision model",
+    "es": "Requiere un modelo con visión"
+  },
+  "Limite de ações por tarefa": {
+    "en": "Action limit per task",
+    "es": "Límite de acciones por tarea"
+  },
+  "Ao atingir o limite, Smith salva o progresso e sinaliza para revisão.": {
+    "en": "When the limit is reached, Smith saves progress and flags it for review.",
+    "es": "Al alcanzar el límite, Smith guarda el progreso y lo señala para revisión."
+  },
+  "Limite de ações": {
+    "en": "Action limit",
+    "es": "Límite de acciones"
+  },
+  "A alternativa só é consultada em falhas transitórias, como indisponibilidade ou limite de requisições. As ações no Windows continuam sob um único executor.": {
+    "en": "The fallback is used only for temporary failures, such as unavailability or rate limits. Windows actions remain under a single executor.",
+    "es": "La alternativa solo se consulta ante fallos transitorios, como indisponibilidad o límites de solicitudes. Las acciones en Windows siguen bajo un único ejecutor."
+  },
+  "ARQUITETURA AGENTSMITH": {
+    "en": "AGENTSMITH ARCHITECTURE",
+    "es": "ARQUITECTURA AGENTSMITH"
+  },
+  "Entender. Agir. Conferir.": {
+    "en": "Understand. Act. Verify.",
+    "es": "Entender. Actuar. Verificar."
+  },
+  "Uma base modular para controlar computadores Windows a partir do Mac.": {
+    "en": "A modular foundation to control Windows computers from your Mac.",
+    "es": "Una base modular para controlar equipos Windows desde el Mac."
+  },
+  "Aplicativo macOS": {
+    "en": "macOS app",
+    "es": "Aplicación macOS"
+  },
+  "Tauri + React · Configuração e acompanhamento": {
+    "en": "Tauri + React · Setup and monitoring",
+    "es": "Tauri + React · Configuración y seguimiento"
+  },
+  "Roteador de modelos": {
+    "en": "Model router",
+    "es": "Enrutador de modelos"
+  },
+  "Motor local integrado · 10 fornecedores · APIs locais": {
+    "en": "Built-in local engine · 10 providers · Local APIs",
+    "es": "Motor local integrado · 10 proveedores · API locales"
+  },
+  "Executor Rust": {
+    "en": "Rust executor",
+    "es": "Ejecutor Rust"
+  },
+  "Plano → Observação → Ação → Verificação": {
+    "en": "Plan → Observation → Action → Verification",
+    "es": "Plan → Observación → Acción → Verificación"
+  },
+  "Estado persistente": {
+    "en": "Persistent state",
+    "es": "Estado persistente"
+  },
+  "SQLite · Chaves do macOS · Histórico": {
+    "en": "SQLite · macOS Keychain · History",
+    "es": "SQLite · Llavero de macOS · Historial"
+  },
+  "Adaptadores de conexão": {
+    "en": "Connection adapters",
+    "es": "Adaptadores de conexión"
+  },
+  "FreeRDP nativo nesta prévia · RustDesk e NanoKVM nas próximas etapas": {
+    "en": "Native FreeRDP in this preview · RustDesk and NanoKVM coming later",
+    "es": "FreeRDP nativo en esta vista previa · RustDesk y NanoKVM en próximas etapas"
+  },
+  "Computadores Windows": {
+    "en": "Windows computers",
+    "es": "Equipos Windows"
+  },
+  "Mouse e teclado enviados à sessão remota": {
+    "en": "Mouse and keyboard sent to the remote session",
+    "es": "Ratón y teclado enviados a la sesión remota"
+  },
+  "O que já está nesta prévia": {
+    "en": "What's included in this preview",
+    "es": "Qué incluye esta vista previa"
+  },
+  "Perfis de IA, quatro formatos de API, modo local, planejamento de roteiros, executor visual, controle RDP, pausa, histórico e retomada manual.": {
+    "en": "AI profiles, four API formats, local mode, task planning, visual executor, RDP control, pause, history and manual resume.",
+    "es": "Perfiles de IA, cuatro formatos de API, modo local, planificación, ejecutor visual, control RDP, pausa, historial y reanudación manual."
+  },
+  "Validação e próximas etapas": {
+    "en": "Validation and next steps",
+    "es": "Validación y próximos pasos"
+  },
+  "As contas de LLM e uma máquina Windows real precisam ser configuradas para validar o fluxo completo. RustDesk, NanoKVM, reconexão automática e execução simultânea ainda estão pendentes.": {
+    "en": "LLM accounts and a real Windows machine must be configured to validate the full flow. RustDesk, NanoKVM, automatic reconnection and concurrent execution are still pending.",
+    "es": "Las cuentas de LLM y una máquina Windows real deben configurarse para validar el flujo completo. RustDesk, NanoKVM, reconexión automática y ejecución simultánea siguen pendientes."
+  },
+  "Seu próximo ajudante.": {
+    "en": "Your next helping hand.",
+    "es": "Tu próximo ayudante."
+  },
+  "macOS primeiro. Arquitetura preparada para evoluir.": {
+    "en": "macOS first. Architecture built to evolve.",
+    "es": "macOS primero. Arquitectura preparada para evolucionar."
+  },
+  "Ritmo de operação": {
+    "en": "Operation pace",
+    "es": "Ritmo de operación"
+  },
+  "Equilibre resposta, nitidez e consumo do Mac.": {
+    "en": "Balance responsiveness, clarity and Mac resource usage.",
+    "es": "Equilibra respuesta, nitidez y consumo del Mac."
+  },
+  "Ágil": {
+    "en": "Fast",
+    "es": "Ágil"
+  },
+  "Equilibrado": {
+    "en": "Balanced",
+    "es": "Equilibrado"
+  },
+  "Econômico": {
+    "en": "Efficient",
+    "es": "Económico"
+  },
+  "Intervalo entre capturas": {
+    "en": "Capture interval",
+    "es": "Intervalo entre capturas"
+  },
+  "100 a 2.000 ms. Menor intervalo deixa a visualização mais fluida e usa mais CPU.": {
+    "en": "100 to 2,000 ms. Shorter intervals make the view smoother and use more CPU.",
+    "es": "De 100 a 2.000 ms. Un intervalo menor ofrece más fluidez y usa más CPU."
+  },
+  "Intervalo entre capturas em milissegundos": {
+    "en": "Capture interval in milliseconds",
+    "es": "Intervalo entre capturas en milisegundos"
+  },
+  "capturas por segundo · Atualização da interface acompanha esse ritmo.": {
+    "en": "captures per second · The interface refresh follows this pace.",
+    "es": "capturas por segundo · La interfaz se actualiza a este ritmo."
+  },
+  "Pausa após cada ação": {
+    "en": "Pause after each action",
+    "es": "Pausa después de cada acción"
+  },
+  "100 a 3.000 ms. O aplicativo também aguarda uma nova imagem antes de continuar.": {
+    "en": "100 to 3,000 ms. The app also waits for a new image before continuing.",
+    "es": "De 100 a 3.000 ms. La aplicación también espera una imagen nueva antes de continuar."
+  },
+  "Pausa após cada ação em milissegundos": {
+    "en": "Pause after each action in milliseconds",
+    "es": "Pausa después de cada acción en milisegundos"
+  },
+  "Imagem enviada à IA": {
+    "en": "Image sent to AI",
+    "es": "Imagen enviada a la IA"
+  },
+  "Imagens menores reduzem os dados, mas podem dificultar a leitura de textos pequenos. O zoom da RDP é independente.": {
+    "en": "Smaller images reduce data, but may make small text harder to read. RDP zoom is independent.",
+    "es": "Las imágenes pequeñas reducen los datos, pero pueden dificultar la lectura de texto pequeño. El zoom RDP es independiente."
+  },
+  "Largura máxima da imagem para IA": {
+    "en": "Maximum image width for AI",
+    "es": "Ancho máximo de imagen para IA"
+  },
+  "Até 1280 pixels · Mais leve": {
+    "en": "Up to 1280 pixels · Lighter",
+    "es": "Hasta 1280 píxeles · Más ligero"
+  },
+  "Até 1600 pixels · Equilibrado": {
+    "en": "Up to 1600 pixels · Balanced",
+    "es": "Hasta 1600 píxeles · Equilibrado"
+  },
+  "Até 1920 pixels · Mais detalhe": {
+    "en": "Up to 1920 pixels · More detail",
+    "es": "Hasta 1920 píxeles · Más detalle"
+  },
+  "Até 2560 pixels": {
+    "en": "Up to 2560 pixels",
+    "es": "Hasta 2560 píxeles"
+  },
+  "Resolução original": {
+    "en": "Original resolution",
+    "es": "Resolución original"
+  },
+  "O ritmo não limita o tempo de resposta do modelo. Cada ação continua sendo verificada. A IA recebe capturas sob demanda, não todas as imagens exibidas na tela. O histórico registra o tempo de cada resposta.": {
+    "en": "Pace does not limit model response time. Every action is still verified. AI receives captures on demand, not all images shown on screen. History records each response time.",
+    "es": "El ritmo no limita el tiempo de respuesta del modelo. Cada acción se verifica. La IA recibe capturas bajo demanda, no todas las imágenes mostradas. El historial registra cada tiempo de respuesta."
+  },
+  "Cancelar": {
+    "en": "Cancel",
+    "es": "Cancelar"
+  },
+  "Salvando…": {
+    "en": "Saving…",
+    "es": "Guardando…"
+  },
+  "Salvar ritmo": {
+    "en": "Save pace",
+    "es": "Guardar ritmo"
+  },
+  "Ajustar tela do Windows": {
+    "en": "Adjust Windows display",
+    "es": "Ajustar pantalla de Windows"
+  },
+  "Resolução da sessão": {
+    "en": "Session resolution",
+    "es": "Resolución de la sesión"
+  },
+  "Mais resolução oferece mais espaço para janelas e aplicativos.": {
+    "en": "Higher resolution gives windows and apps more space.",
+    "es": "Una mayor resolución ofrece más espacio para ventanas y aplicaciones."
+  },
+  " · Equilibrado": {
+    "en": " · Balanced",
+    "es": " · Equilibrado"
+  },
+  " · Full HD": {
+    "en": " · Full HD",
+    "es": " · Full HD"
+  },
+  "Escala do Windows": {
+    "en": "Windows scale",
+    "es": "Escala de Windows"
+  },
+  "100% usa ícones e textos menores. Aumente se precisar de letras maiores.": {
+    "en": "100% uses smaller icons and text. Increase it if you need larger text.",
+    "es": "100 % usa iconos y texto más pequeños. Aumenta la escala si necesitas letras mayores."
+  },
+  "Os ajustes ficam salvos nesta máquina e são solicitados ao reconectar. O Windows pode exigir sair da conta para aplicar uma mudança de escala. Para ampliar ou reduzir apenas a imagem no Mac, use o controle de Zoom.": {
+    "en": "Settings are saved for this machine and requested on reconnect. Windows may require signing out to apply a scale change. To resize only the image on your Mac, use Zoom.",
+    "es": "Los ajustes se guardan para esta máquina y se solicitan al reconectar. Windows puede requerir cerrar sesión para aplicar la escala. Para cambiar solo el tamaño de la imagen en el Mac, usa Zoom."
+  },
+  "Salvar e conectar…": {
+    "en": "Save and connect…",
+    "es": "Guardar y conectar…"
+  },
+  "Editar perfil": {
+    "en": "Edit profile",
+    "es": "Editar perfil"
+  },
+  "Adicionar {0}": {
+    "en": "Add {0}",
+    "es": "Añadir {0}"
+  },
+  "Forma de conexão": {
+    "en": "Connection method",
+    "es": "Forma de conexión"
+  },
+  "Login pelo navegador": {
+    "en": "Browser login",
+    "es": "Inicio de sesión en el navegador"
+  },
+  "API key": {
+    "en": "API key",
+    "es": "Clave API"
+  },
+  "Nome do perfil": {
+    "en": "Profile name",
+    "es": "Nombre del perfil"
+  },
+  "Ex.: Planejador principal": {
+    "en": "E.g. Main planner",
+    "es": "Ej.: Planificador principal"
+  },
+  "Modelo da sua conta": {
+    "en": "Model in your account",
+    "es": "Modelo de tu cuenta"
+  },
+  "ID exato do modelo": {
+    "en": "Exact model ID",
+    "es": "ID exacto del modelo"
+  },
+  "Use default para o padrão do programa, ou informe um modelo disponível na sua conta.": {
+    "en": "Use default for the program's default, or enter a model available in your account.",
+    "es": "Usa default para el modelo predeterminado o introduce uno disponible en tu cuenta."
+  },
+  "Copie o ID disponível na sua conta": {
+    "en": "Copy the ID available in your account",
+    "es": "Copia el ID disponible en tu cuenta"
+  },
+  "Automático · padrão da conta": {
+    "en": "Automatic · Account default",
+    "es": "Automático · Predeterminado de la cuenta"
+  },
+  "Endereço base da API": {
+    "en": "API base URL",
+    "es": "Dirección base de la API"
+  },
+  "Use o endpoint Bedrock da região com acesso ao modelo. Autenticação por chave de API Bedrock; IAM/SigV4 ainda não incluído.": {
+    "en": "Use the Bedrock endpoint for the region with model access. Bedrock API key authentication; IAM/SigV4 is not included yet.",
+    "es": "Usa el endpoint Bedrock de la región con acceso al modelo. Autenticación por clave API Bedrock; IAM/SigV4 aún no incluido."
+  },
+  "Inicie o servidor local e carregue o modelo antes de testar.": {
+    "en": "Start the local server and load the model before testing.",
+    "es": "Inicia el servidor local y carga el modelo antes de probar."
+  },
+  "O endereço e a chave precisam corresponder à mesma região e conta.": {
+    "en": "The address and key must match the same region and account.",
+    "es": "La dirección y la clave deben corresponder a la misma región y cuenta."
+  },
+  "Chave do servidor (opcional)": {
+    "en": "Server key (optional)",
+    "es": "Clave del servidor (opcional)"
+  },
+  "Chave da API": {
+    "en": "API key",
+    "es": "Clave de la API"
+  },
+  "Guardada no Chaves do macOS. Deixe em branco para manter a chave já cadastrada neste endpoint.": {
+    "en": "Stored in macOS Keychain. Leave blank to keep the key already saved for this endpoint.",
+    "es": "Guardada en el Llavero de macOS. Déjala en blanco para conservar la clave de este endpoint."
+  },
+  "•••••••• (não exibida)": {
+    "en": "•••••••• (not shown)",
+    "es": "•••••••• (no se muestra)"
+  },
+  "Cole sua chave aqui": {
+    "en": "Paste your key here",
+    "es": "Pega tu clave aquí"
+  },
+  "Este modelo aceita imagens": {
+    "en": "This model accepts images",
+    "es": "Este modelo acepta imágenes"
+  },
+  "Habilita o perfil para operar e verificar a tela remota. O teste de conexão verifica a resposta de texto.": {
+    "en": "Enables the profile to operate and verify the remote screen. The connection test checks a text response.",
+    "es": "Habilita el perfil para operar y verificar la pantalla remota. La prueba de conexión comprueba la respuesta de texto."
+  },
+  "Consultar modelos": {
+    "en": "List models",
+    "es": "Consultar modelos"
+  },
+  "Salvar perfil": {
+    "en": "Save profile",
+    "es": "Guardar perfil"
+  },
+  "Editar máquina": {
+    "en": "Edit machine",
+    "es": "Editar máquina"
+  },
+  "Adicionar máquina Windows": {
+    "en": "Add Windows machine",
+    "es": "Añadir máquina Windows"
+  },
+  "Uma conexão salva para o seu próximo trabalho.": {
+    "en": "A saved connection for your next job.",
+    "es": "Una conexión guardada para tu próximo trabajo."
+  },
+  "Nome da máquina": {
+    "en": "Machine name",
+    "es": "Nombre de la máquina"
+  },
+  "Ex.: Atendimento 01": {
+    "en": "E.g. Support 01",
+    "es": "Ej.: Atención 01"
+  },
+  "Tipo de conexão": {
+    "en": "Connection type",
+    "es": "Tipo de conexión"
+  },
+  " · em desenvolvimento": {
+    "en": " · in development",
+    "es": " · en desarrollo"
+  },
+  "Endereço IP ou hostname": {
+    "en": "IP address or hostname",
+    "es": "Dirección IP o nombre de host"
+  },
+  "Porta": {
+    "en": "Port",
+    "es": "Puerto"
+  },
+  "Usuário do Windows": {
+    "en": "Windows user",
+    "es": "Usuario de Windows"
+  },
+  "operador": {
+    "en": "operator",
+    "es": "operador"
+  },
+  "Domínio (opcional)": {
+    "en": "Domain (optional)",
+    "es": "Dominio (opcional)"
+  },
+  "Senha (opcional)": {
+    "en": "Password (optional)",
+    "es": "Contraseña (opcional)"
+  },
+  "Senha salva no Chaves do macOS. Deixe em branco para manter; digite apenas para trocar.": {
+    "en": "Password saved in macOS Keychain. Leave blank to keep it; enter a new one only to change it.",
+    "es": "Contraseña guardada en el Llavero de macOS. Déjala en blanco para conservarla; escribe solo para cambiarla."
+  },
+  "Verificando se existe senha salva…": {
+    "en": "Checking for a saved password…",
+    "es": "Buscando una contraseña guardada…"
+  },
+  "Nenhuma senha salva para este endereço e usuário. Informe para conectar automaticamente nas próximas vezes.": {
+    "en": "No password saved for this address and user. Enter one to connect automatically next time.",
+    "es": "No hay contraseña guardada para esta dirección y usuario. Introduce una para conectar automáticamente la próxima vez."
+  },
+  "Senha salva · não exibida": {
+    "en": "Password saved · Not shown",
+    "es": "Contraseña guardada · No se muestra"
+  },
+  "Digite para salvar no Chaves": {
+    "en": "Enter to save in Keychain",
+    "es": "Escribe para guardar en el Llavero"
+  },
+  "Impressão digital do certificado (opcional)": {
+    "en": "Certificate fingerprint (optional)",
+    "es": "Huella del certificado (opcional)"
+  },
+  "Para certificado não reconhecido, copie a impressão digital confirmada com o administrador. Não desativa a validação TLS.": {
+    "en": "For an unrecognized certificate, copy the fingerprint confirmed with your administrator. TLS validation remains enabled.",
+    "es": "Para un certificado desconocido, copia la huella confirmada con el administrador. La validación TLS sigue habilitada."
+  },
+  "SHA-256 exibido na primeira conexão": {
+    "en": "SHA-256 shown on first connection",
+    "es": "SHA-256 mostrado en la primera conexión"
+  },
+  "Salvar máquina": {
+    "en": "Save machine",
+    "es": "Guardar máquina"
+  },
+  "Conectar a {0}": {
+    "en": "Connect to {0}",
+    "es": "Conectar a {0}"
+  },
+  "Senha do Windows": {
+    "en": "Windows password",
+    "es": "Contraseña de Windows"
+  },
+  "Não há senha salva para este endereço e usuário.": {
+    "en": "No password saved for this address and user.",
+    "es": "No hay contraseña guardada para esta dirección y usuario."
+  },
+  "Salvar senha no Chaves do macOS": {
+    "en": "Save password in macOS Keychain",
+    "es": "Guardar contraseña en el Llavero de macOS"
+  },
+  "Na próxima conexão, Smith usará a senha salva automaticamente.": {
+    "en": "Smith will use the saved password automatically next time.",
+    "es": "Smith usará automáticamente la contraseña guardada en la próxima conexión."
+  },
+  "Conectando…": {
+    "en": "Connecting…",
+    "es": "Conectando…"
+  },
+  "Visão local integrada": {
+    "en": "Built-in local vision",
+    "es": "Visión local integrada"
+  },
+  "DENTRO DO AGENTSMITH": {
+    "en": "INSIDE AGENTSMITH",
+    "es": "DENTRO DE AGENTSMITH"
+  },
+  "Visão local": {
+    "en": "Local vision",
+    "es": "Visión local"
+  },
+  "Sem conta · Sem API key": {
+    "en": "No account · No API key",
+    "es": "Sin cuenta · Sin clave API"
+  },
+  "Baixe um modelo e interprete imagens neste Mac. O motor já vem no app; não precisa instalar outro programa.": {
+    "en": "Download a model and interpret images on this Mac. The engine is built in; no other app is needed.",
+    "es": "Descarga un modelo e interpreta imágenes en este Mac. El motor viene integrado; no necesitas otro programa."
+  },
+  "Modelo carregando ou respondendo…": {
+    "en": "Model loading or responding…",
+    "es": "Modelo cargando o respondiendo…"
+  },
+  "Modelo na memória · Pronto para responder": {
+    "en": "Model in memory · Ready to respond",
+    "es": "Modelo en memoria · Listo para responder"
+  },
+  "Motor em repouso · Memória liberada": {
+    "en": "Engine idle · Memory released",
+    "es": "Motor en reposo · Memoria liberada"
+  },
+  "Modelo descarregado da memória. O download continua salvo.": {
+    "en": "Model unloaded from memory. The download is still saved.",
+    "es": "Modelo descargado de la memoria. Los archivos siguen guardados."
+  },
+  "Liberar memória": {
+    "en": "Free memory",
+    "es": "Liberar memoria"
+  },
+  "Abra o aplicativo AgentSmith para baixar e executar modelos neste Mac.": {
+    "en": "Open the AgentSmith app to download and run models on this Mac.",
+    "es": "Abre la aplicación AgentSmith para descargar y ejecutar modelos en este Mac."
+  },
+  "Este aplicativo está sem o motor local. Abra a versão completa atualizada.": {
+    "en": "This app is missing the local engine. Open the updated full version.",
+    "es": "Esta aplicación no incluye el motor local. Abre la versión completa actualizada."
+  },
+  "Baixado": {
+    "en": "Downloaded",
+    "es": "Descargado"
+  },
+  "em disco ·": {
+    "en": "on disk ·",
+    "es": "en disco ·"
+  },
+  "· Um modelo por vez": {
+    "en": "· One model at a time",
+    "es": "· Un modelo a la vez"
+  },
+  "Baixar modelo": {
+    "en": "Download model",
+    "es": "Descargar modelo"
+  },
+  "Testando visão…": {
+    "en": "Testing vision…",
+    "es": "Probando visión…"
+  },
+  "Testar visão": {
+    "en": "Test vision",
+    "es": "Probar visión"
+  },
+  "Perfil disponível. Em Roteamento de IA, escolha este modelo em Operar e/ou Verificar. O roteamento atual foi preservado.": {
+    "en": "Profile available. In AI routing, choose this model for Operate and/or Verify. Current routing was preserved.",
+    "es": "Perfil disponible. En Enrutamiento de IA, elige este modelo para Operar y/o Verificar. Se conservó el enrutamiento actual."
+  },
+  "Adicionar aos meus modelos": {
+    "en": "Add to my models",
+    "es": "Añadir a mis modelos"
+  },
+  "Remover download de ": {
+    "en": "Remove download of ",
+    "es": "Eliminar descarga de "
+  },
+  "Download removido. Baixe novamente antes de usar este modelo.": {
+    "en": "Download removed. Download again before using this model.",
+    "es": "Descarga eliminada. Vuelve a descargar antes de usar este modelo."
+  },
+  "Download de ": {
+    "en": "Download of ",
+    "es": "Descarga de "
+  },
+  "de": {
+    "en": "of",
+    "es": "de"
+  },
+  "Cancelar download": {
+    "en": "Cancel download",
+    "es": "Cancelar descarga"
+  },
+  "A primeira resposta inclui carregar o modelo. Após 2 minutos sem uso, a memória é liberada automaticamente. As imagens não são gravadas pelo motor; os arquivos do modelo ficam salvos até você removê-los. Se houver outro provedor no roteamento, ele poderá receber imagens conforme a rota escolhida.": {
+    "en": "The first response includes loading the model. After 2 minutes idle, memory is freed automatically. The engine does not save images; model files remain until you remove them. Other providers in your routing may receive images according to the selected route.",
+    "es": "La primera respuesta incluye cargar el modelo. Tras 2 minutos sin uso, la memoria se libera automáticamente. El motor no guarda imágenes; los archivos del modelo permanecen hasta que los elimines. Otros proveedores del enrutamiento pueden recibir imágenes según la ruta elegida."
+  },
+  "Conexão pelo navegador": {
+    "en": "Browser connection",
+    "es": "Conexión por navegador"
+  },
+  "Entrar com": {
+    "en": "Sign in with",
+    "es": "Iniciar sesión con"
+  },
+  "Conexão oficial via": {
+    "en": "Official connection via",
+    "es": "Conexión oficial mediante"
+  },
+  "· Sem API key": {
+    "en": "· No API key",
+    "es": "· Sin clave API"
+  },
+  "O navegador abrirá a página oficial para você entrar na sua conta. O acesso aos modelos segue os limites do seu plano.": {
+    "en": "Your browser will open the official page to sign in. Model access follows your plan's limits.",
+    "es": "El navegador abrirá la página oficial para iniciar sesión. El acceso a los modelos sigue los límites de tu plan."
+  },
+  "A sessão pertence ao": {
+    "en": "The session belongs to",
+    "es": "La sesión pertenece a"
+  },
+  "neste Mac e é compartilhada entre os perfis deste provedor. Senhas e tokens ficam sob responsabilidade do programa oficial.": {
+    "en": "on this Mac and is shared across this provider's profiles. Passwords and tokens are managed by the official program.",
+    "es": "en este Mac y se comparte entre los perfiles de este proveedor. El programa oficial gestiona contraseñas y tokens."
+  },
+  "Verificando componente instalado…": {
+    "en": "Checking installed component…",
+    "es": "Comprobando componente instalado…"
+  },
+  "Instalar": {
+    "en": "Install",
+    "es": "Instalar"
+  },
+  "Entrar pelo navegador": {
+    "en": "Sign in with browser",
+    "es": "Iniciar sesión en el navegador"
+  },
+  "Cancelar conexão": {
+    "en": "Cancel connection",
+    "es": "Cancelar conexión"
+  },
+  "Testando…": {
+    "en": "Testing…",
+    "es": "Probando…"
+  },
+  "Testar conexão": {
+    "en": "Test connection",
+    "es": "Probar conexión"
+  },
+  "A instalação usa o pacote oficial e exige Node.js LTS. Nenhuma assinatura é contratada pelo AgentSmith.": {
+    "en": "Installation uses the official package and requires Node.js LTS. AgentSmith does not purchase any subscription.",
+    "es": "La instalación usa el paquete oficial y requiere Node.js LTS. AgentSmith no contrata ninguna suscripción."
+  },
+  "{0} · Fim: {1}": {
+    "en": "{0} · End: {1}",
+    "es": "{0} · Fin: {1}"
+  },
+  "Início agora": {
+    "en": "Start now",
+    "es": "Inicio ahora"
+  },
+  "Início: {0}": {
+    "en": "Start: {0}",
+    "es": "Inicio: {0}"
+  },
+  "Escolha um intervalo de 1 a 3600 segundos.": {
+    "en": "Choose an interval from 1 to 3600 seconds.",
+    "es": "Elige un intervalo de 1 a 3600 segundos."
+  },
+  "Escolha uma duração de 1 minuto a 7 dias.": {
+    "en": "Choose a duration from 1 minute to 7 days.",
+    "es": "Elige una duración de 1 minuto a 7 días."
+  },
+  "Repetir roteiro": {
+    "en": "Repeat plan",
+    "es": "Repetir plan"
+  },
+  "AGENTSMITH / REPETIÇÃO": {
+    "en": "AGENTSMITH / REPETITION",
+    "es": "AGENTSMITH / REPETICIÓN"
+  },
+  "Quando repetir": {
+    "en": "When to repeat",
+    "es": "Cuándo repetir"
+  },
+  "Por duração": {
+    "en": "For a duration",
+    "es": "Por duración"
+  },
+  "De um horário até outro": {
+    "en": "Between two times",
+    "es": "De una hora a otra"
+  },
+  "Dias da semana e horários": {
+    "en": "Weekdays and times",
+    "es": "Días de la semana y horarios"
+  },
+  "Duração": {
+    "en": "Duration",
+    "es": "Duración"
+  },
+  "Unidade": {
+    "en": "Unit",
+    "es": "Unidad"
+  },
+  "Minutos": {
+    "en": "Minutes",
+    "es": "Minutos"
+  },
+  "Horas": {
+    "en": "Hours",
+    "es": "Horas"
+  },
+  "De": {
+    "en": "From",
+    "es": "Desde"
+  },
+  "Horário de início": {
+    "en": "Start time",
+    "es": "Hora de inicio"
+  },
+  "Até": {
+    "en": "Until",
+    "es": "Hasta"
+  },
+  "Horário de fim": {
+    "en": "End time",
+    "es": "Hora de fin"
+  },
+  "Escolha os horários.": {
+    "en": "Choose the times.",
+    "es": "Elige los horarios."
+  },
+  "· Horário deste Mac. Se o fim for anterior ao início, o período atravessa a meia-noite.": {
+    "en": "· This Mac's local time. If the end time is earlier than the start time, the window crosses midnight.",
+    "es": "· Hora local de este Mac. Si la hora final es anterior a la inicial, el período cruza la medianoche."
+  },
+  "Data de início": {
+    "en": "Start date",
+    "es": "Fecha de inicio"
+  },
+  "Data de fim": {
+    "en": "End date",
+    "es": "Fecha de fin"
+  },
+  "Início em branco: a partir de agora. Fim em branco: até você parar. A data final é inclusiva; a execução não passa da meia-noite desse dia.": {
+    "en": "Blank start: from now on. Blank end: until you stop. The final date is inclusive; execution never goes past midnight at the end of that day.",
+    "es": "Inicio en blanco: desde ahora. Fin en blanco: hasta que lo detengas. La fecha final es inclusiva; la ejecución no pasa de la medianoche al terminar ese día."
+  },
+  "Dias de execução": {
+    "en": "Execution days",
+    "es": "Días de ejecución"
+  },
+  "Seg a sex": {
+    "en": "Mon to Fri",
+    "es": "Lun a vie"
+  },
+  "Todos os dias": {
+    "en": "Every day",
+    "es": "Todos los días"
+  },
+  "Repete nos dias marcados, dentro das datas escolhidas. Para horários que atravessam a meia-noite, vale o dia de início.": {
+    "en": "Repeats on selected days within your dates. For overnight windows, the start day applies.",
+    "es": "Se repite en los días marcados, dentro de las fechas elegidas. Si cruza la medianoche, se usa el día de inicio."
+  },
+  "Intervalo entre ciclos (segundos)": {
+    "en": "Interval between cycles (seconds)",
+    "es": "Intervalo entre ciclos (segundos)"
+  },
+  "Cada ciclo começa pela primeira etapa e verifica o resultado. O período continua contando durante pausas.": {
+    "en": "Each cycle starts at the first step and verifies the result. The period continues during pauses.",
+    "es": "Cada ciclo empieza por el primer paso y verifica el resultado. El período sigue contando durante las pausas."
+  },
+  "Ao fim de cada horário, interrompe a execução e aguarda o próximo dia marcado.": {
+    "en": "At the end of each window, execution stops and waits for the next selected day.",
+    "es": "Al terminar cada horario, interrumpe la ejecución y espera el siguiente día marcado."
+  },
+  "Ao chegar ao fim, a execução é interrompida.": {
+    "en": "Execution stops when the period ends.",
+    "es": "La ejecución se interrumpe al terminar el período."
+  },
+  "Erros suspendem a repetição para revisão.": {
+    "en": "Errors suspend repetition for review.",
+    "es": "Los errores suspenden la repetición para revisión."
+  },
+  "Mantenha o AgentSmith aberto, o Mac acordado e o Windows conectado. Uma nova execução será criada; o histórico anterior permanece salvo.": {
+    "en": "Keep AgentSmith open, the Mac awake and Windows connected. A new run is created; previous history is preserved.",
+    "es": "Mantén AgentSmith abierto, el Mac despierto y Windows conectado. Se crea una ejecución nueva; el historial anterior se conserva."
+  },
+  "Conecte a máquina deste roteiro antes de iniciar.": {
+    "en": "Connect this plan's machine before starting.",
+    "es": "Conecta la máquina de este plan antes de iniciar."
+  },
+  "Iniciando…": {
+    "en": "Starting…",
+    "es": "Iniciando…"
+  },
+  "Iniciar repetição": {
+    "en": "Start repetition",
+    "es": "Iniciar repetición"
+  },
+  "Sessão Windows remota": {
+    "en": "Remote Windows session",
+    "es": "Sesión Windows remota"
+  },
+  "CONEXÃO ·": {
+    "en": "CONNECTION ·",
+    "es": "CONEXIÓN ·"
+  },
+  "Windows remoto": {
+    "en": "Remote Windows",
+    "es": "Windows remoto"
+  },
+  "Seu próximo posto de trabalho": {
+    "en": "Your next workstation",
+    "es": "Tu próximo puesto de trabajo"
+  },
+  "Alternar tela cheia": {
+    "en": "Toggle full screen",
+    "es": "Alternar pantalla completa"
+  },
+  "Ampliar a RDP e recolher os demais painéis": {
+    "en": "Expand RDP and hide other panels",
+    "es": "Ampliar RDP y ocultar los demás paneles"
+  },
+  "Tela cheia": {
+    "en": "Full screen",
+    "es": "Pantalla completa"
+  },
+  "Sair do foco": {
+    "en": "Exit focus",
+    "es": "Salir del enfoque"
+  },
+  "Ampliar RDP": {
+    "en": "Expand RDP",
+    "es": "Ampliar RDP"
+  },
+  "Voltar à Central": {
+    "en": "Back to Operations",
+    "es": "Volver a la Central"
+  },
+  "Mostrar janela RDP": {
+    "en": "Show RDP window",
+    "es": "Mostrar ventana RDP"
+  },
+  "Destacar": {
+    "en": "Detach",
+    "es": "Separar"
+  },
+  "Máquina selecionada": {
+    "en": "Selected machine",
+    "es": "Máquina seleccionada"
+  },
+  "Selecionar máquina": {
+    "en": "Select machine",
+    "es": "Seleccionar máquina"
+  },
+  "Pausar e assumir": {
+    "en": "Pause and take control",
+    "es": "Pausar y tomar control"
+  },
+  "Assumir": {
+    "en": "Take control",
+    "es": "Tomar control"
+  },
+  "Desconectar": {
+    "en": "Disconnect",
+    "es": "Desconectar"
+  },
+  "Tela": {
+    "en": "Display",
+    "es": "Pantalla"
+  },
+  "Pause a tarefa para ajustar": {
+    "en": "Pause the task to adjust",
+    "es": "Pausa la tarea para ajustar"
+  },
+  "Ajustar captura e tempo entre ações": {
+    "en": "Adjust capture and time between actions",
+    "es": "Ajustar captura y tiempo entre acciones"
+  },
+  "Ritmo": {
+    "en": "Pace",
+    "es": "Ritmo"
+  },
+  "Zoom da visualização RDP": {
+    "en": "RDP view zoom",
+    "es": "Zoom de la vista RDP"
+  },
+  "Ajustar à janela": {
+    "en": "Fit to window",
+    "es": "Ajustar a la ventana"
+  },
+  "Smith está executando a tarefa": {
+    "en": "Smith is running the task",
+    "es": "Smith está ejecutando la tarea"
+  },
+  "Clique para controlar · Option + rolagem move a visualização": {
+    "en": "Click to control · Option + scroll moves the view",
+    "es": "Haz clic para controlar · Option + desplazamiento mueve la vista"
+  },
+  "Acompanhe a sessão ou assuma o controle": {
+    "en": "Follow the session or take control",
+    "es": "Sigue la sesión o toma el control"
+  },
+  "Sua sessão está em outra janela.": {
+    "en": "Your session is in another window.",
+    "es": "Tu sesión está en otra ventana."
+  },
+  "A conexão e as tarefas continuam aqui. Mova a janela RDP para outro monitor ou traga a visualização de volta.": {
+    "en": "The connection and tasks continue here. Move the RDP window to another monitor or bring the view back.",
+    "es": "La conexión y las tareas continúan aquí. Mueve la ventana RDP a otro monitor o trae la vista de vuelta."
+  },
+  "Trazer de volta": {
+    "en": "Bring back",
+    "es": "Traer de vuelta"
+  },
+  "Tela atual do Windows remoto": {
+    "en": "Current remote Windows screen",
+    "es": "Pantalla actual del Windows remoto"
+  },
+  "Conectando ao Windows…": {
+    "en": "Connecting to Windows…",
+    "es": "Conectando a Windows…"
+  },
+  "Uma máquina. Muitas possibilidades.": {
+    "en": "One machine. Many possibilities.",
+    "es": "Una máquina. Muchas posibilidades."
+  },
+  "A tela remota aparecerá aqui. Smith vai observar, agir e verificar o resultado.": {
+    "en": "The remote screen will appear here. Smith will observe, act and verify the result.",
+    "es": "La pantalla remota aparecerá aquí. Smith observará, actuará y verificará el resultado."
+  },
+  "Conectar máquina": {
+    "en": "Connect machine",
+    "es": "Conectar máquina"
+  },
+  "Adicionar primeira máquina": {
+    "en": "Add first machine",
+    "es": "Añadir primera máquina"
+  },
+  "Visualização destacada": {
+    "en": "Detached view",
+    "es": "Vista separada"
+  },
+  "Automação": {
+    "en": "Automation",
+    "es": "Automatización"
+  },
+  "Controle manual": {
+    "en": "Manual control",
+    "es": "Control manual"
+  },
+  "Observação": {
+    "en": "Observation",
+    "es": "Observación"
+  },
+  "Aguardando conexão": {
+    "en": "Waiting for connection",
+    "es": "Esperando conexión"
+  },
+  "Sessão isolada do seu desktop": {
+    "en": "Session isolated from your desktop",
+    "es": "Sesión aislada de tu escritorio"
+  },
+  "Texto para digitar no Windows": {
+    "en": "Text to type in Windows",
+    "es": "Texto para escribir en Windows"
+  },
+  "Texto para digitar no Windows…": {
+    "en": "Text to type in Windows…",
+    "es": "Texto para escribir en Windows…"
+  },
+  "Digitar": {
+    "en": "Type",
+    "es": "Escribir"
+  },
+  "Execução encerrada. Histórico preservado. Use Reiniciar para executar este roteiro desde a primeira etapa.": {
+    "en": "Run stopped. History preserved. Use Restart to run this plan from the first step.",
+    "es": "Ejecución detenida. Historial conservado. Usa Reiniciar para ejecutar este plan desde el primer paso."
+  },
+  "O período de repetição foi encerrado.": {
+    "en": "The repetition period has ended.",
+    "es": "El período de repetición ha finalizado."
+  },
+  "Todas as etapas foram concluídas e verificadas.": {
+    "en": "All steps have been completed and verified.",
+    "es": "Todos los pasos se han completado y verificado."
+  },
+  "Roteiro preparado. Revise as etapas e clique em Executar.": {
+    "en": "Plan ready. Review the steps and click Run.",
+    "es": "Plan preparado. Revisa los pasos y pulsa Ejecutar."
+  },
+  "Execução pausada. Reconecte, se necessário, e retome para conferir a tela antes de agir.": {
+    "en": "Run paused. Reconnect if needed, then resume to check the screen before acting.",
+    "es": "Ejecución pausada. Reconecta si es necesario y reanuda para comprobar la pantalla antes de actuar."
+  },
+  "Conferindo a tela…": {
+    "en": "Checking the screen…",
+    "es": "Comprobando la pantalla…"
+  },
+  "Preparando a próxima ação…": {
+    "en": "Preparing the next action…",
+    "es": "Preparando la siguiente acción…"
+  },
+  "Preparando roteiro": {
+    "en": "Preparing plan",
+    "es": "Preparando plan"
+  },
+  "Analisando a tela": {
+    "en": "Analyzing the screen",
+    "es": "Analizando la pantalla"
+  },
+  "Repetição aguardando": {
+    "en": "Repetition waiting",
+    "es": "Repetición en espera"
+  },
+  "Tarefa interrompida": {
+    "en": "Task interrupted",
+    "es": "Tarea interrumpida"
+  },
+  "Tarefa pausada": {
+    "en": "Task paused",
+    "es": "Tarea pausada"
+  },
+  "Pronta para executar": {
+    "en": "Ready to run",
+    "es": "Lista para ejecutar"
+  },
+  "Tarefa concluída": {
+    "en": "Task completed",
+    "es": "Tarea completada"
+  },
+  "Tarefa parada": {
+    "en": "Task stopped",
+    "es": "Tarea detenida"
+  },
+  "Andamento da tarefa": {
+    "en": "Task progress",
+    "es": "Progreso de la tarea"
+  },
+  "Reiniciando tarefa…": {
+    "en": "Restarting task…",
+    "es": "Reiniciando tarea…"
+  },
+  "Parando tarefa…": {
+    "en": "Stopping task…",
+    "es": "Deteniendo tarea…"
+  },
+  "etapas confirmadas ·": {
+    "en": "steps confirmed ·",
+    "es": "pasos confirmados ·"
+  },
+  "A IA está organizando o objetivo em etapas.": {
+    "en": "AI is organizing your goal into steps.",
+    "es": "La IA está organizando tu objetivo en pasos."
+  },
+  "Ciclo {0}": {
+    "en": "Cycle {0}",
+    "es": "Ciclo {0}"
+  },
+  "concluídos ·": {
+    "en": "completed ·",
+    "es": "completados ·"
+  },
+  "ações no total · Até": {
+    "en": "total actions · Until",
+    "es": "acciones en total · Hasta"
+  },
+  " · {0} min {1}": {
+    "en": " · {0} min {1}",
+    "es": " · {0} min {1}"
+  },
+  "neste período": {
+    "en": "in this window",
+    "es": "en este período"
+  },
+  "restantes": {
+    "en": "remaining",
+    "es": "restantes"
+  },
+  " · Fim do loop: {0}": {
+    "en": " · Loop ends: {0}",
+    "es": " · Fin del bucle: {0}"
+  },
+  "s nesta fase": {
+    "en": "s in this phase",
+    "es": "s en esta fase"
+  },
+  " · Ainda aguardando resposta; você pode pausar ou parar com Esc.": {
+    "en": " · Still waiting for a response; you can pause or stop with Esc.",
+    "es": " · Esperando respuesta; puedes pausar o detener con Esc."
+  },
+  "Conecte a máquina desta tarefa para reiniciar.": {
+    "en": "Connect this task's machine to restart.",
+    "es": "Conecta la máquina de esta tarea para reiniciar."
+  },
+  "Informe horários de início e fim diferentes.": {
+    "en": "Enter different start and end times.",
+    "es": "Introduce horas de inicio y fin diferentes."
+  },
+  "Seg": {
+    "en": "Mon",
+    "es": "Lun"
+  },
+  "Segunda-feira": {
+    "en": "Monday",
+    "es": "Lunes"
+  },
+  "Ter": {
+    "en": "Tue",
+    "es": "Mar"
+  },
+  "Terça-feira": {
+    "en": "Tuesday",
+    "es": "Martes"
+  },
+  "Qua": {
+    "en": "Wed",
+    "es": "Mié"
+  },
+  "Quarta-feira": {
+    "en": "Wednesday",
+    "es": "Miércoles"
+  },
+  "Qui": {
+    "en": "Thu",
+    "es": "Jue"
+  },
+  "Quinta-feira": {
+    "en": "Thursday",
+    "es": "Jueves"
+  },
+  "Sex": {
+    "en": "Fri",
+    "es": "Vie"
+  },
+  "Sexta-feira": {
+    "en": "Friday",
+    "es": "Viernes"
+  },
+  "Sáb": {
+    "en": "Sat",
+    "es": "Sáb"
+  },
+  "Sábado": {
+    "en": "Saturday",
+    "es": "Sábado"
+  },
+  "Dom": {
+    "en": "Sun",
+    "es": "Dom"
+  },
+  "Domingo": {
+    "en": "Sunday",
+    "es": "Domingo"
+  },
+  "Selecione pelo menos um dia da semana.": {
+    "en": "Select at least one weekday.",
+    "es": "Selecciona al menos un día de la semana."
+  },
+  "A data de fim deve ser igual ou posterior à data de início.": {
+    "en": "The end date must be on or after the start date.",
+    "es": "La fecha final debe ser igual o posterior a la fecha inicial."
+  },
+  "Não há dia e horário disponíveis no período escolhido.": {
+    "en": "No day and time are available in the selected period.",
+    "es": "No hay días ni horarios disponibles en el período elegido."
+  },
+  "Informe uma data válida.": {
+    "en": "Enter a valid date.",
+    "es": "Introduce una fecha válida."
+  },
+  "Nova / modelos Bedrock • chave Bedrock": {
+    "en": "Nova / Bedrock models • Bedrock key",
+    "es": "Nova / modelos Bedrock • clave Bedrock"
+  },
+  "Seed / Doubao • ID do modelo ou endpoint": {
+    "en": "Seed / Doubao • Model or endpoint ID",
+    "es": "Seed / Doubao • ID del modelo o endpoint"
+  },
+  "Modelo instalado no Ollama": {
+    "en": "Model installed in Ollama",
+    "es": "Modelo instalado en Ollama"
+  },
+  "Modelo carregado no LM Studio": {
+    "en": "Model loaded in LM Studio",
+    "es": "Modelo cargado en LM Studio"
+  },
+  "Servidor local compatível": {
+    "en": "Compatible local server",
+    "es": "Servidor local compatible"
+  },
+  "llama.cpp / servidor MLX compatível": {
+    "en": "llama.cpp / compatible MLX server",
+    "es": "llama.cpp / servidor MLX compatible"
+  },
+  "v0.10.0 · Prévia": {
+    "en": "v0.10.0 · Preview",
+    "es": "v0.10.0 · Vista previa"
+  },
+  "Idioma": {
+    "en": "Language",
+    "es": "Idioma"
+  },
+  "Abrir site da prodigy-lab": {
+    "en": "Open prodigy-lab website",
+    "es": "Abrir sitio de prodigy-lab"
+  },
+  "Não foi possível abrir o navegador.": {
+    "en": "Could not open the browser.",
+    "es": "No se pudo abrir el navegador."
+  },
+  "SmolVLM 500M · Mais leve": {
+    "en": "SmolVLM 500M · Lighter",
+    "es": "SmolVLM 500M · Más ligero"
+  },
+  "Qwen2.5 VL 3B · Mais detalhe": {
+    "en": "Qwen2.5 VL 3B · More detail",
+    "es": "Qwen2.5 VL 3B · Más detalle"
+  },
+  "Visão básica. Pode errar textos pequenos, coordenadas e instruções complexas.": {
+    "en": "Basic vision. May misread small text, coordinates and complex instructions.",
+    "es": "Visión básica. Puede fallar con texto pequeño, coordenadas e instrucciones complejas."
+  },
+  "Mais capacidade para ler interfaces. Consome mais memória; avalie junto da sua máquina virtual.": {
+    "en": "Better at reading interfaces. Uses more memory; evaluate alongside your virtual machine.",
+    "es": "Mayor capacidad para leer interfaces. Consume más memoria; evalúa junto con tu máquina virtual."
+  },
+  "Autenticando no Windows…": {
+    "en": "Authenticating with Windows…",
+    "es": "Autenticando en Windows…"
+  },
+  "Conexão RDP ativa": {
+    "en": "RDP connection active",
+    "es": "Conexión RDP activa"
+  },
+  "Conexão encerrada.": {
+    "en": "Connection closed.",
+    "es": "Conexión cerrada."
+  },
+  "A conexão foi interrompida. Reconecte para retomar.": {
+    "en": "Connection interrupted. Reconnect to resume.",
+    "es": "Conexión interrumpida. Reconecta para reanudar."
+  },
+  "Baixando arquivos oficiais…": {
+    "en": "Downloading official files…",
+    "es": "Descargando archivos oficiales…"
+  },
+  "Download concluído e integridade verificada.": {
+    "en": "Download complete and integrity verified.",
+    "es": "Descarga completada e integridad verificada."
+  },
+  "Download cancelado. Arquivos concluídos serão reaproveitados.": {
+    "en": "Download cancelled. Completed files will be reused.",
+    "es": "Descarga cancelada. Se reutilizarán los archivos completos."
+  },
+  "Componente disponível. Entre na conta ou teste uma sessão já existente.": {
+    "en": "Component available. Sign in or test an existing session.",
+    "es": "Componente disponible. Inicia sesión o prueba una sesión existente."
+  },
+  "O componente oficial precisa ser instalado neste Mac.": {
+    "en": "The official component must be installed on this Mac.",
+    "es": "Es necesario instalar el componente oficial en este Mac."
+  },
+  "Operação cancelada. Você pode fechar a aba de autenticação.": {
+    "en": "Operation cancelled. You can close the authentication tab.",
+    "es": "Operación cancelada. Puedes cerrar la pestaña de autenticación."
+  },
+  "Já existe uma operação em andamento para este provedor.": {
+    "en": "An operation is already in progress for this provider.",
+    "es": "Ya hay una operación en curso para este proveedor."
+  },
+  "Instalando o componente oficial. Aguarde.": {
+    "en": "Installing the official component. Please wait.",
+    "es": "Instalando el componente oficial. Espera."
+  },
+  "Conclua a autenticação na janela do seu navegador.": {
+    "en": "Complete sign-in in your browser window.",
+    "es": "Completa la autenticación en la ventana del navegador."
+  },
+  "Informe um roteiro com até 30 mil caracteres.": {
+    "en": "Enter a plan with up to 30,000 characters.",
+    "es": "Introduce un plan de hasta 30.000 caracteres."
+  },
+  "Selecione uma máquina cadastrada.": {
+    "en": "Select a registered machine.",
+    "es": "Selecciona una máquina registrada."
+  },
+  "O modelo não gerou um roteiro verificável.": {
+    "en": "The model did not generate a verifiable plan.",
+    "es": "El modelo no generó un plan verificable."
+  },
+  "Execução pausada pelo operador.": {
+    "en": "Run paused by the operator.",
+    "es": "Ejecución pausada por el operador."
+  },
+  "Período de repetição encerrado.": {
+    "en": "Repetition period ended.",
+    "es": "Período de repetición finalizado."
+  },
+  "A sessão ativa não pertence à máquina da tarefa.": {
+    "en": "The active session does not belong to this task's machine.",
+    "es": "La sesión activa no corresponde a la máquina de esta tarea."
+  },
+  "Limite de ações atingido. Revise o histórico e ajuste o limite antes de retomar.": {
+    "en": "Action limit reached. Review history and adjust the limit before resuming.",
+    "es": "Límite de acciones alcanzado. Revisa el historial y ajusta el límite antes de reanudar."
+  },
+  "O verificador não forneceu evidência.": {
+    "en": "The verifier did not provide evidence.",
+    "es": "El verificador no proporcionó evidencia."
+  },
+  "A tela não apresentou progresso após várias observações.": {
+    "en": "The screen showed no progress after several observations.",
+    "es": "La pantalla no mostró progreso tras varias observaciones."
+  },
+  "O operador solicitou nova verificação.": {
+    "en": "The operator requested another check.",
+    "es": "El operador solicitó otra verificación."
+  },
+  "Próxima entrada preparada. Em uma retomada, conferir o resultado antes de repetir.": {
+    "en": "Next input prepared. On resume, check the result before repeating.",
+    "es": "Siguiente entrada preparada. Al reanudar, comprueba el resultado antes de repetir."
+  },
+  "Enviando mouse ou teclado ao Windows": {
+    "en": "Sending mouse or keyboard input to Windows",
+    "es": "Enviando ratón o teclado a Windows"
+  },
+  "Entrada enviada · aguardando atualização da tela": {
+    "en": "Input sent · Waiting for the screen to update",
+    "es": "Entrada enviada · Esperando actualización de pantalla"
+  },
+  "Todas as etapas tiveram suas condições de sucesso verificadas.": {
+    "en": "All steps had their success conditions verified.",
+    "es": "Se verificaron las condiciones de éxito de todos los pasos."
+  },
+  "Aguardando o próximo dia e horário selecionados": {
+    "en": "Waiting for the next selected day and time",
+    "es": "Esperando el siguiente día y horario seleccionados"
+  },
+  "Aguardando o horário de início": {
+    "en": "Waiting for the start time",
+    "es": "Esperando la hora de inicio"
+  },
+  "Aguardando o próximo ciclo": {
+    "en": "Waiting for the next cycle",
+    "es": "Esperando el siguiente ciclo"
+  },
+  "Horário encerrado. Aguardando o próximo dia selecionado; ciclos incompletos não contam como concluídos.": {
+    "en": "Time window ended. Waiting for the next selected day; incomplete cycles do not count as completed.",
+    "es": "Horario finalizado. Esperando el siguiente día seleccionado; los ciclos incompletos no cuentan como completados."
+  },
+  "Conferindo a tela · etapa {0} de {1}": {
+    "en": "Checking screen · Step {0} of {1}",
+    "es": "Comprobando pantalla · Paso {0} de {1}"
+  },
+  "Escolhendo a próxima ação · etapa {0} de {1}": {
+    "en": "Choosing next action · Step {0} of {1}",
+    "es": "Eligiendo la siguiente acción · Paso {0} de {1}"
+  },
+  "Aguardando o Windows por {0} segundos": {
+    "en": "Waiting for Windows for {0} seconds",
+    "es": "Esperando a Windows durante {0} segundos"
+  },
+  "Período encerrado · {0} ciclos concluídos. Nenhuma nova ação será enviada.": {
+    "en": "Period ended · {0} cycles completed. No new actions will be sent.",
+    "es": "Período finalizado · {0} ciclos completados. No se enviarán nuevas acciones."
+  },
+  "Configure um modelo com visão para {0}.": {
+    "en": "Configure a vision model for {0}.",
+    "es": "Configura un modelo con visión para {0}."
+  },
+  "Roteiro criado por {0}. Revise as etapas antes de executar.": {
+    "en": "Plan created by {0}. Review the steps before running.",
+    "es": "Plan creado por {0}. Revisa los pasos antes de ejecutar."
+  },
+  "Execução iniciada. Cada etapa será verificada antes de uma nova ação.": {
+    "en": "Run started. Each step will be verified before a new action.",
+    "es": "Ejecución iniciada. Cada paso se verificará antes de una nueva acción."
+  },
+  "Tarefa parada pelo operador. Histórico preservado. Use Reiniciar para executar este roteiro desde a primeira etapa.": {
+    "en": "Task stopped by the operator. History preserved. Use Restart to run this plan from the first step.",
+    "es": "Tarea detenida por el operador. Historial conservado. Usa Reiniciar para ejecutar este plan desde el primer paso."
+  },
+  "Texto esperado (OCR)": {
+    "en": "Expected text (OCR)",
+    "es": "Texto esperado (OCR)"
+  },
+  "Editar verificação OCR": {
+    "en": "Edit OCR check",
+    "es": "Editar verificación OCR"
+  },
+  "Ler textos com OCR nativo do macOS": {
+    "en": "Read text with native macOS OCR",
+    "es": "Leer textos con OCR nativo de macOS"
+  },
+  "Permitir recortes solicitados pela IA": {
+    "en": "Allow AI-requested image crops",
+    "es": "Permitir recortes solicitados por la IA"
+  },
+  "Selecione somente o campo ou visor. Esta regra confirma a etapa quando o texto exato aparece nessa região, sem consultar o LLM. Use apenas quando isso comprovar o resultado completo da etapa.": {
+    "en": "Select only the field or display. This rule confirms the step when the exact text appears in that region, without consulting the LLM. Use it only when this proves the entire step succeeded.",
+    "es": "Seleccione solo el campo o visor. Esta regla confirma el paso cuando el texto exacto aparece en esa región, sin consultar al LLM. Úsela solo cuando esto demuestre el resultado completo del paso."
+  },
+  "Selecione a região na captura do Windows": {
+    "en": "Select the region in the Windows capture",
+    "es": "Seleccione la región en la captura de Windows"
+  },
+  "Imagem congelada apenas na memória. Arraste para selecionar ou clique em um texto detectado abaixo.": {
+    "en": "Frozen image held only in memory. Drag to select or click a detected text below.",
+    "es": "Imagen congelada solo en memoria. Arrastre para seleccionar o haga clic en un texto detectado abajo."
+  },
+  "Texto exato esperado": {
+    "en": "Exact expected text",
+    "es": "Texto exacto esperado"
+  },
+  "Posição X": {
+    "en": "X position",
+    "es": "Posición X"
+  },
+  "Posição Y": {
+    "en": "Y position",
+    "es": "Posición Y"
+  },
+  "Largura": {
+    "en": "Width",
+    "es": "Ancho"
+  },
+  "Altura": {
+    "en": "Height",
+    "es": "Alto"
+  },
+  "Confiança mínima de 98%. Se a resolução mudar, ajuste a região. Em loops, o texto precisa mudar antes de reaparecer em cada ciclo. O OCR não prova que uma instalação ou gravação terminou, a menos que a mensagem escolhida comprove isso.": {
+    "en": "Minimum confidence: 98%. Adjust the region if resolution changes. In loops, the text must change before reappearing in each cycle. OCR does not prove an installation or save finished unless the selected message proves it.",
+    "es": "Confianza mínima del 98%. Ajuste la región si cambia la resolución. En bucles, el texto debe cambiar antes de reaparecer en cada ciclo. El OCR no demuestra que una instalación o guardado terminó, salvo que el mensaje elegido lo confirme."
+  },
+  "Comparar leitura na mesma imagem": {
+    "en": "Compare reading on the same image",
+    "es": "Comparar lectura en la misma imagen"
+  },
+  "Informe o texto que está visível agora. Compara acerto e tempo de leitura, não a execução completa de tarefas. A primeira consulta pode incluir o carregamento do modelo. O roteamento permanece igual.": {
+    "en": "Enter the text visible now. Compares reading accuracy and time, not full task execution. The first query may include model loading. Routing stays the same.",
+    "es": "Introduzca el texto visible ahora. Compara precisión y tiempo de lectura, no la ejecución completa de tareas. La primera consulta puede incluir la carga del modelo. El enrutamiento se mantiene."
+  },
+  "Modelo para comparação": {
+    "en": "Model to compare",
+    "es": "Modelo para comparar"
+  },
+  "Baixe um modelo em Provedores e modelos": {
+    "en": "Download a model in Providers and models",
+    "es": "Descargue un modelo en Proveedores y modelos"
+  },
+  "Comparando…": {
+    "en": "Comparing…",
+    "es": "Comparando…"
+  },
+  "Comparar leitura": {
+    "en": "Compare reading",
+    "es": "Comparar lectura"
+  },
+  "Cancelar comparação": {
+    "en": "Cancel comparison",
+    "es": "Cancelar comparación"
+  },
+  "Modo": {
+    "en": "Mode",
+    "es": "Modo"
+  },
+  "Tempo": {
+    "en": "Time",
+    "es": "Tiempo"
+  },
+  "Leitura": {
+    "en": "Reading",
+    "es": "Lectura"
+  },
+  "Acerto": {
+    "en": "Correct",
+    "es": "Acierto"
+  },
+  "Recorte": {
+    "en": "Crop",
+    "es": "Recorte"
+  },
+  "Tela inteira": {
+    "en": "Full screen",
+    "es": "Pantalla completa"
+  },
+  "Atualizar captura": {
+    "en": "Refresh capture",
+    "es": "Actualizar captura"
+  },
+  "Remover regra OCR": {
+    "en": "Remove OCR rule",
+    "es": "Eliminar regla OCR"
+  },
+  "Salvar regra OCR": {
+    "en": "Save OCR rule",
+    "es": "Guardar regla OCR"
+  },
+  "Qwen3-VL 2B · Interfaces": {
+    "en": "Qwen3-VL 2B · Interfaces",
+    "es": "Qwen3-VL 2B · Interfaces"
+  },
+  "Candidato para ler e localizar elementos de interfaces. Compare tempo e acerto neste Mac antes de trocar seu modelo principal.": {
+    "en": "Candidate for reading and locating interface elements. Compare speed and accuracy on this Mac before replacing your primary model.",
+    "es": "Candidato para leer y localizar elementos de interfaces. Compare tiempo y precisión en este Mac antes de cambiar su modelo principal."
+  },
+  "Lendo textos com OCR nativo": {
+    "en": "Reading text with native OCR",
+    "es": "Leyendo textos con OCR nativo"
+  },
+  "Comparação cancelada.": {
+    "en": "Comparison cancelled.",
+    "es": "Comparación cancelada."
+  },
+  "Pause a tarefa antes de comparar a leitura.": {
+    "en": "Pause the task before comparing reading.",
+    "es": "Pause la tarea antes de comparar la lectura."
+  },
+  "Informe um texto esperado de até 160 caracteres, em uma linha.": {
+    "en": "Enter expected text of up to 160 characters on one line.",
+    "es": "Introduzca el texto esperado de hasta 160 caracteres en una línea."
+  },
+  "Selecione uma região válida dentro da tela.": {
+    "en": "Select a valid region inside the screen.",
+    "es": "Seleccione una región válida dentro de la pantalla."
+  },
+  "A resolução mudou. Ajuste a região da verificação OCR antes de retomar.": {
+    "en": "Resolution changed. Adjust the OCR check region before resuming.",
+    "es": "La resolución cambió. Ajuste la región OCR antes de reanudar."
+  },
+  "A resolução mudou. Selecione a região novamente.": {
+    "en": "Resolution changed. Select the region again.",
+    "es": "La resolución cambió. Seleccione la región de nuevo."
+  },
+  "OCR nativo indisponível.": {
+    "en": "Native OCR unavailable.",
+    "es": "OCR nativo no disponible."
+  },
+  "Falha na leitura OCR.": {
+    "en": "OCR reading failed.",
+    "es": "Falló la lectura OCR."
+  },
+  "OCR demorou demais; usando visão geral.": {
+    "en": "OCR took too long.",
+    "es": "El OCR tardó demasiado."
+  },
+  "Resposta fora do formato esperado.": {
+    "en": "Response was not in the expected format.",
+    "es": "Respuesta fuera del formato esperado."
+  },
+  "Resposta sem texto.": {
+    "en": "Response contains no text.",
+    "es": "Respuesta sin texto."
+  },
+  "Sim": {
+    "en": "Yes",
+    "es": "Sí"
+  },
+  "Não": {
+    "en": "No",
+    "es": "No"
+  },
+  "Modelo": {
+    "en": "Model",
+    "es": "Modelo"
+  },
+  "Recolher parte superior": {
+    "en": "Collapse upper panel",
+    "es": "Contraer parte superior"
+  },
+  "Expandir parte superior": {
+    "en": "Expand upper panel",
+    "es": "Expandir parte superior"
+  },
+  "Editar plano": {
+    "en": "Edit plan",
+    "es": "Editar plan"
+  },
+  "Excluir plano": {
+    "en": "Delete plan",
+    "es": "Eliminar plan"
+  },
+  "Este plano e seu histórico serão removidos do AgentSmith. Isso não desfaz ações já realizadas no Windows. Não é possível desfazer esta exclusão.": {
+    "en": "This plan and its history will be removed from AgentSmith. This does not undo actions already performed in Windows. This deletion cannot be undone.",
+    "es": "Este plan y su historial se eliminarán de AgentSmith. Esto no deshace acciones ya realizadas en Windows. Esta eliminación no se puede deshacer."
+  },
+  "As alterações serão salvas neste plano.": {
+    "en": "Changes will be saved to this plan.",
+    "es": "Los cambios se guardarán en este plan."
+  },
+  "Será criada uma nova versão pronta para executar. A execução anterior continuará no histórico.": {
+    "en": "A new version ready to run will be created. The previous execution stays in history.",
+    "es": "Se creará una nueva versión lista para ejecutar. La ejecución anterior permanecerá en el historial."
+  },
+  "Título do plano": {
+    "en": "Plan title",
+    "es": "Título del plan"
+  },
+  "Instruções do plano": {
+    "en": "Plan instructions",
+    "es": "Instrucciones del plan"
+  },
+  "Edite também as etapas abaixo para corresponder às instruções. Salvar não consulta a IA nem inicia a execução. As regras OCR e a repetição deverão ser configuradas novamente.": {
+    "en": "Also update the steps below to match the instructions. Saving does not call AI or start execution. OCR rules and repetition must be configured again.",
+    "es": "Actualice también los pasos para que coincidan con las instrucciones. Guardar no consulta a la IA ni inicia la ejecución. Las reglas OCR y la repetición deberán configurarse de nuevo."
+  },
+  "Etapa {0}": {
+    "en": "Step {0}",
+    "es": "Paso {0}"
+  },
+  "Mover etapa {0} para cima": {
+    "en": "Move step {0} up",
+    "es": "Subir paso {0}"
+  },
+  "Mover etapa {0} para baixo": {
+    "en": "Move step {0} down",
+    "es": "Bajar paso {0}"
+  },
+  "Remover etapa {0}": {
+    "en": "Remove step {0}",
+    "es": "Eliminar paso {0}"
+  },
+  "Remover etapa": {
+    "en": "Remove step",
+    "es": "Eliminar paso"
+  },
+  "Ação": {
+    "en": "Action",
+    "es": "Acción"
+  },
+  "Resultado esperado": {
+    "en": "Expected result",
+    "es": "Resultado esperado"
+  },
+  "Adicionar etapa": {
+    "en": "Add step",
+    "es": "Añadir paso"
+  },
+  "Excluir definitivamente": {
+    "en": "Delete permanently",
+    "es": "Eliminar definitivamente"
+  },
+  "Salvar plano": {
+    "en": "Save plan",
+    "es": "Guardar plan"
+  },
+  "Salvar nova versão": {
+    "en": "Save new version",
+    "es": "Guardar nueva versión"
+  },
+  "Pause ou pare o plano antes de editar ou excluir.": {
+    "en": "Pause or stop the plan before editing or deleting.",
+    "es": "Pause o detenga el plan antes de editar o eliminar."
+  },
+  "O plano mudou. Feche esta janela e abra novamente.": {
+    "en": "The plan changed. Close this window and open it again.",
+    "es": "El plan cambió. Cierre esta ventana y vuelva a abrirla."
+  },
+  "Informe título, instruções e de 1 a 30 etapas com ação e resultado esperado.": {
+    "en": "Enter a title, instructions and 1 to 30 steps with actions and expected results.",
+    "es": "Introduzca título, instrucciones y de 1 a 30 pasos con acción y resultado esperado."
+  },
+  "Plano editado. Revise antes de executar.": {
+    "en": "Plan edited. Review before running.",
+    "es": "Plan editado. Revise antes de ejecutar."
+  },
+  "Nova versão do plano criada. A execução anterior foi preservada no histórico.": {
+    "en": "New plan version created. The previous execution was preserved in history.",
+    "es": "Nueva versión del plan creada. La ejecución anterior se conservó en el historial."
+  }
+}

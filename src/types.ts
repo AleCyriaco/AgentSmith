@@ -1,0 +1,15 @@
+export type Vendor = { id:string; name:string; country:string; protocol:'responses'|'chat'|'anthropic'|'bedrock'; baseUrl:string; family:string; docs:string; local?:boolean };
+export type Profile = {id:string; vendor:string; name:string; protocol:Vendor['protocol']; baseUrl:string; model:string; vision:boolean; enabled:boolean; authMethod?:'api_key'|'browser'|'local_engine'};
+export type DisplaySettings = {width:number;height:number;scale:number};
+export const defaultDisplay:DisplaySettings={width:1600,height:900,scale:100};
+export type Machine = {id:string; name:string; protocol:'rdp'|'rustdesk'|'nanokvm'|'nanokvm_pro'|'nanokvm_usb'; host:string; port:number; username:string; domain:string; fingerprint:string;display?:DisplaySettings};
+export type PerformanceSettings={captureIntervalMs:number;postActionDelayMs:number;visionMaxWidth:number;nativeOcr:boolean;allowCrops:boolean};
+export const defaultPerformance:PerformanceSettings={captureIntervalMs:300,postActionDelayMs:650,visionMaxWidth:1600,nativeOcr:true,allowCrops:true};
+export type Settings = {profiles:Profile[]; machines:Machine[]; routes:{planner:string[];operator:string[];verifier:string[]}; localOnly:boolean; maxActions:number;performance?:PerformanceSettings};
+export type Region={x:number;y:number;width:number;height:number};
+export type TextCheck={expected:string;region:Region;screenWidth:number;screenHeight:number};
+export type Step = {title:string; success:string; status:string; evidence?:string;textCheck?:TextCheck|null};
+export type Run = {repetition?:import('./repetition').RepeatState|null;progress?:{message:string;startedAt:number}|null;id:string; title:string; machineId:string; instructions:string; steps:Step[]; status:string; log:string[]; actionCount:number; updatedAt:number};
+export type Snapshot = {dataUrl:string;width:number;height:number;sequence:number;capturedAt:number};
+export type SessionInfo = {machineId:string; status:string; message:string; detached?:boolean};
+export const emptySettings:Settings = {profiles:[],machines:[],routes:{planner:[],operator:[],verifier:[]},localOnly:false,maxActions:60,performance:defaultPerformance};

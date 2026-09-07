@@ -1,0 +1,27 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/resources/rdp/
+*.log
+.DS_Store
+
+# Generated native engines and schemas
+src-tauri/resources/vision/
+src-tauri/resources/ocr/
+src-tauri/gen/
+
+# Local test installations, credentials and runtime data
+test-runtime/
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.gguf
+*.app/
+*.zip
+*.dmg
+*.pem
+*.key

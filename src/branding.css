@@ -1,0 +1,9 @@
+:root{--accent:#a77ed6;--green:#7847a8;--lime:#dfc8f5;--dark:#211a2c;--muted:#80748c;--border:#e5deee}
+.sidebar{background:#211a2c;overflow-y:auto}
+.brand-credit{display:inline-flex;align-items:center;gap:6px;align-self:flex-start;margin:7px 0 0 49px;color:#c4acd9;font-size:10px;letter-spacing:.25px;text-decoration:none}
+.brand-credit:hover{color:#f3e6ff;text-decoration:underline}
+.brand-credit:focus-visible{outline:2px solid #d5b8f5;outline-offset:4px}
+.language-picker{display:flex;align-items:center;gap:5px;color:#786488;flex-shrink:0}
+.language-picker select{width:130px;font-size:11px;padding:6px 7px;background:#f6f1fb;border-color:#e1d4ef;color:#604873}
+.detached-language{display:flex;justify-content:flex-end;padding:5px 12px;background:#f8f5fc;flex-shrink:0}
+@media(max-width:1200px){.sidebar nav button{font-size:11px;gap:8px}.header-right{gap:10px}.language-picker select{width:117px}}

@@ -1,0 +1,111 @@
+/* The remote desktop owns the main row. Supporting work stays below it. */
+.operation-shell header{height:44px;padding:0 22px}
+.operation-shell main{max-width:none;padding:16px 22px 12px}
+.operation-heading{margin-bottom:12px;gap:12px}
+.operation-heading .eyebrow{font-size:8px;margin-bottom:5px}
+.operation-heading h1{font-size:21px;line-height:1.25;margin-bottom:5px}
+.operation-heading p{font-size:11px}
+.operation-heading .button{padding:9px 12px;font-size:11px}
+.operation-workspace .summary-grid{gap:10px;margin-bottom:14px}
+.operation-workspace .summary{min-height:50px;padding:9px 12px;gap:9px;align-items:center}
+.operation-workspace .summary-icon{width:30px;height:30px;flex-shrink:0}
+.operation-workspace .summary>div{gap:3px}
+.operation-workspace .summary strong{font-size:17px;line-height:1}
+.operation-workspace .summary div span{font-size:9px;white-space:nowrap}
+.operation-workspace .summary-foot{position:static;margin-left:auto;text-align:right;max-width:95px;font-size:9px;line-height:1.5}
+.rdp-stage{min-width:0}
+.rdp-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 13px;border-bottom:1px solid var(--border)}
+.rdp-identity{display:flex;align-items:center;gap:10px;min-width:0}
+.rdp-identity>svg{color:var(--green);flex-shrink:0}
+.rdp-identity h3{font-size:14px;margin:3px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rdp-identity .tiny-label{font-size:8px}
+.rdp-window-actions{display:flex;gap:7px;flex-shrink:0}
+.rdp-window-actions .button{font-size:10px;padding:8px 10px;white-space:nowrap}
+.rdp-stage .remote-screen{height:calc(100dvh - 280px);min-height:360px;max-height:1100px}
+.session-panel .session-controls{padding:7px 12px;gap:7px;flex-wrap:wrap}
+.session-panel .session-controls select{flex:0 1 210px;min-width:110px;max-width:260px}
+.session-panel .session-controls .button{padding:7px 9px}
+.rdp-control-hint{margin-left:auto;color:#87749b;font-size:10px}
+.session-panel .manual-input{padding:8px 12px;align-items:center;margin:0;border-top:1px solid var(--border);flex-shrink:0}
+.session-panel .manual-input input{padding:8px 10px}
+.session-panel .manual-input .button{font-size:10px;padding:8px 10px;white-space:nowrap}
+.session-panel .screen-caption{pointer-events:none}
+.session-panel .remote-screen{overscroll-behavior:contain}
+.session-panel .screen-empty p{max-width:560px;overflow-wrap:anywhere}
+.operation-support{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;margin-top:16px;align-items:start}
+.operation-support .history-panel{margin-top:0;min-width:0}
+.operation-support .task-panel{min-width:0}
+.operation-support .task-compose textarea{min-height:125px}
+.operation-support .empty-task{padding:12px}
+.operation-support .empty-task p{margin:8px 0}
+.operation-support .history-content{grid-template-columns:1fr}
+.operation-support .run-list{border-right:0;max-height:200px;overflow:auto}
+.operation-support .run-log{max-height:230px;overflow:auto;border-top:1px solid var(--border)}
+.operation-shell footer{padding:14px 22px}
+.rdp-stage .remote-screen.is-detached{height:230px;min-height:230px}
+.detached-message .button-row{justify-content:center}
+
+/* Focus hides surrounding content without unmounting forms or task drafts. */
+.rdp-focus{height:100dvh;overflow:hidden}
+.rdp-focus>.sidebar,.rdp-focus header,.rdp-focus footer{display:none}
+.rdp-focus .main-shell{margin-left:0;height:100%;display:flex;flex-direction:column}
+.rdp-focus main{padding:6px;max-width:none;width:100%;flex:1;min-height:0;margin:0;display:flex;flex-direction:column;gap:6px}
+.rdp-focus .operation-workspace{flex:1;min-height:0;display:flex;flex-direction:column}
+.rdp-focus .operation-heading,.rdp-focus .summary-grid,.rdp-focus .operation-support{display:none}
+.rdp-focus .rdp-stage{flex:1;min-height:0;display:flex;flex-direction:column}
+.rdp-focus .session-panel,.detached-workspace .session-panel{flex:1;min-height:0;display:flex;flex-direction:column}
+.rdp-focus .remote-screen,.detached-workspace .remote-screen{flex:1;height:auto;min-height:0;max-height:none}
+.rdp-focus .rdp-toolbar,.detached-workspace .rdp-toolbar,.rdp-focus .session-controls,.detached-workspace .session-controls{flex-shrink:0}
+.detached-workspace{height:100dvh;overflow:hidden;display:flex;flex-direction:column;background:#0e0b12;padding:0}
+.detached-workspace .session-panel{border:0;border-radius:0}
+.detached-workspace .alert,.rdp-focus .alert{margin:0;flex-shrink:0}
+.detached-workspace .screen-caption span:last-child,.rdp-focus .screen-caption span:last-child{display:flex}
+@media(max-width:1100px){
+ .operation-shell main{padding:12px 14px}
+ .operation-heading h1{font-size:18px}
+ .operation-workspace .summary-foot{font-size:8px;max-width:76px}
+ .rdp-control-hint{display:none}
+ .operation-support{grid-template-columns:1fr}
+ .rdp-focus main{padding:5px}
+}
+@media(max-width:800px){
+ .detached-workspace .rdp-toolbar{flex-wrap:wrap;gap:7px}
+ .detached-workspace .rdp-window-actions{margin-left:auto}
+ .detached-workspace .screen-caption span:last-child{display:none}
+}
+
+/* Keep the complete image visible; explicit zoom uses a scrollable canvas. */
+.session-panel .remote-viewport{position:absolute;inset:0 0 29px;overflow:auto;overscroll-behavior:contain}
+.session-panel .remote-canvas{min-width:100%;min-height:100%;display:flex;align-items:center;justify-content:center}
+.session-panel .remote-canvas img{position:static;flex:none;max-width:none;object-fit:fill}
+.rdp-zoom{display:flex;align-items:center;gap:7px;font-size:10px;color:#6f5d81;white-space:nowrap}
+.session-panel .rdp-zoom select{min-width:132px;width:132px;padding:7px}
+.rdp-stage .remote-screen{height:calc(100dvh - 325px)}
+.rdp-focus .remote-screen,.detached-workspace .remote-screen{height:auto}
+.display-preview{padding:12px;background:#ece6f2;border-radius:6px;color:#665677;font-size:12px;line-height:1.7;margin-bottom:20px}
+
+.performance-presets{display:flex;gap:8px;margin:0 0 22px}
+
+/* Folding preserves the session and drafts; only surrounding controls are hidden. */
+.operation-shell.top-collapsed .main-shell>.task-activity,.detached-workspace.top-collapsed>.task-activity,
+.operation-shell.top-collapsed .operation-heading,.operation-shell.top-collapsed .summary-grid,
+.session-top-collapsed>.rdp-toolbar,.session-top-collapsed>.session-controls{display:none}
+.rdp-compact-bar{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;min-width:0}
+.rdp-compact-bar .button{font-size:11px;padding:6px 9px;white-space:nowrap}
+.rdp-compact-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#665677}
+.operation-shell.top-collapsed .rdp-stage .remote-screen{height:calc(100dvh - 175px);max-height:none}
+.operation-shell.top-collapsed.rdp-focus .remote-screen{height:auto}
+
+/* Compact operation dedicates all remaining window height to the remote screen. */
+.operation-shell.top-collapsed{height:100dvh;overflow:hidden}
+.operation-shell.top-collapsed>.main-shell{height:100%;display:flex;flex-direction:column;min-height:0}
+.operation-shell.top-collapsed .main-shell>header{flex-shrink:0;height:34px;padding:0 12px}
+.operation-shell.top-collapsed .main-shell>main{flex:1;min-height:0;display:flex;flex-direction:column;padding:4px 6px;margin:0;width:100%;max-width:none;gap:4px}
+.operation-shell.top-collapsed .operation-workspace,.operation-shell.top-collapsed .rdp-stage,.operation-shell.top-collapsed .session-panel{flex:1;min-height:0;display:flex;flex-direction:column}
+.operation-shell.top-collapsed .operation-support,.operation-shell.top-collapsed footer,.session-top-collapsed>.manual-input{display:none}
+.operation-shell.top-collapsed .rdp-stage .remote-screen{flex:1;height:auto;min-height:0;max-height:none}
+.operation-shell.top-collapsed .rdp-compact-bar{padding:3px 7px;gap:6px}
+.operation-shell.top-collapsed .rdp-compact-bar .button{padding:4px 7px}
+.operation-shell.top-collapsed.rdp-focus .main-shell>header{display:none}
+.operation-shell.top-collapsed.rdp-focus .main-shell>main{padding:0}
+.operation-shell.top-collapsed.rdp-focus .session-panel{border:0;border-radius:0}
