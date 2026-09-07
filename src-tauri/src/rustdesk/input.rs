@@ -129,7 +129,7 @@ pub fn translate(action: &Action, width: u32, height: u32) -> Result<Vec<Input>,
             let normalized: Vec<String> = keys.iter().map(|k| k.to_ascii_lowercase()).collect();
             let unique: std::collections::HashSet<_> = normalized.iter().collect();
             let main: Vec<&String> = normalized.iter().filter(|k| modifier(k).is_none()).collect();
-            if main.len() != 1 || unique.len() != keys.len() {
+            if main.len() > 1 || unique.len() != keys.len() {
                 return Err("keys aceita um atalho por ação, não uma sequência. Envie cada atalho/Enter em uma ação separada.".into());
             }
             let modifiers: Vec<i32> = normalized
@@ -137,10 +137,31 @@ pub fn translate(action: &Action, width: u32, height: u32) -> Result<Vec<Input>,
                 .filter_map(|k| modifier(k))
                 .map(|k| k as i32)
                 .collect();
-            Ok(vec![
-                Input::Key(primary(main[0], modifiers.clone(), true)?),
-                Input::Key(primary(main[0], modifiers, false)?),
-            ])
+            match main.first() {
+                Some(main) => Ok(vec![
+                    Input::Key(primary(main, modifiers.clone(), true)?),
+                    Input::Key(primary(main, modifiers, false)?),
+                ]),
+                // Modifiers alone, as in the Windows key opening the Start
+                // menu: pressed as keys in their own right, released in
+                // reverse — the same thing the RDP transport does.
+                None => {
+                    let press = |key: i32, down: bool| {
+                        Input::Key(proto::KeyEvent {
+                            down,
+                            press: false,
+                            union: Some(key_event::Union::ControlKey(key)),
+                            modifiers: Vec::new(),
+                            mode: KeyboardMode::Legacy as i32,
+                        })
+                    };
+                    Ok(modifiers
+                        .iter()
+                        .map(|k| press(*k, true))
+                        .chain(modifiers.iter().rev().map(|k| press(*k, false)))
+                        .collect())
+                }
+            }
         }
         Action::Scroll { direction, amount } => {
             if !(1..=10).contains(amount) || !["up", "down"].contains(&direction.as_str()) {
@@ -236,7 +257,6 @@ mod tests {
         for action in [
             keys(&["ctrl", "s", "enter"]),
             keys(&["ctrl", "ctrl"]),
-            keys(&["ctrl"]),
             keys(&[]),
             keys(&["teclaquenaoexiste"]),
         ] {
@@ -340,6 +360,9 @@ mod tests {
             keys(&["enter"]),
             keys(&["f5"]),
             keys(&["ctrl", "alt", "delete"]),
+            keys(&["win"]),
+            keys(&["alt"]),
+            keys(&["ctrl", "alt"]),
             keys(&["ctrl", "s", "enter"]),
             keys(&["ctrl", "ctrl"]),
             keys(&[]),
