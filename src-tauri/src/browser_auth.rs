@@ -314,7 +314,19 @@ async fn bounded(mut stream: impl AsyncRead + Unpin, cap: u64) -> Result<Vec<u8>
         Ok(v)
     }
 }
-async fn process(mut c: Command, input: Vec<u8>) -> Result<Vec<u8>, String> {
+struct ProcessOutput {
+    status: std::process::ExitStatus,
+    stdout: Vec<u8>,
+    stderr: Vec<u8>,
+}
+async fn process(c: Command, input: Vec<u8>) -> Result<Vec<u8>, String> {
+    let out = process_output(c, input).await?;
+    if !out.status.success() {
+        return Err(format!("O cliente oficial encerrou com código {}. Confira login, acesso ao modelo e limites da conta. Atualize o componente se necessário.",out.status.code().unwrap_or(-1)));
+    }
+    Ok(out.stdout)
+}
+async fn process_output(mut c: Command, input: Vec<u8>) -> Result<ProcessOutput, String> {
     let mut child = OwnedChild::new(c.spawn().map_err(|_| {
         "Não foi possível iniciar o componente oficial. Confira a instalação e a versão."
     })?);
@@ -329,8 +341,8 @@ async fn process(mut c: Command, input: Vec<u8>) -> Result<Vec<u8>, String> {
         drop(stdin);
         Ok::<_, String>(())
     };
-    let (_, out, _) = tokio::try_join!(
-        write,
+    let (written, out, err) = tokio::try_join!(
+        async { Ok::<_, String>(write.await) },
         bounded(stdout, 16 * 1024 * 1024),
         bounded(stderr, 2 * 1024 * 1024)
     )?;
@@ -338,10 +350,18 @@ async fn process(mut c: Command, input: Vec<u8>) -> Result<Vec<u8>, String> {
         .wait()
         .await
         .map_err(|_| "Falha ao aguardar o cliente.")?;
-    if !status.success() {
-        return Err(format!("O cliente oficial encerrou com código {}. Confira login, acesso ao modelo e limites da conta. Atualize o componente se necessário.",status.code().unwrap_or(-1)));
+    let stdout = out;
+    let stderr = err;
+    // Preserve the client's diagnostics if it rejected the request before stdin
+    // was fully written. On success, a failed write is still an invalid call.
+    if status.success() {
+        written?;
     }
-    Ok(out)
+    Ok(ProcessOutput {
+        status,
+        stdout,
+        stderr,
+    })
 }
 
 struct OwnedChild {
@@ -733,8 +753,15 @@ async fn generate_inner(
                 content.push(json!({"type":"image","source":{"type":"base64","media_type":"image/png","data":data}}));
             }
             let payload = json!({"type":"user","message":{"role":"user","content":content}});
-            let out = process(c, format!("{payload}\n").into_bytes()).await?;
-            parse_claude(&out)
+            let out = process_output(c, format!("{payload}\n").into_bytes()).await?;
+            if !out.status.success() {
+                return Err(claude_failure(
+                    &out.stdout,
+                    &out.stderr,
+                    out.status.code().unwrap_or(-1),
+                ));
+            }
+            parse_claude(&out.stdout)
         }
         "google" | "xai" => {
             let (mut rpc, init) = acp(&p.vendor, &scratch).await?;
@@ -814,7 +841,7 @@ fn nonempty(text: String) -> Result<String, String> {
         Ok(text)
     }
 }
-fn parse_claude(bytes: &[u8]) -> Result<String, String> {
+fn claude_result(bytes: &[u8]) -> Result<Value, String> {
     let invalid = "O Claude Code retornou um formato inesperado. Atualize o componente.";
     // stream-json emits system, assistant and tool events before its final result.
     // Only that result may reach the harness; intermediate messages are not actions.
@@ -839,12 +866,110 @@ fn parse_claude(bytes: &[u8]) -> Result<String, String> {
     if result.get("type").is_some_and(|kind| kind != "result") {
         return Err("O Claude Code não retornou uma resposta final.".into());
     }
+    Ok(result)
+}
+fn parse_claude(bytes: &[u8]) -> Result<String, String> {
+    let result = claude_result(bytes)?;
     if result["is_error"] == true || result["subtype"].as_str().is_some_and(|s| s != "success") {
-        return Err(
-            "O Claude Code não concluiu a resposta. Confira login, modelo e limites.".into(),
-        );
+        return Err(claude_failure(bytes, &[], 0));
     }
     nonempty(result["result"].as_str().unwrap_or_default().into())
+}
+
+fn claude_failure(stdout: &[u8], stderr: &[u8], code: i32) -> String {
+    // Classify only final error fields and stderr. Never show raw process output:
+    // it can include prompts, account identifiers or credentials.
+    let result = claude_result(stdout).unwrap_or(Value::Null);
+    let details = format!(
+        "{} {} {} {}",
+        result["subtype"],
+        result["result"],
+        result["errors"],
+        String::from_utf8_lossy(stderr)
+    )
+    .to_lowercase();
+    let has = |words: &[&str]| words.iter().any(|w| details.contains(w));
+    let (category, message) = if has(&[
+        "--input-format",
+        "--output-format",
+        "unknown option",
+        "unrecognized option",
+    ]) {
+        ("protocolo", "O cliente recusou os parâmetros enviados. Confira a versão do AgentSmith e atualize o componente Claude Code.")
+    } else if has(&["error_max_turns", "max turns", "max_turns"]) {
+        (
+            "turnos",
+            "O cliente atingiu seu limite de turnos antes de concluir a resposta.",
+        )
+    } else if has(&["error_max_budget", "max budget", "budget exceeded"]) {
+        (
+            "orçamento",
+            "O cliente atingiu o limite de orçamento configurado.",
+        )
+    } else if has(&[
+        "rate_limit",
+        "rate limit",
+        "usage limit",
+        "hit your limit",
+        "quota",
+        "too many requests",
+        "429",
+    ]) {
+        ("limite", "O provedor informou limite de uso ou excesso de solicitações. Aguarde a liberação da conta e teste novamente.")
+    } else if has(&[
+        "authentication_error",
+        "not logged in",
+        "please log in",
+        "please login",
+        "oauth token has expired",
+        "invalid access token",
+        "unauthorized",
+        "401",
+    ]) {
+        (
+            "login",
+            "O cliente informou falha de autenticação. Entre novamente com Claude pelo navegador.",
+        )
+    } else if has(&[
+        "model_not_found",
+        "model not found",
+        "invalid model",
+        "does not have access",
+        "do not have access",
+        "permission_error",
+        "403",
+    ]) {
+        ("acesso", "O cliente informou falta de acesso ou modelo indisponível. Confira o modelo e as permissões da conta.")
+    } else if has(&[
+        "overloaded",
+        "api_error",
+        "service unavailable",
+        "internal server error",
+        "502",
+        "503",
+        "529",
+    ]) {
+        (
+            "serviço",
+            "O serviço Claude informou uma falha. Tente novamente em alguns instantes.",
+        )
+    } else if has(&[
+        "econn",
+        "enotfound",
+        "fetch failed",
+        "connection error",
+        "network",
+        "timed out",
+        "timeout",
+    ]) {
+        (
+            "rede",
+            "O cliente informou falha de rede. Confira a conexão e tente novamente.",
+        )
+    } else {
+        ("não identificado", "O cliente encerrou sem um motivo reconhecido. O login e a cota não foram confirmados como causa.")
+    };
+    format!("Claude Code · {category} · código {code}: {message} Nenhuma ação foi executada por esta chamada.")
 }
 
 #[cfg(test)]
@@ -949,6 +1074,49 @@ mod tests {
         assert!(parse_claude(br#"{"is_error":true,"result":"do something"}"#).is_err());
         assert!(parse_claude(br#"{"result":""}"#).is_err());
     }
+    #[test]
+    fn claude_failures_distinguish_causes_without_echoing_private_output() {
+        for (detail, expected) in [
+            (
+                "Error: --input-format=stream-json requires output-format=stream-json",
+                "protocolo",
+            ),
+            ("rate_limit_error 429", "limite"),
+            ("OAuth token has expired 401", "login"),
+            ("model_not_found", "acesso"),
+            ("Service unavailable 503", "serviço"),
+            ("Connection error ECONNRESET", "rede"),
+            ("error_max_turns", "turnos"),
+            ("error_max_budget_usd", "orçamento"),
+            ("unrecognized internal failure", "não identificado"),
+        ] {
+            let output = json!({"type":"result","subtype":"error_during_execution","is_error":true,"result":format!("{detail} secret-DO-NOT-ECHO")}).to_string();
+            let message = claude_failure(output.as_bytes(), &[], 1);
+            assert!(message.contains(expected), "{message}");
+            assert!(!message.contains("secret-DO-NOT-ECHO"));
+            assert!(parse_claude(output.as_bytes()).is_err());
+        }
+        let err = claude_failure(&[], b"unknown option --flag secret-DO-NOT-ECHO", 1);
+        assert!(err.contains("protocolo") && !err.contains("secret-DO-NOT-ECHO"));
+    }
+
+    #[tokio::test]
+    async fn claude_exit_one_preserves_final_error_after_closed_stdin() {
+        let scratch = Scratch::new().unwrap();
+        let script = scratch.write("failure.py", br#"import json,sys
+sys.stdin.close()
+print(json.dumps({'type':'result','subtype':'error_during_execution','is_error':True,'result':'rate_limit_error'}),flush=True)
+sys.exit(1)
+"#).unwrap();
+        let mut command = command(Path::new("/usr/bin/python3"), &scratch.0);
+        command.arg(script);
+        let out = process_output(command, vec![b'x'; 1000000]).await.unwrap();
+        assert!(!out.status.success());
+        assert!(
+            claude_failure(&out.stdout, &out.stderr, out.status.code().unwrap()).contains("limite")
+        );
+    }
+
     #[test]
     fn claude_stream_uses_only_the_final_result() {
         let stream = concat!(

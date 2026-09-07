@@ -1,4 +1,4 @@
-# Harness de operação — AgentSmith 0.12.4
+# Harness de operação — AgentSmith 0.12.5
 
 O contrato é comum aos adaptadores de API, clientes oficiais e modelos locais. Compatibilidade com o protocolo não garante competência visual ou latência: valide cada perfil com **Testar operador** e uma tarefa curta no Windows.
 
@@ -62,3 +62,10 @@ Capturas aceitam de 20 a 2.000 ms em passos de 1 ms na interface, na configuraç
 Claude Code 2.1.179 rejeita `--input-format stream-json --output-format json` antes da inferência. O adaptador passa a usar `stream-json` nos dois sentidos, com `--verbose` exigido para a saída de eventos. O leitor consome somente o evento final `result`, rejeitando eventos intermediários isolados, resultados duplicados, JSON malformado e resultados com erro. A compatibilidade com uma resposta JSON única é mantida.
 
 O teste real da conexão com a sessão existente respondeu OK em 2,9 segundos; não enviou ações ao Windows. Os testes de regressão cobrem a leitura do fluxo e impedem que texto intermediário seja tratado como resposta final. [Referência oficial da CLI](https://code.claude.com/docs/en/cli-reference).
+
+
+## Diagnóstico de encerramento do Claude (0.12.5)
+
+Um código de saída não zero não explica sozinho a falha. O adaptador agora examina o evento final de erro e stderr antes de descartar a resposta. Distingue protocolo, autenticação, acesso ao modelo, limites de uso, orçamento, turnos, rede e serviço; motivos desconhecidos continuam identificados como desconhecidos. Não copia a saída bruta para avisos ou histórico, pois ela pode conter dados da tarefa ou da conta. Se o processo fechar stdin antecipadamente, o erro final continua disponível. Saída de processo malsucedido nunca é usada como ação.
+
+Após a nova ocorrência relatada, o pedido exato do botão Testar respondeu normalmente pela sessão existente. Isso não identifica retrospectivamente a causa do código 1 anterior: os detalhes haviam sido descartados. Os testes simulam um cliente que encerra com código 1, incluem fechamento antecipado de stdin e verificam a classificação sem expor texto privado.
