@@ -181,6 +181,7 @@ message LoginRequest {
   uint64 session_id = 10;
   string version = 11;
   string my_platform = 13;
+  bytes hwid = 14;
 }
 
 message Resolution {

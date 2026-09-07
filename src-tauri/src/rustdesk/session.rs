@@ -7,7 +7,6 @@ use crate::rustdesk::{
     proto::{self, message, rendezvous_message},
     stream::{Reader, Stream, Writer},
 };
-use sha2::{Digest, Sha256};
 
 /// RustDesk protocol level AgentSmith implements and announces to the peer.
 pub const PROTOCOL_VERSION: &str = "1.3.0";
@@ -119,11 +118,12 @@ fn punch_failure(response: &proto::PunchHoleResponse) -> String {
     }
 }
 
-/// A stable controller identity, so the peer shows the same origin every time
-/// without AgentSmith having to register itself as a RustDesk host.
+/// A stable controller identity. The machine remembers a trusted device by
+/// this id together with the hardware hash, so it must not change between
+/// the connection that trusted and the ones after it — which rules out
+/// anything taken from the environment, since a windowed app may not have it.
 fn controller_id() -> String {
-    let host = std::env::var("HOSTNAME").unwrap_or_else(|_| "agentsmith".into());
-    let digest = Sha256::digest(format!("agentsmith|{host}").as_bytes());
+    let digest = crate::rustdesk::device::identity();
     let value = u32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]]);
     format!("{:09}", value % 1_000_000_000)
 }
@@ -163,6 +163,10 @@ fn login_request(options: &Options, hash: &proto::Hash) -> proto::LoginRequest {
         session_id: rand::random(),
         version: PROTOCOL_VERSION.into(),
         my_platform: "Mac OS".into(),
+        // Presented on every login. A machine that was asked to trust this Mac
+        // recognises it here and skips the second factor; one that was not
+        // simply ignores it, as it already knows the controller id.
+        hwid: crate::rustdesk::device::identity(),
     }
 }
 
@@ -540,13 +544,18 @@ impl Commands {
             .await
     }
 
+    /// Echoes the machine's latency probe back untouched.
+    ///
+    /// The machine sends one probe at a time and waits for it to come back
+    /// before sending the next, and it tells its own probes from ours by the
+    /// `from_client` flag — so the echo must carry the flag as received.
+    /// Marking it as ours makes the machine echo it back instead, and it then
+    /// never sends another: the session goes quiet and, after thirty seconds,
+    /// the machine closes it for timeout.
     pub async fn pong(&mut self, delay: proto::TestDelay) -> Result<(), String> {
         self.writer
             .send(proto::Message {
-                union: Some(message::Union::TestDelay(proto::TestDelay {
-                    from_client: true,
-                    ..delay
-                })),
+                union: Some(message::Union::TestDelay(delay)),
             })
             .await
     }
@@ -637,6 +646,30 @@ mod tests {
     }
 
     #[test]
+    fn the_login_presents_a_stable_device_identity_for_trust() {
+        let options = Options {
+            id: "123456789".into(),
+            password: "segredo".into(),
+            rendezvous: String::new(),
+            key: String::new(),
+            two_factor_code: String::new(),
+            trust_device: false,
+        };
+        let hash = proto::Hash::default();
+        let first = login_request(&options, &hash);
+        let second = login_request(&options, &hash);
+        // The machine matches a trusted device on all four of these, so none
+        // may change from one connection to the next.
+        assert_eq!(first.hwid, crate::rustdesk::device::identity());
+        assert_eq!(first.hwid, second.hwid);
+        assert_eq!(first.my_id, second.my_id);
+        assert_eq!(first.my_name, second.my_name);
+        assert_eq!(first.my_platform, second.my_platform);
+        assert_eq!(first.my_id.len(), 9);
+        assert!(first.my_id.chars().all(|c| c.is_ascii_digit()));
+    }
+
+    #[test]
     fn a_multi_session_windows_machine_is_attached_without_asking() {
         let session = |sid, name: &str| proto::WindowsSession {
             sid,
@@ -723,5 +756,49 @@ mod tests {
             }),
             Event::Idle
         ));
+    }
+}
+
+#[cfg(test)]
+mod probe_tests {
+    //! The machine's latency probe must go back with its flag untouched; the
+    //! session dies quietly otherwise. Exercised over a loopback socket so the
+    //! bytes on the wire are what is checked, not a helper's intent.
+    use super::*;
+    use prost::Message as _;
+    use tokio::io::AsyncReadExt;
+
+    #[tokio::test]
+    async fn the_probe_is_echoed_with_its_flag_untouched() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let machine = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buffer = vec![0u8; 256];
+            let read = socket.read(&mut buffer).await.unwrap();
+            buffer.truncate(read);
+            let (head, len) = crate::rustdesk::codec::decode_header(&buffer).unwrap().unwrap();
+            proto::Message::decode(&buffer[head..head + len]).unwrap()
+        });
+        let stream = Stream::connect(&address.to_string()).await.unwrap();
+        let (_, mut commands) = {
+            let (reader, writer) = stream.split();
+            (reader, Commands { writer })
+        };
+        commands
+            .pong(proto::TestDelay {
+                time: 7,
+                from_client: false,
+                last_delay: 12,
+                target_bitrate: 800,
+            })
+            .await
+            .unwrap();
+        let echoed = machine.await.unwrap();
+        let Some(message::Union::TestDelay(delay)) = echoed.union else {
+            panic!("a resposta não foi um TestDelay");
+        };
+        assert!(!delay.from_client, "a máquina trataria isto como sondagem nossa e nunca enviaria a próxima");
+        assert_eq!((delay.time, delay.last_delay, delay.target_bitrate), (7, 12, 800));
     }
 }

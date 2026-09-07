@@ -10,6 +10,7 @@
 - Assert that both transports accept and refuse exactly the same actions.
 - Implement the wire format independently, with no RustDesk source copied or linked; AgentSmith stays MIT.
 - Answer a second-factor challenge: the interface asks for the current code, and offers to have the machine trust this Mac so later runs need none. Trusting is unticked by default and says plainly what it gives up, since it is a lasting reduction of that machine's protection.
+- Echo the machine's latency probe untouched, and present the device identity on every login. The first keeps the session alive — the machine sends one probe at a time and closes a silent connection after thirty seconds — and the second is what lets a machine that was asked to trust this Mac actually skip the second factor.
 - Convert and encode one frame per capture interval instead of every frame the machine sends, and optimise the development profile, since a two-million-pixel frame is unusably slow to convert in an unoptimised build.
 - Attach to a Windows session on a machine running more than one, since that choice cannot be put to a person during unattended work.
 - Verified end to end against a Windows 11 machine running RustDesk 1.4.9 through a self-hosted server: relay path, both signature layers, the cipher, the second factor, VP9, key plus delta frames decoded to a correct image, and pointer moves after which the picture changed. The direct path, a multi-session machine, the public server, and clicks and typing are not yet exercised.
