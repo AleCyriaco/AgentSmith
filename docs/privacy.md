@@ -35,3 +35,9 @@ TLS validation remains enabled. Confirm unfamiliar certificate fingerprints thro
 The publication review checked all reachable Git history with Gitleaks and additional checks for personal paths, emails, private network addresses, runtime databases, credentials, and task-specific data. Screenshot fixtures contain fictional names and reserved example domains; no live machine, provider account, credential, or remote desktop was used for the documentation captures.
 
 Generated dependencies, native bundles, model weights, local databases, logs, and credentials are excluded from source control. A scan is not proof that no possible sensitive information exists. Keep future commits and uploaded issue attachments subject to the same review.
+
+## RustDesk web preview
+
+Opening the client loads the official RustDesk website, or the HTTPS web-client URL explicitly saved for that machine. That site and its network services apply their own data and telemetry policies. AgentSmith does not send the saved ID or any Keychain password to the page; enter the ID and password directly in the client. The remote ID is visible in the window title for reference.
+
+The window uses nonpersistent WebView storage, disallows navigation to other origins and new popup windows, and has no AgentSmith Tauri capability. Nonpersistent storage does not prevent server-side retention. Closing the window ends that client view; the site owns the RustDesk connection lifecycle. No RustDesk frames enter AgentSmith OCR or AI in this preview.

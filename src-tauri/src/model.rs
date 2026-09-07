@@ -21,6 +21,8 @@ fn default_auth() -> String {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Machine {
+    #[serde(default)]
+    pub rustdesk_web_url: String,
     pub id: String,
     pub name: String,
     pub protocol: String,
@@ -216,6 +218,9 @@ pub fn validate_settings(s: &Settings) -> Result<(), String> {
     ids.clear();
     for m in &s.machines {
         m.display.validate()?;
+        if m.protocol == "rustdesk" {
+            super::rustdesk::validate(m)?;
+        }
         valid_id(&m.id)?;
         if !ids.insert(&m.id) {
             return Err("Máquinas duplicadas.".into());

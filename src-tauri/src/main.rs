@@ -11,6 +11,7 @@ mod plan_edit;
 mod reading_test;
 mod remote;
 mod repetition;
+mod rustdesk;
 mod store;
 mod vision;
 use model::*;
@@ -27,6 +28,46 @@ struct SessionViewInfo {
     #[serde(flatten)]
     session: SessionInfo,
     detached: bool,
+}
+
+#[tauri::command]
+async fn open_rustdesk_client(
+    app: tauri::AppHandle,
+    window: tauri::WebviewWindow,
+    state: tauri::State<'_, AppState>,
+    id: Option<String>,
+) -> Result<(), String> {
+    if !["main", RDP_WINDOW].contains(&window.label()) {
+        return Err("Abra o cliente pela Central do AgentSmith.".into());
+    }
+    if state.busy.load(Ordering::SeqCst) {
+        return Err("Pause a tarefa antes de abrir o cliente RustDesk.".into());
+    }
+    let settings = state.store.settings()?;
+    let machine = match id {
+        Some(id) => Some(
+            settings
+                .machines
+                .iter()
+                .find(|m| m.id == id)
+                .ok_or("Máquina não encontrada.")?,
+        ),
+        None => None,
+    };
+    rustdesk::open(&app, machine)
+}
+
+fn require_machine_automation(state: &AppState, machine_id: &str) -> Result<(), String> {
+    let settings = state.store.settings()?;
+    let machine = settings
+        .machines
+        .iter()
+        .find(|m| m.id == machine_id)
+        .ok_or("Máquina não encontrada.")?;
+    rustdesk::require_automation(machine)
+}
+fn require_run_automation(state: &AppState, id: &str) -> Result<(), String> {
+    require_machine_automation(state, &state.store.run(id)?.machine_id)
 }
 
 #[tauri::command]
@@ -495,10 +536,12 @@ async fn plan_run(
     machine_id: String,
     instructions: String,
 ) -> Result<Run, String> {
+    require_machine_automation(&state, &machine_id)?;
     executor::plan(&state.store, machine_id, instructions).await
 }
 #[tauri::command]
 async fn start_run(state: tauri::State<'_, AppState>, id: String) -> Result<(), String> {
+    require_run_automation(&state, &id)?;
     executor::launch(
         state.store.clone(),
         state.remote.clone(),
@@ -514,6 +557,7 @@ async fn repeat_run(
     id: String,
     options: repetition::RepeatOptions,
 ) -> Result<Run, String> {
+    require_run_automation(&state, &id)?;
     executor::repeat(
         state.store.clone(),
         state.remote.clone(),
@@ -526,6 +570,7 @@ async fn repeat_run(
 }
 #[tauri::command]
 async fn restart_run(state: tauri::State<'_, AppState>, id: String) -> Result<Run, String> {
+    require_run_automation(&state, &id)?;
     executor::restart(
         state.store.clone(),
         state.remote.clone(),
@@ -661,12 +706,18 @@ fn main() {
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::CloseRequested { api, .. }
                 if window.label() == "main"
-                    && window.app_handle().get_webview_window(RDP_WINDOW).is_some() =>
+                    && window
+                        .app_handle()
+                        .webview_windows()
+                        .keys()
+                        .any(|label| label == RDP_WINDOW || label.starts_with("rustdesk-")) =>
             {
                 api.prevent_close();
                 let _ = window.hide();
             }
-            tauri::WindowEvent::Destroyed if window.label() == RDP_WINDOW => {
+            tauri::WindowEvent::Destroyed
+                if window.label() == RDP_WINDOW || window.label().starts_with("rustdesk-") =>
+            {
                 if let Some(main) = window.app_handle().get_webview_window("main") {
                     let _ = main.show();
                     let _ = main.set_focus();
@@ -706,6 +757,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             open_prodigy_site,
+            open_rustdesk_client,
             load_settings,
             local_engine_status,
             local_model_download,

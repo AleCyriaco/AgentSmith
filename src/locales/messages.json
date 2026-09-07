@@ -2374,5 +2374,93 @@
   "{version} · Prévia": {
     "en": "{version} · Preview",
     "es": "{version} · Versión preliminar"
+  },
+  "Cliente RustDesk aberto. Informe o ID e a senha na janela do cliente. A conexão é manual nesta versão.": {
+    "en": "RustDesk client opened. Enter the ID and password in its window. This version supports manual control.",
+    "es": "Cliente RustDesk abierto. Introduzca el ID y la contraseña en su ventana. Esta versión permite control manual."
+  },
+  "Cliente web · Controle manual": {
+    "en": "Web client · Manual control",
+    "es": "Cliente web · Control manual"
+  },
+  "Prévia manual": {
+    "en": "Manual preview",
+    "es": "Vista previa manual"
+  },
+  " · prévia manual": {
+    "en": " · manual preview",
+    "es": " · vista previa manual"
+  },
+  "Abrir cliente RustDesk": {
+    "en": "Open RustDesk client",
+    "es": "Abrir cliente RustDesk"
+  },
+  "Experimentar cliente RustDesk": {
+    "en": "Try RustDesk client",
+    "es": "Probar cliente RustDesk"
+  },
+  "ID RustDesk": {
+    "en": "RustDesk ID",
+    "es": "ID RustDesk"
+  },
+  "Copie o ID exibido no RustDesk do Windows. A senha será solicitada pelo próprio cliente.": {
+    "en": "Copy the ID shown in RustDesk on Windows. The client will ask for the password.",
+    "es": "Copie el ID mostrado en RustDesk en Windows. El cliente solicitará la contraseña."
+  },
+  "Endereço do cliente web": {
+    "en": "Web client URL",
+    "es": "URL del cliente web"
+  },
+  "Use o cliente oficial ou a URL HTTPS do seu cliente web. Não inclua ID, senha ou parâmetros na URL.": {
+    "en": "Use the official client or your web client HTTPS URL. Do not include an ID, password, or parameters in the URL.",
+    "es": "Use el cliente oficial o la URL HTTPS de su cliente web. No incluya ID, contraseña ni parámetros en la URL."
+  },
+  "RustDesk está disponível para controle manual. Captura e execução de planos por IA ainda não estão disponíveis neste conector.": {
+    "en": "RustDesk is available for manual control. Screen capture and AI plan execution are not yet available for this connector.",
+    "es": "RustDesk permite control manual. La captura de pantalla y la ejecución de planes por IA aún no están disponibles en este conector."
+  },
+  "RDP oferece controle com IA. RustDesk abre o cliente web para controle manual. NanoKVM permanece em desenvolvimento.": {
+    "en": "RDP supports AI control. RustDesk opens its web client for manual control. NanoKVM remains in development.",
+    "es": "RDP permite control con IA. RustDesk abre su cliente web para control manual. NanoKVM sigue en desarrollo."
+  },
+  "FreeRDP com IA · RustDesk web manual · NanoKVM nas próximas etapas": {
+    "en": "FreeRDP with AI · Manual RustDesk web · NanoKVM planned",
+    "es": "FreeRDP con IA · RustDesk web manual · NanoKVM previsto"
+  },
+  "Configure os modelos e um Windows de teste para validar o fluxo. Automação RustDesk, NanoKVM e reconexão automática ainda estão pendentes.": {
+    "en": "Configure models and a test Windows machine to validate the flow. RustDesk automation, NanoKVM, and automatic reconnection remain pending.",
+    "es": "Configure modelos y un Windows de prueba para validar el flujo. La automatización RustDesk, NanoKVM y la reconexión automática siguen pendientes."
+  },
+  "Cliente RustDesk": {
+    "en": "RustDesk client",
+    "es": "Cliente RustDesk"
+  },
+  "Cliente web em janela própria": {
+    "en": "Web client in its own window",
+    "es": "Cliente web en su propia ventana"
+  },
+  "Copie o ID e informe a senha diretamente no cliente. Abrir a janela não confirma conexão com o Windows.": {
+    "en": "Copy the ID and enter the password directly in the client. Opening the window does not confirm a Windows connection.",
+    "es": "Copie el ID e introduzca la contraseña directamente en el cliente. Abrir la ventana no confirma la conexión con Windows."
+  },
+  "Informe um endereço HTTPS válido para o cliente web RustDesk.": {
+    "en": "Enter a valid HTTPS URL for the RustDesk web client.",
+    "es": "Introduzca una URL HTTPS válida para el cliente web RustDesk."
+  },
+  "Use uma URL HTTPS sem usuário, senha, parâmetros ou fragmento para o cliente web RustDesk.": {
+    "en": "Use an HTTPS URL without credentials, query parameters, or a fragment for the RustDesk web client.",
+    "es": "Use una URL HTTPS sin credenciales, parámetros ni fragmento para el cliente web RustDesk."
+  },
+  "Informe o ID RustDesk, usando letras, números, hífen ou sublinhado, sem espaços.": {
+    "en": "Enter the RustDesk ID using letters, numbers, hyphens or underscores, without spaces.",
+    "es": "Introduzca el ID RustDesk usando letras, números, guiones o guiones bajos, sin espacios."
+  },
+  "Pause a tarefa antes de abrir o cliente RustDesk.": {
+    "en": "Pause the task before opening the RustDesk client.",
+    "es": "Pause la tarea antes de abrir el cliente RustDesk."
+  },
+  "Não foi possível abrir o cliente web RustDesk.": {
+    "en": "Could not open the RustDesk web client.",
+    "es": "No se pudo abrir el cliente web RustDesk."
   }
 }

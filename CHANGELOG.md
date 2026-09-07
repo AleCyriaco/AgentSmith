@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.0 — RustDesk manual web client
+
+- Open the official RustDesk client in its own native window from Machines, without creating a machine first.
+- Save a RustDesk ID and optional custom HTTPS web-client URL; enter authentication directly in the client.
+- Restrict external navigation and keep the client outside AgentSmith IPC, Keychain, and AI execution.
+- Explicitly distinguish manual RustDesk access from the native RDP session and reject unsupported AI planning/execution for RustDesk.
+- Add URL, origin, migration, and capability regression tests; translate new controls into English and Spanish.
+
 ## Licensing update
 
 - Publish AgentSmith source and documentation under the MIT License, including version 0.12.7. Third-party components keep their own licenses.
