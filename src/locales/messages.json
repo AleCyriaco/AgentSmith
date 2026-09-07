@@ -2366,5 +2366,9 @@
   "Esses ajustes reduzem as esperas do aplicativo. OCR, rede e resposta do modelo têm tempos próprios; mais capturas não geram mais chamadas à IA.": {
     "en": "These settings reduce app delays. OCR, network and model response take their own time; more captures do not trigger more AI calls.",
     "es": "Estos ajustes reducen las esperas de la aplicación. El OCR, la red y la respuesta del modelo tienen sus propios tiempos; más capturas no generan más llamadas a la IA."
+  },
+  "Para imagens na API DeepSeek, use deepseek-v4-flash-vision-exp. Flash e Pro sem vision são modelos de texto. Ações curtas usam o modo sem raciocínio prolongado.": {
+    "en": "For images in the DeepSeek API, use deepseek-v4-flash-vision-exp. Flash and Pro without vision are text models. Short actions use non-thinking mode.",
+    "es": "Para imágenes en la API DeepSeek, usa deepseek-v4-flash-vision-exp. Flash y Pro sin vision son modelos de texto. Las acciones cortas usan el modo sin razonamiento prolongado."
   }
 }

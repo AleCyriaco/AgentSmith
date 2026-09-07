@@ -40,6 +40,19 @@ pub fn endpoint(p: &Profile, local_only: bool) -> Result<Url, String> {
     }
     Ok(url)
 }
+fn official_deepseek(p: &Profile) -> bool {
+    p.vendor == "deepseek"
+        && Url::parse(&p.base_url)
+            .ok()
+            .is_some_and(|u| u.host_str() == Some("api.deepseek.com"))
+}
+fn deepseek_text_only(p: &Profile) -> bool {
+    official_deepseek(p)
+        && matches!(
+            p.model.as_str(),
+            "deepseek-v4-flash" | "deepseek-v4-pro" | "deepseek-chat" | "deepseek-reasoner"
+        )
+}
 pub fn request_body(
     p: &Profile,
     system: &str,
@@ -48,6 +61,9 @@ pub fn request_body(
 ) -> Result<(String, Value), String> {
     if image.is_some() && !p.vision {
         return Err("O perfil selecionado não está habilitado para visão.".into());
+    }
+    if image.is_some() && deepseek_text_only(p) {
+        return Err(format!("{} é um modelo de texto. Para apoio visual DeepSeek, selecione deepseek-v4-flash-vision-exp e teste o acesso; marcar visão não adiciona essa capacidade ao modelo.", p.model));
     }
     let base = p.base_url.trim_end_matches('/');
     let encoded = image
@@ -101,6 +117,24 @@ pub fn request_body(
             // xAI documents JSON mode; other compatible APIs may not support it.
             if p.vendor == "xai" && system.contains("AgentSmith harness") {
                 body["response_format"] = json!({"type":"json_object"});
+            }
+            if official_deepseek(p)
+                && matches!(
+                    p.model.as_str(),
+                    "deepseek-v4-flash" | "deepseek-v4-pro" | "deepseek-v4-flash-vision-exp"
+                )
+            {
+                // V4 defaults to high thinking. Reserve it for planning; short
+                // actions must not spend their output budget on reasoning.
+                if system.contains("[contract:plan]") {
+                    body["thinking"] = json!({"type":"enabled"});
+                    body["reasoning_effort"] = json!("low");
+                } else {
+                    body["thinking"] = json!({"type":"disabled"});
+                }
+                if system.contains("AgentSmith harness") {
+                    body["response_format"] = json!({"type":"json_object"});
+                }
             }
             Ok((format!("{base}/chat/completions"), body))
         }
@@ -198,6 +232,12 @@ pub async fn call(
         .timeout(std::time::Duration::from_secs(120))
         .build()
         .map_err(|_| fail("Não foi possível iniciar o cliente HTTP.".into()))?;
+    let output_limit = body
+        .get("max_tokens")
+        .or_else(|| body.get("max_output_tokens"))
+        .or_else(|| body.pointer("/inferenceConfig/maxTokens"))
+        .and_then(Value::as_u64)
+        .unwrap_or(0);
     let mut req = client.post(url).json(&body);
     if p.protocol == "anthropic" {
         req = req
@@ -230,7 +270,11 @@ pub async fn call(
     }
     let v: Value = serde_json::from_slice(&body)
         .map_err(|_| fail("O provedor não retornou JSON válido.".into()))?;
-    response_text(&p.protocol, &v).map_err(fail)
+    response_text(&p.protocol, &v).map_err(|message| {
+        if message.contains("truncada") {
+            fail(format!("{} · {}: resposta truncada (limite de saída: {} tokens). Nenhuma ação executada. Use um modelo sem raciocínio prolongado para operar ou ajuste o perfil.",p.name,p.model,output_limit))
+        } else {fail(message)}
+    })
 }
 // Repair invalid model outputs before falling back. All attempts are read-only;
 // the caller receives only one validated result to execute after checking freshness.
@@ -393,6 +437,56 @@ mod tests {
         s.profiles[1].enabled = false;
         assert!(visual_settings(&s).routes["vision"].is_empty());
     }
+    #[test]
+    fn deepseek_v4_bounds_thinking_and_rejects_text_models_for_images() {
+        let mut p = profile("chat");
+        p.vendor = "deepseek".into();
+        p.base_url = "https://api.deepseek.com".into();
+        p.model = "deepseek-v4-flash".into();
+        p.vision = true;
+        let (_, body) =
+            request_body(&p, &crate::harness::system("text-action"), "OCR", None).unwrap();
+        assert_eq!(body["thinking"]["type"], "disabled");
+        assert_eq!(body["max_tokens"], 1024);
+        assert_eq!(body["response_format"]["type"], "json_object");
+        let (_, plan) = request_body(&p, &crate::harness::system("plan"), "Plan", None).unwrap();
+        assert_eq!(plan["thinking"]["type"], "enabled");
+        assert_eq!(plan["reasoning_effort"], "low");
+        assert_eq!(plan["max_tokens"], 8192);
+        for model in [
+            "deepseek-v4-flash",
+            "deepseek-v4-pro",
+            "deepseek-chat",
+            "deepseek-reasoner",
+        ] {
+            p.model = model.into();
+            assert!(
+                request_body(&p, "s", "p", Some("data:image/png;base64,AAAA"))
+                    .unwrap_err()
+                    .contains("modelo de texto")
+            );
+        }
+        p.model = "deepseek-v4-flash-vision-exp".into();
+        let (_, vision) = request_body(
+            &p,
+            &crate::harness::system("visual-action"),
+            "p",
+            Some("data:image/png;base64,AAAA"),
+        )
+        .unwrap();
+        assert_eq!(vision["thinking"]["type"], "disabled");
+        assert!(vision["messages"][1]["content"].is_array());
+        p.base_url = "https://other.example/v1".into();
+        assert!(
+            request_body(&p, &crate::harness::system("text-action"), "p", None)
+                .unwrap()
+                .1
+                .get("thinking")
+                .is_none()
+        );
+        assert!(response_text("chat",&json!({"choices":[{"finish_reason":"length","message":{"content":"{\"kind\":\"key\",\"keys\":[\"win\"]}"}}]})).is_err());
+    }
+
     #[test]
     fn compact_text_requests_have_no_image_and_bounded_output() {
         for protocol in ["chat", "responses", "anthropic", "bedrock"] {

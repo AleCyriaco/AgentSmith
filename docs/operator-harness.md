@@ -1,4 +1,4 @@
-# Harness de operação — AgentSmith 0.12.5
+# Harness de operação — AgentSmith 0.12.6
 
 O contrato é comum aos adaptadores de API, clientes oficiais e modelos locais. Compatibilidade com o protocolo não garante competência visual ou latência: valide cada perfil com **Testar operador** e uma tarefa curta no Windows.
 
@@ -69,3 +69,14 @@ O teste real da conexão com a sessão existente respondeu OK em 2,9 segundos; n
 Um código de saída não zero não explica sozinho a falha. O adaptador agora examina o evento final de erro e stderr antes de descartar a resposta. Distingue protocolo, autenticação, acesso ao modelo, limites de uso, orçamento, turnos, rede e serviço; motivos desconhecidos continuam identificados como desconhecidos. Não copia a saída bruta para avisos ou histórico, pois ela pode conter dados da tarefa ou da conta. Se o processo fechar stdin antecipadamente, o erro final continua disponível. Saída de processo malsucedido nunca é usada como ação.
 
 Após a nova ocorrência relatada, o pedido exato do botão Testar respondeu normalmente pela sessão existente. Isso não identifica retrospectivamente a causa do código 1 anterior: os detalhes haviam sido descartados. Os testes simulam um cliente que encerra com código 1, incluem fechamento antecipado de stdin e verificam a classificação sem expor texto privado.
+
+
+## DeepSeek V4: raciocínio e capacidade visual (0.12.6)
+
+Na API oficial DeepSeek, o adaptador Chat Completions configura V4 Flash, Pro e Flash Vision explicitamente: planejamento com raciocínio `low` e orçamento de 8.192 tokens; ações, verificações e teste de conexão sem thinking, mantendo o limite compacto de 1.024 tokens para operação. Chamadas do harness solicitam JSON mode. Essa configuração evita depender do thinking `high` padrão para produzir uma ação curta. Não muda parâmetros de servidores compatíveis de terceiros nem de outros provedores.
+
+Modelos conhecidos de texto (V4 Flash/Pro e aliases chat/reasoner) são recusados localmente quando recebem uma imagem, mesmo se a opção de visão estiver marcada. A mensagem indica o modelo visual `deepseek-v4-flash-vision-exp`; modelos novos não são bloqueados por uma lista fechada. Respostas truncadas continuam recusadas integralmente, agora com nome do perfil, modelo e limite de saída no erro.
+
+Validação ao vivo: Flash respondeu ao contrato de ação OCR em 1,3 s, sem truncamento. A variante vision-exp entregou JSON completo, mas errou o alvo em duas imagens sintéticas iguais: primeiro sem dimensões explícitas, depois com o contexto de dimensões usado em produção. Não foi certificada para controle visual nem adotada automaticamente. Nenhuma entrada foi enviada ao Windows nesses testes.
+
+Fontes: [Thinking mode](https://api-docs.deepseek.com/guides/thinking_mode/), [Vision](https://api-docs.deepseek.com/guides/vision/), [JSON output](https://api-docs.deepseek.com/guides/json_mode/).
