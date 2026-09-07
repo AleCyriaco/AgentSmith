@@ -1,82 +1,53 @@
-# Harness de operação — AgentSmith 0.12.6
+# Operator harness — 0.12.7
 
-O contrato é comum aos adaptadores de API, clientes oficiais e modelos locais. Compatibilidade com o protocolo não garante competência visual ou latência: valide cada perfil com **Testar operador** e uma tarefa curta no Windows.
+The same action meaning applies across API adapters, official clients, and local models. Protocol compatibility does not establish visual accuracy. Test each profile with the synthetic operator check and a small Windows task.
 
-## Ciclo
+## Compact observe–act–verify loop
 
-1. Capturar uma imagem atual e reutilizar OCR somente se os pixels da região não mudaram.
-2. Fornecer roteiro autorizado, etapa e critério, etapas anteriores e até quatro entradas recentes com indicação de mudança da tela.
-3. Quando Operar e Verificar têm a mesma rota, uma chamada de texto propõe a próxima ação ou a conclusão. Rotas diferentes mantêm decisões separadas.
-4. Validar JSON, campos, IDs, coordenadas, tamanho do texto e atalhos. Uma resposta inválida recebe uma única correção por perfil; depois utiliza somente a alternativa já configurada.
-5. Enviar uma ação validada ao RDP após conferir se a observação ainda é atual. Nenhuma ferramenta local do provedor deve executar ações.
-6. Observar novamente. A tela pode demorar até 1,2 segundo adicional para responder. Após três entradas sem mudança, parar para revisão.
+1. Read a current frame; reuse OCR only when the relevant pixels and resolution match.
+2. Send the authorized plan, current step and criterion, prior steps, and up to four recent inputs with screen-change information.
+3. Combine operation and verification into one text decision when their routes match.
+4. Validate JSON, fields, target IDs, coordinates, text length, and shortcuts. Allow one format repair per profile; use only configured alternatives afterward.
+5. Recheck observation freshness before transmitting one input through the single RDP executor.
+6. Observe again, allowing delayed screen response. Three unchanged inputs stop for review.
 
-Propostas de sucesso por texto continuam exigindo confirmação visual. Regras OCR explícitas são verificadas pelo motor. O harness não transforma ausência de evidência em sucesso nem remove condições de parada.
+Text-proposed success still requires visual confirmation; explicit OCR criteria are checked directly. Real blocking restrictions are preserved.
 
-## Semântica
+## Action semantics
 
-- `key`: um atalho simultâneo, por exemplo `{"kind":"key","keys":["ctrl","l"]}`. Ctrl+L pressupõe navegador ativo. Não agrupar atalhos sequenciais.
-- `type_text`: digita até 400 caracteres; não pressiona Enter. Não transmite a senha pela linha de comando.
-- Clique OCR: `{"kind":"click","target":0}` usa ID da observação atual com confiança suficiente.
-- Clique visual: `{"kind":"click","x":120,"y":80}` usa pixels da imagem recebida, mesmo quando reduzida ou recortada. O motor faz a conversão para o RDP.
-- `need_vision`: texto/OCR insuficiente. `inspect`: solicita recorte se habilitado. Nenhum dos dois envia entrada.
-- `wait`: espera de 1 a 10 segundos. `blocked`: motivo concreto e respeito às restrições do roteiro.
+| Proposal | Meaning |
+| --- | --- |
+| `{"kind":"key","keys":["ctrl","l"]}` | One simultaneous shortcut; assumes appropriate application focus |
+| `{"kind":"type_text","text":"hello"}` | Type up to 400 characters; does not press Enter |
+| `{"kind":"click","target":0}` | Click a current OCR target with sufficient confidence |
+| `{"kind":"click","x":120,"y":80}` | Visual-image coordinates; the engine maps them to the remote session |
+| `need_vision` | Request image assistance; no Windows input |
+| `inspect` | Request a bounded crop if enabled; no Windows input |
+| `wait` | Wait for 1–10 seconds |
+| `blocked` | A concrete impediment respecting task restrictions |
 
-## Custo e velocidade
+Additional validated remote actions include double click, right click, and scrolling. Separate sequential shortcuts into separate proposals. A syntactically valid object is still subject to semantic checks.
 
-O OCR é enviado em linhas compactas com até 120 elementos e orçamento de 12 KB para as linhas serializadas. Textos longos são limitados a 200 caracteres e omissões são indicadas; falta de informação deve solicitar visão. O roteiro autorizado é preservado integralmente para não perder restrições. Diagnósticos de execução não substituem a memória das últimas entradas. Conteúdo digitado não é copiado para essa memória.
+## Context and cost
 
-Uma etapa incompleta na mesma rota passa de duas chamadas de texto para uma. A confirmação visual, correções de JSON e alternativas podem exigir chamadas adicionais. Limites de saída continuam limitados por adaptador; latência, raciocínio interno e cobrança dependem do modelo. Não há economia percentual medida ainda.
+OCR context is capped at 120 elements and a 12 KB serialized-line budget. Long recognized strings are truncated to 200 characters and omissions are marked. Authorized task instructions remain intact so constraints are not lost. Recent-input context does not copy typed content.
 
-## Testar operador
+Combined text decisions can remove one model call for an incomplete step. Visual confirmation, repairs, and alternatives can add calls. No percentage cost saving has been established; account billing and hidden reasoning depend on the provider/model.
 
-Usa um botão fictício recebido por OCR e exige um clique com ID correto. Usa apenas o perfil selecionado, permite uma correção e mede o tempo total. Não abre a sessão Windows, não envia mouse/teclado e não valida capacidade de visão. É um teste mínimo de entendimento do contrato, não certificação de todas as tarefas.
+## Provider-specific handling
 
-## Validação
+**xAI API:** harness requests through its Chat Completions path request JSON mode, with local validation retained.
 
-A suíte cobre JSON inválido, correção e alternativa, impedimentos reais preservados, clique fora da tela, IDs inventados, proposta textual falsa recusada pela visão, ausência de imagens no caminho de texto, atraso de atualização e liberação das teclas. O fluxo real precisa ser medido com a mesma tarefa e tela inicial para comparar provedores.
+**Grok Build browser login:** `session/prompt` includes `_meta.outputSchema`; final `_meta.structuredOutput` is authoritative when a contract was requested. Intermediate prose, missing metadata, cancellation, or malformed output cannot become an input. Plan, OCR action, combined decision, OCR verification, visual action, and visual verification have separate closed schemas.
 
-## Validação xAI neste Mac
+**Claude Code browser login:** input and output use `stream-json`, with `--verbose`. Only the final `result` event is consumed; duplicate, incomplete, malformed, or failed responses are rejected. Nonzero exits are classified from bounded output without copying raw provider messages into the user history.
 
-No teste sintético de 7/9/2026, o perfil grok-4.6 via API retornou recusa textual ao contrato inicial. Com a descrição explícita de geração de uma proposta (execução pertence ao aplicativo) e `response_format: {"type":"json_object"}`, retornou `{"kind":"click","target":0}` em 14,25 s. Não é benchmark comparativo nem validação de operação visual real.
+**Official DeepSeek V4 endpoint:** planning explicitly uses low reasoning with an 8,192-token output budget; short operation/verification requests disable thinking and retain a compact 1,024-token budget. Harness calls request JSON mode. Known text-only models reject image input locally, even if their profile has vision selected. Third-party compatible endpoints are not given DeepSeek-specific parameters automatically. Truncated output is rejected in full.
 
-O modo JSON é aplicado somente a chamadas do harness via adaptador xAI/chat, conforme [documentação oficial](https://docs.x.ai/developers/model-capabilities/text/structured-outputs). A validação local continua necessária: JSON válido não garante ação correta. Os demais adaptadores mantêm contrato por texto e validação local, sem presumir suporte a parâmetros exclusivos da xAI.
+## Validation scope
 
+Automated checks cover invented IDs, invalid JSON, format repair, configured fallback, out-of-screen clicks, genuine impediments, false text completion rejected by vision, image-free text requests, delayed frame updates, cancellation, and key release.
 
-## Login xAI: saída estruturada nativa (0.12.2)
+Selected live synthetic checks observed a DeepSeek Flash OCR action in 1.3 s and a Claude connection response in 2.9 s. These were different tests, not a comparative benchmark. DeepSeek's experimental vision variant returned complete JSON but missed the synthetic target in both attempts; it was not certified for visual control. No claim is made that all catalog providers or models pass real Windows tasks.
 
-O adaptador Grok Build envia `_meta.outputSchema` em `session/prompt` e usa `_meta.structuredOutput` da resposta final. Esses campos são usados pelo [cliente headless oficial](https://github.com/xai-org/grok-build/blob/main/crates/codegen/xai-grok-pager/src/headless.rs). Texto intermediário da conversa deixa de ser interpretado como ação quando um contrato foi solicitado. Se o cliente não devolver a estrutura ou indicar erro de validação, a chamada falha sem executar entradas e apresenta uma mensagem específica.
-
-Cada função tem seu contrato: plano, ação OCR, observação/ação combinada, verificação OCR, ação visual e verificação visual. O seletor pertence às instruções internas, não ao texto do roteiro ou da tela. Todos os objetos fecham campos extras; clique OCR exige `target` e clique visual exige `x`/`y`. A validação semântica local continua obrigatória. O modo de teste simples e o cliente Gemini mantêm seu protocolo anterior.
-
-A suíte cobre seleção dos contratos, separação de coordenadas e IDs, prioridade da saída estruturada sobre prosa e rejeição de metadados ausentes, erro ou cancelamento. Os testes ao vivo são sintéticos e não executam tarefas no Windows.
-
-
-## Ritmo abaixo de 100 ms (0.12.3)
-
-Capturas aceitam de 20 a 2.000 ms em passos de 1 ms na interface, na configuração salva e no processo FreeRDP. A pausa adicional após ações aceita de 0 a 3.000 ms. O preset Turbo usa 50 ms, pausa zero e imagens de até 1.280 pixels; o padrão Equilibrado continua igual. Zero não dispensa a observação de uma nova imagem nem a verificação da ação. A frequência configurada é um alvo; transferência dos quadros, codificação, OCR, rede e inferência podem limitar o ritmo efetivo. Capturas não disparam chamadas de IA por si mesmas.
-
-
-## Login Claude: protocolo de entrada e saída (0.12.4)
-
-Claude Code 2.1.179 rejeita `--input-format stream-json --output-format json` antes da inferência. O adaptador passa a usar `stream-json` nos dois sentidos, com `--verbose` exigido para a saída de eventos. O leitor consome somente o evento final `result`, rejeitando eventos intermediários isolados, resultados duplicados, JSON malformado e resultados com erro. A compatibilidade com uma resposta JSON única é mantida.
-
-O teste real da conexão com a sessão existente respondeu OK em 2,9 segundos; não enviou ações ao Windows. Os testes de regressão cobrem a leitura do fluxo e impedem que texto intermediário seja tratado como resposta final. [Referência oficial da CLI](https://code.claude.com/docs/en/cli-reference).
-
-
-## Diagnóstico de encerramento do Claude (0.12.5)
-
-Um código de saída não zero não explica sozinho a falha. O adaptador agora examina o evento final de erro e stderr antes de descartar a resposta. Distingue protocolo, autenticação, acesso ao modelo, limites de uso, orçamento, turnos, rede e serviço; motivos desconhecidos continuam identificados como desconhecidos. Não copia a saída bruta para avisos ou histórico, pois ela pode conter dados da tarefa ou da conta. Se o processo fechar stdin antecipadamente, o erro final continua disponível. Saída de processo malsucedido nunca é usada como ação.
-
-Após a nova ocorrência relatada, o pedido exato do botão Testar respondeu normalmente pela sessão existente. Isso não identifica retrospectivamente a causa do código 1 anterior: os detalhes haviam sido descartados. Os testes simulam um cliente que encerra com código 1, incluem fechamento antecipado de stdin e verificam a classificação sem expor texto privado.
-
-
-## DeepSeek V4: raciocínio e capacidade visual (0.12.6)
-
-Na API oficial DeepSeek, o adaptador Chat Completions configura V4 Flash, Pro e Flash Vision explicitamente: planejamento com raciocínio `low` e orçamento de 8.192 tokens; ações, verificações e teste de conexão sem thinking, mantendo o limite compacto de 1.024 tokens para operação. Chamadas do harness solicitam JSON mode. Essa configuração evita depender do thinking `high` padrão para produzir uma ação curta. Não muda parâmetros de servidores compatíveis de terceiros nem de outros provedores.
-
-Modelos conhecidos de texto (V4 Flash/Pro e aliases chat/reasoner) são recusados localmente quando recebem uma imagem, mesmo se a opção de visão estiver marcada. A mensagem indica o modelo visual `deepseek-v4-flash-vision-exp`; modelos novos não são bloqueados por uma lista fechada. Respostas truncadas continuam recusadas integralmente, agora com nome do perfil, modelo e limite de saída no erro.
-
-Validação ao vivo: Flash respondeu ao contrato de ação OCR em 1,3 s, sem truncamento. A variante vision-exp entregou JSON completo, mas errou o alvo em duas imagens sintéticas iguais: primeiro sem dimensões explícitas, depois com o contexto de dimensões usado em produção. Não foi certificada para controle visual nem adotada automaticamente. Nenhuma entrada foi enviada ao Windows nesses testes.
-
-Fontes: [Thinking mode](https://api-docs.deepseek.com/guides/thinking_mode/), [Vision](https://api-docs.deepseek.com/guides/vision/), [JSON output](https://api-docs.deepseek.com/guides/json_mode/).
+Implementation details live in `harness.rs`, `llm.rs`, `browser_auth.rs`, `observation.rs`, and `executor.rs`.

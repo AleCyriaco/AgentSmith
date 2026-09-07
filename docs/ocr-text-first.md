@@ -1,41 +1,23 @@
-# AgentSmith 0.11.0 — OCR e texto como caminho principal
+# OCR-first operation
 
-## Fluxo
+A frame is captured from the remote RDP session. Apple Vision extracts text, confidence, and positions locally. The text path receives compact OCR elements with observation-scoped IDs, the authorized plan, the current criterion, and recent input context.
 
-1. Capturar a sessão Windows, sem capturar o desktop do Mac.
-2. Havendo critério explícito, ler primeiro a região configurada e conferir o texto exato no motor. Confirmar somente com a resolução esperada, confiança mínima, correspondência única e pixels ainda iguais. Em repetição, exigir uma nova ocorrência após não correspondência.
-3. Ler a tela por OCR ou reutilizar a leitura em memória se seus pixels estiverem iguais.
-4. Enviar JSON de textos, confiança e caixas ao modelo de Verificar, sem imagem. Propostas de conclusão precisam citar IDs existentes de alta confiança e, desde a 0.11.2, passam por conferência visual antes de avançar. A conferência usa preferencialmente outro modelo já configurado na rota visual e não recebe a afirmação proposta como prova. LLMs continuam sujeitos a erros; somente critérios explícitos são verificados diretamente pelo motor.
-5. Se não confirmado, enviar a observação ao modelo de Operar, sem imagem. Ele retorna uma ação ou solicita apoio visual.
-6. O motor resolve os IDs OCR para coordenadas e valida a ação. Um clique textual não aceita coordenadas livres. IDs e caixas só valem para a observação atual.
-7. Conferir se a captura continua válida antes da ação. Enviar mouse/teclado exclusivamente à sessão Windows. Aguardar atualização e repetir.
+For an OCR click, the model chooses a current target ID. The engine resolves the position; invented IDs or insufficient confidence cannot become clicks. Icons, focus states, blank inputs, ambiguous text, and insufficient evidence can trigger visual assistance.
 
-O apoio visual recebe imagens se OCR falhar/não fornecer informação, se o modelo pedir, se a resposta textual for inválida/indisponível, se uma entrada não mudar os pixels ou após duas esperas. Continua aceitando recortes e conversão de coordenadas. Um pedido de bloqueio por falta de autorização não é contornado. Se o apoio visual não estiver configurado, a tarefa pede atenção com instrução de configuração.
+## Completion
 
-## Configuração e compatibilidade
+A text model can propose completion but cannot confirm a normal step alone: the visual assistant checks the current screenshot and original criterion. This adds a visual call at completion boundaries. An explicit expected-text rule instead uses direct OCR validation, with exact text/punctuation, confidence threshold, a unique match contained in the configured region, matching resolution, and unchanged region pixels before confirmation.
 
-- **Planejar:** modelo de texto para o roteiro.
-- **Operar:** modelo de texto para decisões a partir do OCR.
-- **Verificar:** modelo de texto para condições sem regra explícita.
-- **Apoio visual:** modelo multimodal sob demanda. Vazio usa apenas os perfis com visão que já estavam atribuídos a Operar/Verificar. Nenhum perfil alheio às rotas é escolhido automaticamente.
-- **Ritmo → OCR nativo:** ativado usa o novo fluxo. Desativado usa visão, preservando as regras explícitas OCR.
-- **Somente local:** continua validando endpoints e autenticação em toda consulta, inclusive no apoio visual.
+Use exact OCR rules only when the visible text proves the whole step. A number visible elsewhere on the screen is not enough. Moving the target window can invalidate the region. Repeated cycles require the criterion to leave the matching state before it can be confirmed again.
 
-Não há migração de máquinas, tarefas, credenciais ou roteamento. Modelos multimodais existentes podem ser usados no caminho textual sem receber imagem. Esta versão não adiciona um novo modelo de texto ao catálogo nem baixa pesos automaticamente.
+## Caching and crops
 
-## Cache e limites
+At most two observations are cached in memory per execution. Exact pixels and resolution must match before an OCR result is reused. Changes outside a crop do not invalidate that crop's reading but do require a new whole-screen observation. Pause/resume, restart, and a new repetition cycle start a new cache. Cached actions are never replayed.
 
-Cache de até duas leituras por execução, com região, resolução, captura e resultado OCR. Apenas a comparação exata dos pixels autoriza reutilização. Uma leitura de região não serve como leitura de tela inteira. Um novo ciclo/retomada não herda cache. Imagens ficam na memória; o histórico registra tempos, reutilização, evidências e motivo do apoio visual.
+The visual model can request a crop with `inspect`. This changes its observation, not the Windows state. The engine maps coordinates from resized/cropped images to the remote session. Old OCR is not paired with a new image. A changed image can invalidate a pending decision.
 
-Não se repetem ações em cache: cada nova entrada precisa de decisão atual. Três entradas consecutivas sem mudança nos pixels pedem atenção. Essa heurística não mede progresso semântico em todas as interfaces; relógios/animações podem mudar pixels sem cumprir o objetivo. Ícones, campos vazios e foco de teclado continuam dependendo frequentemente de visão. O executor preserva pausas, Esc, limite de ações e janelas de repetição.
+## Failure and progress
 
-## Validação
+Invalid text output gets a bounded repair attempt or configured fallback. Insufficient information escalates to vision. Three inputs without pixel change stop the attempt for review. Pixel change is only a progress signal: animation can change pixels without advancing the task, and hidden application work can happen without a visible change.
 
-- Testes de cache: mudança de um pixel invalida; mudança fora da região preserva; resolução diferente invalida; região parcial não substitui tela inteira; memória limitada.
-- Testes de ações: clique por ID correto; rejeição de ID ausente, baixa confiança, caixa fora da tela, coordenadas injetadas e tipos não autorizados.
-- Testes de evidência: IDs reais de alta confiança obrigatórios para confirmação textual.
-- Teste HTTP com modelo somente textual: verificação e operação sem imagem, saída limitada, clique convertido, solicitação de visão pelo verificador/operador e regra explícita impedindo que o LLM confirme sucesso.
-- Testes de roteamento: seleção visual explícita, compatibilidade com rotas antigas, exclusão de perfis textuais/desativados e preservação das preferências.
-- Regressões de pausa/parada, repetição, edição de planos, geometria e idiomas.
-
-Os testes automatizados não medem a qualidade das decisões de um LLM real. Comparar latência, taxa de conclusão e uso de apoio visual nas mesmas tarefas Windows ainda é necessário para afirmar ganho de desempenho ou acerto.
+The current engine can still stop when an intermediate step is no longer applicable even if the overall task is already complete. This is a known goal-reconciliation limitation, not proof of an authentication or routing failure.

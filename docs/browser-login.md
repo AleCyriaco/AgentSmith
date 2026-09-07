@@ -1,27 +1,30 @@
-# Autenticação por navegador
+# Browser login through official clients
 
-## Login pelo navegador — versão 0.2.0
+AgentSmith offers browser-login profiles for four providers. It delegates account authentication and inference to their official client programs installed on the Mac. This is not a general conversion of a chat subscription into an API key.
 
-A tela de provedores oferece login para OpenAI, Anthropic, Google e xAI. O aplicativo usa os clientes oficiais instalados no Mac; não coleta senha de conta nem lê/copía seus arquivos de tokens. Não há conversão de assinatura de chat em chave da API.
-
-| Provedor | Login | Execução |
+| Provider | Client used by AgentSmith | Integration |
 | --- | --- | --- |
-| OpenAI | Codex App Server, OAuth ChatGPT no navegador | Codex exec, texto e imagem anexa, com verificação de autenticação ChatGPT |
-| Anthropic | Claude Code oficial, `auth login --claudeai` | Claude Code oficial em modo de resposta, mensagens de texto/imagem por stdin; exige autenticação Claude.ai |
-| Google | Gemini CLI oficial via ACP, autenticação `oauth-personal` | ACP com texto/imagem, configuração restrita e modelo padrão ou escolhido |
-| xAI | Grok Build oficial, login OAuth | ACP com sessão autenticada. A versão instalada anuncia apenas texto; imagens são recusadas com orientação para usar outro perfil |
+| OpenAI | Codex | ChatGPT login through app-server; inference through Codex exec |
+| Anthropic | Claude Code | Claude account login; streaming input/output through the CLI |
+| Google | Gemini CLI | ACP personal OAuth authentication and session prompts |
+| xAI | Grok Build | OAuth login and ACP; structured output for harness requests |
 
-Abertura do navegador não é confirmação de login. A tela acompanha instalação, espera, conclusão, falha e cancelamento. O teste envia uma mensagem simples ao modelo antes de salvar, se solicitado. `default` usa o modelo padrão do cliente, sem fixar um catálogo desatualizado.
+## Connect
 
-A sessão é compartilhada por provedor com seu cliente oficial neste Mac; perfis diferentes não isolam contas. O modo somente local recusa perfis com login na nuvem. As credenciais das APIs não são consultadas para esses perfis. Ferramentas locais dos agentes são restringidas; ações no Windows continuam passando pela validação do executor do AgentSmith. Cancelar encerra o grupo de processos da chamada, incluindo processos auxiliares do cliente.
+Open **Providers and models**, select the provider, then **Login through browser**. Install the component if it is missing, start login, and complete authentication on the official page. Installing a component requires Node.js/npm and does not purchase or enable a subscription.
 
-Se faltar um cliente, o botão de instalação baixa seu pacote oficial pelo npm na pasta de dados do AgentSmith. Exige Node.js LTS. Instalar um componente não compra nem ativa um plano. A homologação de login, cotas, modelos e operação visual precisa da conclusão de autenticação pelo titular da conta.
+Use `default` for the official client's default model, or enter an identifier actually available to the account. Run **Test connection** before saving. Opening the browser alone does not prove authentication succeeded. A successful text test does not prove image support or operator accuracy.
 
-Fontes: [Codex App Server](https://developers.openai.com/codex/app-server/), [Claude Code CLI](https://code.claude.com/docs/en/cli-reference), [condições de integração do Claude Code](https://code.claude.com/docs/en/legal-and-compliance), [Gemini CLI](https://geminicli.com/docs/get-started/authentication/), [Grok Build](https://docs.x.ai/build/enterprise).
+Sessions belong to the official client and are shared between profiles for that provider on this Mac. Creating two profiles does not create isolated accounts. AgentSmith does not copy account passwords or token stores. API-key profiles are separate and use their configured endpoint credentials.
 
+## Compatibility and limits
 
-## Correção 0.3.1: crash ao iniciar login
+Model availability, quotas, permissions, client versions, and provider policies apply. API access and subscription-client access are distinct. The interface's vision checkbox is a capability declaration, not an upgrade: the selected model and client transport must accept images. Local-only mode rejects these cloud profiles.
 
-O comando nativo de login é síncrono e pode ser chamado na thread da interface, sem um contexto Tokio ativo. O agendamento agora usa `tauri::async_runtime::spawn`, mantendo o cancelamento pelo AbortHandle. Isso cobre login e instalação de componentes para os quatro provedores.
+Provider agent tools are restricted by the integration; Windows inputs continue through AgentSmith's executor. Cancellation terminates the associated request process group. Official clients may have their own persistent logs or session policies; see [privacy](privacy.md).
 
-O teste de regressão executa fora de um runtime Tokio, inicia e cancela tarefas para os quatro provedores, verifica timers e rejeição de duplicatas. O agendamento anterior reproduziu `there is no reactor running`; a correção passou. Os relatórios de crash do macOS confirmavam SIGABRT em `AuthManager::start` → `tokio::task::spawn`.
+## Troubleshooting
+
+A nonzero exit code alone does not identify the cause. Check client installation, authenticated account, model access, quota, and version. Claude errors are categorized when recognizable; unknown failures remain unknown instead of being labeled as an account failure without evidence. Raw client output is not copied into task history.
+
+For `session/new` refusal, confirm that the installed client supports the expected protocol and that its session can use the selected model. Try its default model before selecting a more specific identifier. See [troubleshooting](troubleshooting.md).

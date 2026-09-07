@@ -25,3 +25,7 @@ test-runtime/
 *.dmg
 *.pem
 *.key
+
+# Browser automation captures and local documentation preview
+.playwright-cli/
+output/playwright/
