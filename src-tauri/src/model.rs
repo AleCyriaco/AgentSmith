@@ -23,6 +23,12 @@ fn default_auth() -> String {
 pub struct Machine {
     #[serde(default)]
     pub rustdesk_web_url: String,
+    /// Rendezvous host for a RustDesk destination. Empty uses the public server.
+    #[serde(default)]
+    pub rustdesk_server: String,
+    /// Base64 signing key of that rendezvous server. Empty uses the public one.
+    #[serde(default)]
+    pub rustdesk_key: String,
     pub id: String,
     pub name: String,
     pub protocol: String,

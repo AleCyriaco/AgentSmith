@@ -1,4 +1,9 @@
 use crate::model::*;
+use crate::rustdesk::{
+    decoder::Decoder,
+    input::{self, Input},
+    session::{self, Codec, Event},
+};
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -19,8 +24,17 @@ struct Connection {
     child: Child,
     input: ChildStdin,
 }
+
+/// The two transports a session can run on. Both feed the same frame slot and
+/// accept the same actions, so nothing above this layer needs to tell them apart.
+enum Transport {
+    Rdp(Connection),
+    /// Input goes to the task that owns the RustDesk session; dropping the
+    /// sender is what ends that task.
+    RustDesk(tokio::sync::mpsc::Sender<Vec<Input>>),
+}
 pub struct Remote {
-    connection: tokio::sync::Mutex<Option<Connection>>,
+    connection: tokio::sync::Mutex<Option<Transport>>,
     pub info: Arc<Mutex<SessionInfo>>,
     frame: Arc<Mutex<Option<Snapshot>>>,
     generation: Arc<AtomicU64>,
@@ -88,7 +102,7 @@ impl Remote {
     pub async fn disconnect(&self) -> Result<(), String> {
         self.epoch.fetch_add(1, Ordering::SeqCst);
         self.generation.fetch_add(1, Ordering::SeqCst);
-        if let Some(mut c) = self.connection.lock().await.take() {
+        if let Some(Transport::Rdp(mut c)) = self.connection.lock().await.take() {
             let _ = c.child.kill().await;
             let _ = c.child.wait().await;
         }
@@ -103,6 +117,9 @@ impl Remote {
         helper: &Path,
         capture_interval_ms: u32,
     ) -> Result<(), String> {
+        if m.protocol == "rustdesk" {
+            return self.connect_rustdesk(m, password).await;
+        }
         if m.protocol != "rdp" {
             return Err("Este conector está previsto na arquitetura, mas ainda não foi implementado nesta versão.".into());
         }
@@ -154,7 +171,7 @@ impl Remote {
             status: "connecting".into(),
             message: "Autenticando no Windows…".into(),
         };
-        *self.connection.lock().await = Some(Connection { child, input });
+        *self.connection.lock().await = Some(Transport::Rdp(Connection { child, input }));
         let info = self.info.clone();
         let frame = self.frame.clone();
         let gen = self.generation.clone();
@@ -212,19 +229,12 @@ impl Remote {
                     }
                     seq += 1;
                     let encoded = tokio::task::spawn_blocking(move || {
+                        // FreeRDP hands over BGRA with an unset alpha channel.
                         for p in bytes.chunks_exact_mut(4) {
                             p.swap(0, 2);
                             p[3] = 255;
                         }
-                        let img = image::RgbaImage::from_raw(w, h, bytes)?;
-                        let mut png = Cursor::new(vec![]);
-                        image::DynamicImage::ImageRgba8(img)
-                            .write_to(&mut png, image::ImageFormat::Png)
-                            .ok()?;
-                        Some(format!(
-                            "data:image/png;base64,{}",
-                            STANDARD.encode(png.into_inner())
-                        ))
+                        encode_frame(bytes, w, h, seq)
                     })
                     .await
                     .ok()
@@ -232,14 +242,8 @@ impl Remote {
                     if gen.load(Ordering::SeqCst) != generation {
                         return;
                     }
-                    if let Some(data_url) = encoded {
-                        *frame.lock().unwrap() = Some(Snapshot {
-                            data_url,
-                            width: w,
-                            height: h,
-                            sequence: seq,
-                            captured_at: now(),
-                        });
+                    if encoded.is_some() {
+                        *frame.lock().unwrap() = encoded;
                     }
                 } else {
                     break;
@@ -256,9 +260,111 @@ impl Remote {
         });
         Ok(())
     }
+    /// Opens a RustDesk session and keeps it running in its own task, feeding
+    /// the same frame slot the RDP transport uses.
+    async fn connect_rustdesk(&self, m: &Machine, password: &str) -> Result<(), String> {
+        self.disconnect().await?;
+        let generation = self.generation.load(Ordering::SeqCst);
+        // Connecting before spawning means a bad ID, a refused password or an
+        // offline machine reaches the operator as an error, not as a silent wait.
+        let session = session::Session::connect(&session::Options {
+            id: m.host.trim().into(),
+            password: password.into(),
+            rendezvous: m.rustdesk_server.clone(),
+            key: m.rustdesk_key.clone(),
+        })
+        .await?;
+        let (peer, mut events, mut commands) = session.split();
+        *self.info.lock().unwrap() = SessionInfo {
+            machine_id: m.id.clone(),
+            status: "connected".into(),
+            message: format!(
+                "Sessão RustDesk ativa com {} ({}×{})",
+                if peer.hostname.is_empty() {
+                    m.name.clone()
+                } else {
+                    peer.hostname.clone()
+                },
+                peer.width,
+                peer.height
+            ),
+        };
+        let (sender, mut inbox) = tokio::sync::mpsc::channel::<Vec<Input>>(64);
+        *self.connection.lock().await = Some(Transport::RustDesk(sender));
+        let info = self.info.clone();
+        let frame = self.frame.clone();
+        let gen = self.generation.clone();
+        tokio::spawn(async move {
+            let _ = commands.request_refresh().await;
+            let mut decoder: Option<(Codec, Decoder)> = None;
+            let mut seq = 0u64;
+            let ended = loop {
+                if gen.load(Ordering::SeqCst) != generation {
+                    return;
+                }
+                tokio::select! {
+                    inputs = inbox.recv() => {
+                        // The sender is dropped on disconnect, which ends the task.
+                        let Some(inputs) = inputs else { return };
+                        if let Err(error) = commands.send(&inputs).await {
+                            break error;
+                        }
+                    }
+                    event = events.next() => match event {
+                        Err(error) => break error,
+                        Ok(Event::Closed(reason)) => {
+                            break format!("O par RustDesk encerrou a sessão: {reason}")
+                        }
+                        Ok(Event::Ping(delay)) => {
+                            if let Err(error) = commands.pong(delay).await {
+                                break error;
+                            }
+                        }
+                        Ok(Event::Idle) => {}
+                        Ok(Event::Video { codec, data, .. }) => {
+                            // A codec switch mid-stream needs its own decoder.
+                            if !matches!(&decoder, Some((current, _)) if *current == codec) {
+                                match Decoder::new(codec) {
+                                    Ok(fresh) => decoder = Some((codec, fresh)),
+                                    Err(error) => break error,
+                                }
+                            }
+                            let Some((_, active)) = decoder.as_mut() else { continue };
+                            let picture = match active.decode(&data) {
+                                Ok(Some(picture)) => picture,
+                                Ok(None) => continue,
+                                Err(error) => break error,
+                            };
+                            seq += 1;
+                            let encoded = tokio::task::spawn_blocking(move || {
+                                encode_frame(picture.rgba, picture.width, picture.height, seq)
+                            })
+                            .await
+                            .ok()
+                            .flatten();
+                            if gen.load(Ordering::SeqCst) != generation {
+                                return;
+                            }
+                            if encoded.is_some() {
+                                *frame.lock().unwrap() = encoded;
+                            }
+                        }
+                    }
+                }
+            };
+            if gen.load(Ordering::SeqCst) == generation {
+                let mut current = info.lock().unwrap();
+                current.status = "error".into();
+                current.message = ended;
+                *frame.lock().unwrap() = None;
+            }
+        });
+        Ok(())
+    }
     pub async fn configure_capture(&self, interval: u32) -> Result<(), String> {
         validate_capture_interval(interval)?;
-        if let Some(c) = self.connection.lock().await.as_mut() {
+        // A RustDesk peer paces its own stream; the setting is kept for RDP.
+        if let Some(Transport::Rdp(c)) = self.connection.lock().await.as_mut() {
             c.input
                 .write_all(format!("interval {interval}\n").as_bytes())
                 .await
@@ -306,7 +412,13 @@ impl Remote {
     }
     pub async fn release(&self) -> Result<(), String> {
         let mut guard = self.connection.lock().await;
-        if let Some(c) = guard.as_mut() {
+        if let Some(Transport::RustDesk(sender)) = guard.as_ref() {
+            return sender
+                .send(input::release())
+                .await
+                .map_err(|_| "A sessão RustDesk foi encerrada.".into());
+        }
+        if let Some(Transport::Rdp(c)) = guard.as_mut() {
             let mut commands = String::new();
             for key in [0x1d, 0x11d, 0x2a, 0x36, 0x38, 0x138, 0x15b, 0x15c] {
                 commands.push_str(&format!("key {key} 0\n"));
@@ -323,18 +435,40 @@ impl Remote {
     }
     pub async fn act(&self, action: &Action, epoch: u64) -> Result<(), String> {
         let f = self.snapshot()?;
-        let commands = action_commands(action, f.width, f.height)?;
         let mut guard = self.connection.lock().await;
         if self.epoch.load(Ordering::SeqCst) != epoch {
             return Err("Execução pausada.".into());
         }
-        let c = guard.as_mut().ok_or("Não existe conexão ativa.")?;
-        c.input
-            .write_all(commands.as_bytes())
-            .await
-            .map_err(|_| "Conexão interrompida ao enviar entrada.".into())
+        match guard.as_mut().ok_or("Não existe conexão ativa.")? {
+            Transport::Rdp(c) => c
+                .input
+                .write_all(action_commands(action, f.width, f.height)?.as_bytes())
+                .await
+                .map_err(|_| "Conexão interrompida ao enviar entrada.".into()),
+            Transport::RustDesk(sender) => sender
+                .send(input::translate(action, f.width, f.height)?)
+                .await
+                .map_err(|_| "A sessão RustDesk foi encerrada.".into()),
+        }
     }
 }
+/// Wraps an RGBA image as the PNG data URL the interface and the vision
+/// pipeline already consume. Shared by both transports.
+fn encode_frame(rgba: Vec<u8>, width: u32, height: u32, sequence: u64) -> Option<Snapshot> {
+    let image = image::RgbaImage::from_raw(width, height, rgba)?;
+    let mut png = Cursor::new(vec![]);
+    image::DynamicImage::ImageRgba8(image)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .ok()?;
+    Some(Snapshot {
+        data_url: format!("data:image/png;base64,{}", STANDARD.encode(png.into_inner())),
+        width,
+        height,
+        sequence,
+        captured_at: now(),
+    })
+}
+
 pub fn action_commands(a: &Action, w: u32, h: u32) -> Result<String, String> {
     let click = |x: u32, y: u32, button: u32, n: u32| -> Result<String, String> {
         if x >= w || y >= h {

@@ -5,7 +5,6 @@ use sha2::{Digest, Sha256};
 use tauri::Manager;
 
 pub const DEFAULT_WEB_URL: &str = "https://rustdesk.com/web/";
-pub const MANUAL_ONLY: &str = "RustDesk está disponível para controle manual. Captura e execução de planos por IA ainda não estão disponíveis neste conector.";
 
 pub fn web_url(value: &str) -> Result<Url, String> {
     let value = if value.trim().is_empty() {
@@ -29,7 +28,9 @@ pub fn web_url(value: &str) -> Result<Url, String> {
     Ok(url)
 }
 
-pub fn validate(machine: &Machine) -> Result<Url, String> {
+/// The RustDesk ID a destination points at, rejected early if it could not be
+/// one. Shared by the manual client and the session transport.
+pub fn peer_id(machine: &Machine) -> Result<&str, String> {
     let id = machine.host.trim();
     if id.is_empty()
         || id.len() > 64
@@ -42,6 +43,11 @@ pub fn validate(machine: &Machine) -> Result<Url, String> {
                 .into(),
         );
     }
+    Ok(id)
+}
+
+pub fn validate(machine: &Machine) -> Result<Url, String> {
+    peer_id(machine)?;
     web_url(&machine.rustdesk_web_url)
 }
 
@@ -52,10 +58,13 @@ pub fn navigation_allowed(base: &Url, next: &Url) -> bool {
         && next.password().is_none()
 }
 
+/// Whether a destination can carry a plan. The manual web-client window is
+/// never one of them: it stays outside AgentSmith IPC and has no frame bridge,
+/// so only a machine reachable by the session transport qualifies.
 pub fn require_automation(machine: &Machine) -> Result<(), String> {
     match machine.protocol.as_str() {
         "rdp" => Ok(()),
-        "rustdesk" => Err(MANUAL_ONLY.into()),
+        "rustdesk" => peer_id(machine).map(|_| ()),
         _ => Err("Este conector ainda não permite execução de planos.".into()),
     }
 }
@@ -142,18 +151,22 @@ mod tests {
         }
     }
     #[test]
-    fn old_machine_data_migrates_and_manual_transport_cannot_run_ai() {
+    fn old_machine_data_migrates_and_only_addressable_destinations_run_ai() {
         let mut machine: Machine = serde_json::from_str(r#"{"id":"demo","name":"demo","protocol":"rdp","host":"localhost","port":3389,"username":"demo","domain":"","fingerprint":""}"#).unwrap();
         assert!(machine.rustdesk_web_url.is_empty());
         assert!(require_automation(&machine).is_ok());
         machine.protocol = "rustdesk".into();
         machine.host = "123456789".into();
         assert_eq!(validate(&machine).unwrap().as_str(), DEFAULT_WEB_URL);
-        assert!(require_automation(&machine).is_err());
+        // A RustDesk destination now carries plans, but only once it names a machine.
+        assert!(require_automation(&machine).is_ok());
         for id in ["bad id", "host.example.com", "123\n456", "x/../y", ""] {
             machine.host = id.into();
             assert!(validate(&machine).is_err());
+            assert!(require_automation(&machine).is_err());
         }
+        machine.protocol = "nanokvm".into();
+        assert!(require_automation(&machine).is_err());
     }
     #[test]
     fn external_client_has_no_tauri_capability() {

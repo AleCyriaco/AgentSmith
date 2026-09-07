@@ -23,6 +23,7 @@ name = "agentsmith"
 version = "0.13.0"
 dependencies = [
  "base64 0.22.1",
+ "cc",
  "chrono",
  "crypto_box",
  "crypto_secretbox",

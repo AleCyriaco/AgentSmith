@@ -98,6 +98,10 @@ pub fn seal_session_key(peer_public_key: [u8; KEY_LEN]) -> Result<KeyExchange, S
 /// XSalsa20-Poly1305 over the frame payloads, with independent counters per
 /// direction. Counters are incremented before use, so the first frame carries
 /// sequence 1, and frames of one byte or less pass through untouched.
+///
+/// Cloning splits a session by direction: each half keeps its own counter, and
+/// the two never share one, so a clone is not a nonce reuse.
+#[derive(Clone)]
 pub struct Cipher {
     key: XSalsa20Poly1305,
     sent: u64,

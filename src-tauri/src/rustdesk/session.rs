@@ -3,8 +3,9 @@
 use crate::rustdesk::{
     address,
     crypto::{self, RELAY_PORT, RENDEZVOUS_PORT},
+    input::Input,
     proto::{self, message, rendezvous_message},
-    stream::Stream,
+    stream::{Reader, Stream, Writer},
 };
 use sha2::{Digest, Sha256};
 
@@ -67,7 +68,9 @@ pub enum Event {
         data: Vec<u8>,
         key: bool,
     },
-    /// A message we handled internally and the caller can ignore.
+    /// The peer's latency probe, which the caller answers through [`Commands`].
+    Ping(proto::TestDelay),
+    /// A message with nothing for the caller to do.
     Idle,
     Closed(String),
 }
@@ -361,56 +364,65 @@ impl Session {
         }
     }
 
-    /// Pumps one message, answering the peer's own housekeeping directly.
+    /// Separates video from input so neither waits on the other.
+    pub fn split(self) -> (Peer, Events, Commands) {
+        let (reader, writer) = self.stream.split();
+        (self.peer, Events { reader }, Commands { writer })
+    }
+
+    pub fn is_secure(&self) -> bool {
+        self.stream.is_secure()
+    }
+}
+
+fn video(frame: proto::VideoFrame) -> Event {
+    let (codec, frames) = match frame.union {
+        Some(proto::video_frame::Union::Vp9s(frames)) => (Codec::Vp9, frames),
+        Some(proto::video_frame::Union::Vp8s(frames)) => (Codec::Vp8, frames),
+        // The peer ignored our declared abilities; treat it as no picture
+        // rather than pretending a frame arrived.
+        _ => return Event::Idle,
+    };
+    match frames.frames.into_iter().next() {
+        Some(first) => Event::Video {
+            codec,
+            data: first.data,
+            key: first.key,
+        },
+        None => Event::Idle,
+    }
+}
+
+/// The incoming half of a session.
+pub struct Events {
+    reader: Reader,
+}
+
+impl Events {
     pub async fn next(&mut self) -> Result<Event, String> {
-        match self.stream.recv().await?.union {
-            Some(message::Union::VideoFrame(frame)) => Ok(Self::video(frame)),
-            Some(message::Union::TestDelay(delay)) => {
-                if !delay.from_client {
-                    self.stream
-                        .send(proto::Message {
-                            union: Some(message::Union::TestDelay(proto::TestDelay {
-                                from_client: true,
-                                ..delay
-                            })),
-                        })
-                        .await?;
-                }
-                Ok(Event::Idle)
+        match self.reader.recv().await?.union {
+            Some(message::Union::VideoFrame(frame)) => Ok(video(frame)),
+            Some(message::Union::TestDelay(delay)) if !delay.from_client => {
+                Ok(Event::Ping(delay))
             }
             Some(message::Union::Misc(misc)) => match misc.union {
                 Some(proto::misc::Union::CloseReason(reason)) => Ok(Event::Closed(reason)),
                 _ => Ok(Event::Idle),
             },
-            Some(message::Union::PeerInfo(info)) => {
-                self.peer = Self::describe(&info);
-                Ok(Event::Idle)
-            }
             _ => Ok(Event::Idle),
         }
     }
+}
 
-    fn video(frame: proto::VideoFrame) -> Event {
-        let (codec, frames) = match frame.union {
-            Some(proto::video_frame::Union::Vp9s(frames)) => (Codec::Vp9, frames),
-            Some(proto::video_frame::Union::Vp8s(frames)) => (Codec::Vp8, frames),
-            // The peer ignored our declared abilities; treat it as no picture
-            // rather than pretending a frame arrived.
-            _ => return Event::Idle,
-        };
-        match frames.frames.into_iter().next() {
-            Some(first) => Event::Video {
-                codec,
-                data: first.data,
-                key: first.key,
-            },
-            None => Event::Idle,
-        }
-    }
+/// The outgoing half of a session.
+pub struct Commands {
+    writer: Writer,
+}
 
+impl Commands {
     /// Asks for a fresh key frame, used after connecting or resuming.
     pub async fn request_refresh(&mut self) -> Result<(), String> {
-        self.stream
+        self.writer
             .send(proto::Message {
                 union: Some(message::Union::Misc(proto::Misc {
                     union: Some(proto::misc::Union::RefreshVideo(true)),
@@ -419,29 +431,31 @@ impl Session {
             .await
     }
 
-    pub async fn send_mouse(&mut self, mask: i32, x: i32, y: i32) -> Result<(), String> {
-        self.stream
+    pub async fn pong(&mut self, delay: proto::TestDelay) -> Result<(), String> {
+        self.writer
             .send(proto::Message {
-                union: Some(message::Union::MouseEvent(proto::MouseEvent {
-                    mask,
-                    x,
-                    y,
-                    modifiers: Vec::new(),
+                union: Some(message::Union::TestDelay(proto::TestDelay {
+                    from_client: true,
+                    ..delay
                 })),
             })
             .await
     }
 
-    pub async fn send_key(&mut self, event: proto::KeyEvent) -> Result<(), String> {
-        self.stream
-            .send(proto::Message {
-                union: Some(message::Union::KeyEvent(event)),
-            })
-            .await
-    }
-
-    pub fn is_secure(&self) -> bool {
-        self.stream.is_secure()
+    pub async fn send(&mut self, inputs: &[Input]) -> Result<(), String> {
+        for input in inputs {
+            let union = match input {
+                Input::Mouse { mask, x, y } => message::Union::MouseEvent(proto::MouseEvent {
+                    mask: *mask,
+                    x: *x,
+                    y: *y,
+                    modifiers: Vec::new(),
+                }),
+                Input::Key(event) => message::Union::KeyEvent(event.clone()),
+            };
+            self.writer.send(proto::Message { union: Some(union) }).await?;
+        }
+        Ok(())
     }
 }
 
@@ -543,21 +557,21 @@ mod tests {
                 pts: 0,
             }],
         };
-        let event = Session::video(proto::VideoFrame {
+        let event = video(proto::VideoFrame {
             union: Some(proto::video_frame::Union::Vp9s(frames(b"quadro"))),
             display: 0,
         });
         assert!(matches!(event, Event::Video { codec: Codec::Vp9, ref data, key: true } if data == b"quadro"));
         // H264 was never advertised; a peer sending it produces no picture.
         assert!(matches!(
-            Session::video(proto::VideoFrame {
+            video(proto::VideoFrame {
                 union: Some(proto::video_frame::Union::H264s(frames(b"x"))),
                 display: 0,
             }),
             Event::Idle
         ));
         assert!(matches!(
-            Session::video(proto::VideoFrame {
+            video(proto::VideoFrame {
                 union: Some(proto::video_frame::Union::Vp8s(proto::EncodedVideoFrames::default())),
                 display: 0,
             }),
