@@ -2411,10 +2411,6 @@
     "en": "Use an HTTPS URL without credentials, query parameters, or a fragment for the RustDesk web client.",
     "es": "Use una URL HTTPS sin credenciales, parámetros ni fragmento para el cliente web RustDesk."
   },
-  "Informe o ID RustDesk, usando letras, números, hífen ou sublinhado, sem espaços.": {
-    "en": "Enter the RustDesk ID using letters, numbers, hyphens or underscores, without spaces.",
-    "es": "Introduzca el ID RustDesk usando letras, números, guiones o guiones bajos, sin espacios."
-  },
   "Pause a tarefa antes de abrir o cliente RustDesk.": {
     "en": "Pause the task before opening the RustDesk client.",
     "es": "Pause la tarea antes de abrir el cliente RustDesk."
@@ -2502,5 +2498,9 @@
   "Chave pública em base64 do servidor indicado acima.": {
     "en": "Base64 public key of the server named above.",
     "es": "Clave pública en base64 del servidor indicado arriba."
+  },
+  "Informe o ID RustDesk, usando letras, números, hífen ou sublinhado.": {
+    "en": "Enter the RustDesk ID using letters, numbers, hyphens or underscores, without spaces.",
+    "es": "Introduzca el ID RustDesk usando letras, números, guiones o guiones bajos, sin espacios."
   }
 }

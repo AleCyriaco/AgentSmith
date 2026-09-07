@@ -274,7 +274,7 @@ impl Remote {
         // Connecting before spawning means a bad ID, a refused password or an
         // offline machine reaches the operator as an error, not as a silent wait.
         let session = session::Session::connect(&session::Options {
-            id: m.host.trim().into(),
+            id: crate::rustdesk::peer_id(m)?,
             password: password.into(),
             // A machine may point at its own server; otherwise the shared one,
             // and otherwise RustDesk's public server.

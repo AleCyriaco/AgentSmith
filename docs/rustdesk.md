@@ -5,7 +5,7 @@ AgentSmith speaks the RustDesk protocol directly. A RustDesk destination is a se
 ## Connect a machine
 
 1. On the Windows machine, open RustDesk, note the ID, and set a permanent password. Without one, every connection needs someone to approve it on that machine.
-2. In AgentSmith, choose **Add machine → RustDesk**, and enter the name, the ID, and that password. The password is stored in the macOS Keychain under the RustDesk ID, separate from any RDP password for the same host.
+2. In AgentSmith, choose **Add machine → RustDesk**, and enter the name, the ID, and that password. RustDesk shows the ID grouped in threes; pasting it that way is fine, the spaces are dropped. The password is stored in the macOS Keychain under the RustDesk ID, separate from any RDP password for the same host.
 3. For a self-hosted server, set it once under **Machines → RustDesk → Default server**: the ID server address and its base64 public key, exactly as RustDesk shows them under Settings → Network → ID/Relay server. A machine may override both in its own form; with neither set, RustDesk's public server is used. The key is what authenticates the machine, so a self-hosted server without one cannot open a session.
 4. Select the machine and choose **Connect**. **Manual client** still opens the official web client in its own window.
 

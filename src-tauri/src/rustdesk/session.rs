@@ -157,7 +157,9 @@ fn active_display(info: &proto::PeerInfo) -> Option<&proto::DisplayInfo> {
 
 impl Session {
     pub async fn connect(options: &Options) -> Result<Self, String> {
-        let id = options.id.trim();
+        // Accepts the grouped form RustDesk displays, as the machine form does.
+        let id: String = options.id.chars().filter(|c| !c.is_whitespace()).collect();
+        let id = id.as_str();
         if id.is_empty() {
             return Err("Informe o ID RustDesk da máquina.".into());
         }

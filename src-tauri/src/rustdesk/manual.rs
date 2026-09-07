@@ -30,8 +30,11 @@ pub fn web_url(value: &str) -> Result<Url, String> {
 
 /// The RustDesk ID a destination points at, rejected early if it could not be
 /// one. Shared by the manual client and the session transport.
-pub fn peer_id(machine: &Machine) -> Result<&str, String> {
-    let id = machine.host.trim();
+///
+/// RustDesk shows an ID grouped in threes ("123 456 789"), so the spaces a
+/// person copies along with it are dropped rather than refused.
+pub fn peer_id(machine: &Machine) -> Result<String, String> {
+    let id: String = machine.host.chars().filter(|c| !c.is_whitespace()).collect();
     if id.is_empty()
         || id.len() > 64
         || !id
@@ -39,8 +42,7 @@ pub fn peer_id(machine: &Machine) -> Result<&str, String> {
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
     {
         return Err(
-            "Informe o ID RustDesk, usando letras, números, hífen ou sublinhado, sem espaços."
-                .into(),
+            "Informe o ID RustDesk, usando letras, números, hífen ou sublinhado.".into(),
         );
     }
     Ok(id)
@@ -160,7 +162,11 @@ mod tests {
         assert_eq!(validate(&machine).unwrap().as_str(), DEFAULT_WEB_URL);
         // A RustDesk destination now carries plans, but only once it names a machine.
         assert!(require_automation(&machine).is_ok());
-        for id in ["bad id", "host.example.com", "123\n456", "x/../y", ""] {
+        // The grouped form RustDesk displays is accepted as the plain ID.
+        machine.host = "123 456 789".into();
+        assert_eq!(peer_id(&machine).unwrap(), "123456789");
+        assert!(require_automation(&machine).is_ok());
+        for id in ["host.example.com", "x/../y", "", "   ", "id@casa"] {
             machine.host = id.into();
             assert!(validate(&machine).is_err());
             assert!(require_automation(&machine).is_err());
