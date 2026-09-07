@@ -18,3 +18,12 @@
 | Delete plan does not apply | Pause/stop active work first; confirm the selected run; refresh if another update changed its version |
 
 When reporting a bug, include AgentSmith version, macOS/chip, connection type, authentication method, model identifier, a sanitized task, and expected versus observed behavior. Never attach tokens, passwords, the live SQLite database, or an unreviewed remote screenshot. See [Contributing](../CONTRIBUTING.md).
+
+## Diagnostics files
+
+Two files under `~/Library/Logs/AgentSmith/` hold what the interface deliberately does not show:
+
+- `rustdesk-session.log` — one line per event of the current RustDesk session, started fresh on each connection: rendezvous, handshake and login stages, every frame and what the decoder made of it, every published picture with its timings, every latency probe, every input, and exactly why a frame was refused when it was. Never pixels, passwords or verification codes.
+- `client-diagnostics.log` — appended whenever an official client (Claude Code, Codex, Gemini CLI, Grok Build) exits with a failure: the exit code, the client's final result fields, and the tail of its error stream. Never the prompt and never an image. The interface shows only a classified message because raw client output can carry prompts, account identifiers or credentials; this file is where the reason goes instead.
+
+Attach the relevant file to a bug report. Both stop growing at a fixed size.

@@ -1,5 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod browser_auth;
+mod client_log;
 mod executor;
 mod harness;
 mod llm;

@@ -327,6 +327,10 @@ async fn process(c: Command, input: Vec<u8>) -> Result<Vec<u8>, String> {
     Ok(out.stdout)
 }
 async fn process_output(mut c: Command, input: Vec<u8>) -> Result<ProcessOutput, String> {
+    let client_name = std::path::Path::new(c.as_std().get_program())
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_else(|| "cliente".into());
     let mut child = OwnedChild::new(c.spawn().map_err(|_| {
         "Não foi possível iniciar o componente oficial. Confira a instalação e a versão."
     })?);
@@ -356,6 +360,15 @@ async fn process_output(mut c: Command, input: Vec<u8>) -> Result<ProcessOutput,
     // was fully written. On success, a failed write is still an invalid call.
     if status.success() {
         written?;
+    } else {
+        // The interface will show a classified message; the reason itself goes
+        // to the diagnostics file, or it is lost.
+        crate::client_log::failure(
+            &client_name,
+            status.code().unwrap_or(-1),
+            claude_result(&stdout).ok().as_ref(),
+            &stderr,
+        );
     }
     Ok(ProcessOutput {
         status,
