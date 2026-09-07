@@ -25,10 +25,16 @@ Actions cross unchanged too. Clicks move the pointer first. Shortcuts travel as 
 
 Audio, clipboard and file transfer are disabled at login. AgentSmith reads the screen; the rest is surface it does not need.
 
+## Second factor
+
+A machine with two-factor authentication answers the password with a challenge. The code is time-based and never stored; it is supplied per connection. AgentSmith sends no hardware id with it, so the machine is not asked to trust this Mac and **every** connection asks for a fresh code. That makes unattended runs impractical on such a machine; asking the machine to remember this one is a persistent change to its security and is deliberately left to a later, explicit choice.
+
 ## Current limits
 
-- **Not yet verified against a live RustDesk machine.** The protocol, cipher, address handling, colour conversion and action translation are covered by unit tests, and the identity checks are tested against wrong and forged signatures. An end-to-end session with a real Windows host is not recorded as verified.
+- **Verified once, against one machine.** A session reached a Windows 11 host running RustDesk 1.4.9 through a self-hosted rendezvous server: relay path, both signature layers, the cipher, a second-factor challenge, VP9 negotiation, and a key frame followed by delta frames decoded to a 1800×1130 opaque image. Not yet exercised: the direct (non-relay) path, input actually reaching the machine, a machine offering more than one Windows session, the public rendezvous server, and sessions longer than a few seconds.
 - One display: the machine's current display sets the session resolution. Switching displays mid-session is not implemented.
+- A Windows machine running several sessions is attached to the one it marks active, or otherwise the first it offers. RustDesk asks a person; AgentSmith cannot, so the choice is fixed and not yet configurable per machine.
+- The interface has nowhere to enter a second-factor code, so a machine that requires one connects only from the live check, not from the application.
 - Direct connections and relays over TCP only. The UDP, KCP and WebRTC transports newer RustDesk builds can negotiate are not implemented; a machine reachable only that way will not connect.
 - No file transfer, clipboard, audio, or mouse dragging.
 - Resolution and scale settings apply to RDP; a RustDesk machine reports its own.

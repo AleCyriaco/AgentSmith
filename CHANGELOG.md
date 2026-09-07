@@ -9,7 +9,8 @@
 - Store the RustDesk password in the Keychain under its ID, separate from any RDP password for the same host, and answer the peer's challenge rather than sending it.
 - Assert that both transports accept and refuse exactly the same actions.
 - Implement the wire format independently, with no RustDesk source copied or linked; AgentSmith stays MIT.
-- Not yet verified end to end against a live RustDesk machine.
+- Answer a second-factor challenge, and attach to a Windows session on a machine running more than one, since neither can be asked of a person during unattended work.
+- Verified end to end against a Windows 11 machine running RustDesk 1.4.9 through a self-hosted server: relay path, both signature layers, the cipher, the second factor, VP9, and key plus delta frames decoded to a correct image. Input, the direct path, and the public server are not yet exercised.
 
 ## 0.13.0 — RustDesk manual web client
 
