@@ -2326,5 +2326,25 @@
   "Aguardando resposta visual do Windows": {
     "en": "Waiting for the Windows screen to respond",
     "es": "Esperando la respuesta visual de Windows"
+  },
+  "Execução excluída. Outras execuções do mesmo plano permanecem no histórico.": {
+    "en": "Run deleted. Other runs of the same plan remain in history.",
+    "es": "Ejecución eliminada. Las demás ejecuciones del mismo plan permanecen en el historial."
+  },
+  "Atualizado em {0}": {
+    "en": "Updated {0}",
+    "es": "Actualizado el {0}"
+  },
+  "Selecione uma execução no histórico para ver seus detalhes.": {
+    "en": "Select a run in history to view its details.",
+    "es": "Seleccione una ejecución del historial para ver sus detalles."
+  },
+  "Somente esta execução e seu registro serão excluídos. Outras execuções com o mesmo título serão mantidas. Isso não desfaz ações já realizadas no Windows.": {
+    "en": "Only this run and its record will be deleted. Other runs with the same title will be kept. This does not undo actions already performed on Windows.",
+    "es": "Solo se eliminarán esta ejecución y su registro. Se conservarán las demás ejecuciones con el mismo título. Esto no deshace las acciones ya realizadas en Windows."
+  },
+  "Excluindo…": {
+    "en": "Deleting…",
+    "es": "Eliminando…"
   }
 }
