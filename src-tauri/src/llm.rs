@@ -97,10 +97,12 @@ pub fn request_body(
             } else {
                 json!(prompt)
             };
-            Ok((
-                format!("{base}/chat/completions"),
-                json!({"model":p.model,"messages":[{"role":"system","content":system},{"role":"user","content":c}],"stream":false,"max_tokens":if image.is_some() || system.contains("[compact-output]"){1024}else{8192}}),
-            ))
+            let mut body = json!({"model":p.model,"messages":[{"role":"system","content":system},{"role":"user","content":c}],"stream":false,"max_tokens":if image.is_some() || system.contains("[compact-output]"){1024}else{8192}});
+            // xAI documents JSON mode; other compatible APIs may not support it.
+            if p.vendor == "xai" && system.contains("AgentSmith harness") {
+                body["response_format"] = json!({"type":"json_object"});
+            }
+            Ok((format!("{base}/chat/completions"), body))
         }
         _ => Err("Formato de API não suportado.".into()),
     }
@@ -602,5 +604,37 @@ mod tests {
             assert_eq!(result.map_err(|e| e.message).unwrap(), "ok");
             server.await.unwrap();
         }
+    }
+}
+
+#[cfg(test)]
+mod harness_format_tests {
+    use super::*;
+    #[test]
+    fn xai_json_mode_is_scoped_to_harness_requests() {
+        let mut p = Profile {
+            id: "test".into(),
+            vendor: "xai".into(),
+            name: "xAI".into(),
+            protocol: "chat".into(),
+            base_url: "https://api.x.ai/v1".into(),
+            model: "fixture".into(),
+            vision: true,
+            enabled: true,
+            auth_method: "api_key".into(),
+        };
+        let (_, body) = request_body(&p, crate::harness::SYSTEM, "synthetic", None).unwrap();
+        assert_eq!(body["response_format"]["type"], "json_object");
+        assert!(request_body(&p, "Reply OK", "test", None)
+            .unwrap()
+            .1
+            .get("response_format")
+            .is_none());
+        p.vendor = "local".into();
+        assert!(request_body(&p, crate::harness::SYSTEM, "test", None)
+            .unwrap()
+            .1
+            .get("response_format")
+            .is_none());
     }
 }

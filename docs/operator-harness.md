@@ -1,4 +1,4 @@
-# Harness de operação — AgentSmith 0.12.0
+# Harness de operação — AgentSmith 0.12.1
 
 O contrato é comum aos adaptadores de API, clientes oficiais e modelos locais. Compatibilidade com o protocolo não garante competência visual ou latência: valide cada perfil com **Testar operador** e uma tarefa curta no Windows.
 
@@ -35,3 +35,9 @@ Usa um botão fictício recebido por OCR e exige um clique com ID correto. Usa a
 ## Validação
 
 A suíte cobre JSON inválido, correção e alternativa, impedimentos reais preservados, clique fora da tela, IDs inventados, proposta textual falsa recusada pela visão, ausência de imagens no caminho de texto, atraso de atualização e liberação das teclas. O fluxo real precisa ser medido com a mesma tarefa e tela inicial para comparar provedores.
+
+## Validação xAI neste Mac
+
+No teste sintético de 7/9/2026, o perfil grok-4.6 via API retornou recusa textual ao contrato inicial. Com a descrição explícita de geração de uma proposta (execução pertence ao aplicativo) e `response_format: {"type":"json_object"}`, retornou `{"kind":"click","target":0}` em 14,25 s. Não é benchmark comparativo nem validação de operação visual real.
+
+O modo JSON é aplicado somente a chamadas do harness via adaptador xAI/chat, conforme [documentação oficial](https://docs.x.ai/developers/model-capabilities/text/structured-outputs). A validação local continua necessária: JSON válido não garante ação correta. Os demais adaptadores mantêm contrato por texto e validação local, sem presumir suporte a parâmetros exclusivos da xAI.
