@@ -112,4 +112,4 @@ Next priorities: goal-level reconciliation, task-based model evaluation, RustDes
 
 ## Project and third-party rights
 
-See [distribution notes](docs/distribution.md). Public repository access alone does not establish an open-source license. Third-party engines, libraries, and model weights retain their own licenses and terms. AgentSmith is independent of the model providers and remote-access projects it integrates with.
+AgentSmith is licensed under the [MIT License](LICENSE), permitting commercial use, modification, and redistribution with the copyright and license notice preserved. See [distribution notes](docs/distribution.md). Third-party engines, libraries, and model weights retain their own licenses and terms. AgentSmith is independent of the model providers and remote-access projects it integrates with.

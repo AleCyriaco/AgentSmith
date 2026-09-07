@@ -1,5 +1,9 @@
 # Changelog
 
+## Licensing update
+
+- Publish AgentSmith source and documentation under the MIT License, including version 0.12.7. Third-party components keep their own licenses.
+
 ## 0.12.7 — Public documentation release
 
 - Reorganize the project documentation in English: goals, benefits, setup, routing, architecture, privacy, troubleshooting, contribution, and distribution notes.

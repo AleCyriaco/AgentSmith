@@ -20,4 +20,4 @@ Rebuild the RDP helper after native RDP changes (`npm run helper`), OCR after Sw
 
 Describe the concrete problem, expected behavior, change, and relevant verification. For provider changes, distinguish mocked protocol checks, synthetic live checks, and real Windows task validation. Do not infer broad compatibility from one response.
 
-Use fictional hosts such as `windows.example.com` and synthetic screenshots. Keep secrets, machine addresses, personal paths, live task data, application databases, and downloaded binaries out of commits. Review the whole diff and newly added images before pushing. Follow the project's licensing status in the README and distribution notes.
+Use fictional hosts such as `windows.example.com` and synthetic screenshots. Keep secrets, machine addresses, personal paths, live task data, application databases, and downloaded binaries out of commits. Review the whole diff and newly added images before pushing. AgentSmith uses the MIT License; preserve notices and ensure contributions are compatible with it. See the distribution notes for third-party components.
