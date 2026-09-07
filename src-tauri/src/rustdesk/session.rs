@@ -22,6 +22,9 @@ pub struct Options {
     pub rendezvous: String,
     /// Base64 Ed25519 key of that rendezvous server. Empty uses the public one.
     pub key: String,
+    /// Current six-digit code, for a machine with two-factor enabled. It is
+    /// time-based, so it is supplied per connection and never stored.
+    pub two_factor_code: String,
 }
 
 impl Options {
@@ -52,6 +55,9 @@ pub struct Peer {
     pub version: String,
     pub width: u32,
     pub height: u32,
+    /// On a Windows machine with more than one session, the one this session
+    /// attached to. `None` when the machine offered no choice.
+    pub session: Option<(u32, String)>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -150,6 +156,19 @@ fn login_request(options: &Options, hash: &proto::Hash) -> proto::LoginRequest {
     }
 }
 
+/// A Windows machine can offer the console and one or more remote sessions.
+/// Unattended work cannot show a dialog, so the active session is taken when
+/// the machine names one, and otherwise the first it offers.
+fn choose_session(info: &proto::PeerInfo) -> Option<(u32, String)> {
+    let sessions = info.windows_sessions.as_ref()?;
+    let pick = sessions
+        .sessions
+        .iter()
+        .find(|session| session.sid == sessions.current_sid)
+        .or_else(|| sessions.sessions.first())?;
+    Some((pick.sid, pick.name.clone()))
+}
+
 /// The peer reports every display; AgentSmith drives the one it marked current.
 fn active_display(info: &proto::PeerInfo) -> Option<&proto::DisplayInfo> {
     info.displays
@@ -175,6 +194,9 @@ impl Session {
         let peer = Self::login(&mut stream, options)
             .await
             .map_err(|error| format!("Login ({path}): {error}"))?;
+        Self::attach_session(&mut stream, &peer)
+            .await
+            .map_err(|error| format!("Sessão do Windows ({path}): {error}"))?;
         Ok(Self { stream, peer, path })
     }
 
@@ -333,11 +355,33 @@ impl Session {
                 union: Some(message::Union::LoginRequest(login_request(options, &hash))),
             })
             .await?;
+        // The peer may answer the password with a second-factor challenge; it is
+        // sent once, so a repeated demand means the code did not satisfy it.
+        let mut answered_second_factor = false;
         loop {
             match stream.recv().await?.union {
                 Some(message::Union::LoginResponse(response)) => match response.union {
                     Some(proto::login_response::Union::PeerInfo(info)) => {
                         return Ok(Self::describe(&info))
+                    }
+                    Some(proto::login_response::Union::Error(error))
+                        if error == "2FA Required" && !answered_second_factor =>
+                    {
+                        let code = options.two_factor_code.trim();
+                        if code.is_empty() {
+                            return Err(Self::login_error(&error));
+                        }
+                        answered_second_factor = true;
+                        stream
+                            .send(proto::Message {
+                                union: Some(message::Union::Auth2fa(proto::Auth2Fa {
+                                    code: code.into(),
+                                    // Empty: this session is not asking the
+                                    // machine to remember and trust this Mac.
+                                    hwid: Vec::new(),
+                                })),
+                            })
+                            .await?;
                     }
                     Some(proto::login_response::Union::Error(error)) => {
                         return Err(Self::login_error(&error))
@@ -358,6 +402,8 @@ impl Session {
     fn login_error(error: &str) -> String {
         match error {
             "Wrong Password" => "Senha RustDesk incorreta.".into(),
+            "2FA Required" => "Esta máquina exige verificação em duas etapas. Informe o código atual do autenticador.".into(),
+            "Wrong 2FA Code" => "Código de verificação incorreto ou expirado. Ele muda a cada 30 segundos.".into(),
             "No Password Access" => {
                 "A máquina exige aprovação manual e não aceita senha.".into()
             }
@@ -375,7 +421,23 @@ impl Session {
             version: info.version.clone(),
             width: display.map(|d| d.width.max(0) as u32).unwrap_or(0),
             height: display.map(|d| d.height.max(0) as u32).unwrap_or(0),
+            session: choose_session(info),
         }
+    }
+
+    /// Tells a multi-session Windows machine which session to stream. Without
+    /// this the machine waits for a choice and no picture ever arrives.
+    async fn attach_session(stream: &mut Stream, peer: &Peer) -> Result<(), String> {
+        let Some((sid, _)) = peer.session else {
+            return Ok(());
+        };
+        stream
+            .send(proto::Message {
+                union: Some(message::Union::Misc(proto::Misc {
+                    union: Some(proto::misc::Union::SelectedSid(sid)),
+                })),
+            })
+            .await
     }
 
     /// Separates video from input so neither waits on the other.
@@ -484,6 +546,7 @@ mod tests {
             password: String::new(),
             rendezvous: String::new(),
             key: String::new(),
+            two_factor_code: String::new(),
         };
         assert_eq!(options.rendezvous_address(), "rs-ny.rustdesk.com:21116");
         assert_eq!(options.signing_key().unwrap().len(), 32);
@@ -505,6 +568,8 @@ mod tests {
         response.other_failure = "servidor em manutenção".into();
         assert_eq!(punch_failure(&response), "servidor em manutenção");
         assert!(Session::login_error("Wrong Password").contains("incorreta"));
+        assert!(Session::login_error("2FA Required").contains("duas etapas"));
+        assert!(Session::login_error("Wrong 2FA Code").contains("30 segundos"));
         assert!(Session::login_error("qualquer outra").contains("qualquer outra"));
     }
 
@@ -515,6 +580,7 @@ mod tests {
             password: "segredo".into(),
             rendezvous: String::new(),
             key: String::new(),
+            two_factor_code: String::new(),
         };
         let hash = proto::Hash {
             salt: "sal".into(),
@@ -533,6 +599,37 @@ mod tests {
             (decoding.ability_h264, decoding.ability_h265, decoding.ability_av1),
             (0, 0, 0)
         );
+    }
+
+    #[test]
+    fn a_multi_session_windows_machine_is_attached_without_asking() {
+        let session = |sid, name: &str| proto::WindowsSession {
+            sid,
+            name: name.into(),
+        };
+        let with = |sessions, current_sid| proto::PeerInfo {
+            windows_sessions: Some(proto::WindowsSessions {
+                sessions,
+                current_sid,
+            }),
+            ..Default::default()
+        };
+        // The machine names an active session: take that one.
+        assert_eq!(
+            choose_session(&with(
+                vec![session(1, "Console"), session(3, "RDP: Lego")],
+                3
+            )),
+            Some((3, "RDP: Lego".into()))
+        );
+        // It names none we were offered: take the first rather than stall.
+        assert_eq!(
+            choose_session(&with(vec![session(1, "Console")], 99)),
+            Some((1, "Console".into()))
+        );
+        // A machine with a single desktop offers no choice at all.
+        assert_eq!(choose_session(&proto::PeerInfo::default()), None);
+        assert_eq!(choose_session(&with(vec![], 1)), None);
     }
 
     #[test]

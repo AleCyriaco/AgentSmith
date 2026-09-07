@@ -200,6 +200,16 @@ message DisplayInfo {
   double scale = 9;
 }
 
+message WindowsSession {
+  uint32 sid = 1;
+  string name = 2;
+}
+
+message WindowsSessions {
+  repeated WindowsSession sessions = 1;
+  uint32 current_sid = 2;
+}
+
 message PeerInfo {
   string username = 1;
   string hostname = 2;
@@ -210,6 +220,7 @@ message PeerInfo {
   string version = 7;
   SupportedEncoding encoding = 10;
   string platform_additions = 12;
+  WindowsSessions windows_sessions = 13;
 }
 
 message LoginResponse {
@@ -304,6 +315,11 @@ message KeyEvent {
   KeyboardMode mode = 9;
 }
 
+message Auth2FA {
+  string code = 1;
+  bytes hwid = 2;
+}
+
 message TestDelay {
   int64 time = 1;
   bool from_client = 2;
@@ -321,6 +337,7 @@ message Misc {
     bool refresh_video = 10;
     bool video_received = 12;
     int32 refresh_video_display = 31;
+    uint32 selected_sid = 35;
   }
 }
 
@@ -337,5 +354,6 @@ message Message {
     KeyEvent key_event = 15;
     Misc misc = 19;
     PeerInfo peer_info = 25;
+    Auth2FA auth_2fa = 27;
   }
 }

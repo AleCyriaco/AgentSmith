@@ -9,7 +9,9 @@
 //! ```
 //!
 //! Optional: `RUSTDESK_SERVER` and `RUSTDESK_KEY` for a self-hosted server,
-//! and `RUSTDESK_SEND_INPUT=1` to also move the pointer on the remote machine.
+//! `RUSTDESK_2FA` with the current six-digit code when the machine asks for a
+//! second factor, and `RUSTDESK_SEND_INPUT=1` to also move the pointer on the
+//! remote machine.
 #![cfg(test)]
 use crate::rustdesk::{
     decoder::Decoder,
@@ -24,6 +26,7 @@ fn options() -> Option<Options> {
         password: std::env::var("RUSTDESK_PASSWORD").unwrap_or_default(),
         rendezvous: std::env::var("RUSTDESK_SERVER").unwrap_or_default(),
         key: std::env::var("RUSTDESK_KEY").unwrap_or_default(),
+        two_factor_code: std::env::var("RUSTDESK_2FA").unwrap_or_default(),
     })
 }
 
@@ -66,6 +69,10 @@ async fn rustdesk_live_session_connects_decodes_and_accepts_input() {
         peer.width,
         peer.height
     );
+    match &peer.session {
+        Some((sid, name)) => println!("→ sessão do Windows escolhida: {name} (sid {sid})"),
+        None => println!("→ a máquina ofereceu uma única sessão"),
+    }
     assert!(peer.width > 0 && peer.height > 0, "a máquina não relatou display");
 
     commands.request_refresh().await.expect("pedido de quadro");

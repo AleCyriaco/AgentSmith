@@ -280,6 +280,9 @@ impl Remote {
             // and otherwise RustDesk's public server.
             rendezvous: pick(&m.rustdesk_server, &fallback.server),
             key: pick(&m.rustdesk_key, &fallback.key),
+            // No prompt for a second-factor code yet; a machine that requires
+            // one fails with an explanation instead of hanging.
+            two_factor_code: String::new(),
         })
         .await?;
         let path = session.path;
@@ -697,6 +700,7 @@ mod tests {
             password: String::new(),
             rendezvous: pick("", ""),
             key: pick("", ""),
+            two_factor_code: String::new(),
         }
         .rendezvous_address()
         .starts_with(crate::rustdesk::session::DEFAULT_RENDEZVOUS));
