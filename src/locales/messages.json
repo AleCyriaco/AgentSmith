@@ -2322,5 +2322,9 @@
   "Não foi possível remover a chave deste perfil do Chaves do macOS.": {
     "en": "Could not remove this profile’s key from macOS Keychain.",
     "es": "No se pudo eliminar la clave de este perfil del Llavero de macOS."
+  },
+  "Aguardando resposta visual do Windows": {
+    "en": "Waiting for the Windows screen to respond",
+    "es": "Esperando la respuesta visual de Windows"
   }
 }
