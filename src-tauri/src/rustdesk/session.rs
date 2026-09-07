@@ -12,6 +12,9 @@ use sha2::{Digest, Sha256};
 /// RustDesk protocol level AgentSmith implements and announces to the peer.
 pub const PROTOCOL_VERSION: &str = "1.3.0";
 pub const DEFAULT_RENDEZVOUS: &str = "rs-ny.rustdesk.com";
+/// Returned when the machine wants a second factor and none was supplied, so
+/// the interface can ask for a code instead of showing a dead end.
+pub const SECOND_FACTOR_REQUIRED: &str = "second-factor";
 
 #[derive(Clone, Debug)]
 pub struct Options {
@@ -25,6 +28,10 @@ pub struct Options {
     /// Current six-digit code, for a machine with two-factor enabled. It is
     /// time-based, so it is supplied per connection and never stored.
     pub two_factor_code: String,
+    /// Ask the machine to remember this Mac, so later connections skip the
+    /// second factor. It weakens that machine's protection, so it is only ever
+    /// set from an explicit choice.
+    pub trust_device: bool,
 }
 
 impl Options {
@@ -191,9 +198,13 @@ impl Session {
         Self::handshake(&mut stream, &signed_peer_key, &signer, id)
             .await
             .map_err(|error| format!("Handshake ({path}): {error}"))?;
-        let peer = Self::login(&mut stream, options)
-            .await
-            .map_err(|error| format!("Login ({path}): {error}"))?;
+        // The second-factor prompt travels unwrapped so the interface can
+        // recognise it; every other failure names its stage.
+        let peer = match Self::login(&mut stream, options).await {
+            Ok(peer) => peer,
+            Err(error) if error == SECOND_FACTOR_REQUIRED => return Err(error),
+            Err(error) => return Err(format!("Login ({path}): {error}")),
+        };
         Self::attach_session(&mut stream, &peer)
             .await
             .map_err(|error| format!("Sessão do Windows ({path}): {error}"))?;
@@ -369,16 +380,21 @@ impl Session {
                     {
                         let code = options.two_factor_code.trim();
                         if code.is_empty() {
-                            return Err(Self::login_error(&error));
+                            return Err(SECOND_FACTOR_REQUIRED.into());
                         }
                         answered_second_factor = true;
                         stream
                             .send(proto::Message {
                                 union: Some(message::Union::Auth2fa(proto::Auth2Fa {
                                     code: code.into(),
-                                    // Empty: this session is not asking the
-                                    // machine to remember and trust this Mac.
-                                    hwid: Vec::new(),
+                                    // Sent only when the operator chose it: the
+                                    // machine then trusts this Mac and stops
+                                    // asking for a code.
+                                    hwid: if options.trust_device {
+                                        crate::rustdesk::device::identity()
+                                    } else {
+                                        Vec::new()
+                                    },
                                 })),
                             })
                             .await?;
@@ -547,6 +563,7 @@ mod tests {
             rendezvous: String::new(),
             key: String::new(),
             two_factor_code: String::new(),
+            trust_device: false,
         };
         assert_eq!(options.rendezvous_address(), "rs-ny.rustdesk.com:21116");
         assert_eq!(options.signing_key().unwrap().len(), 32);
@@ -581,6 +598,7 @@ mod tests {
             rendezvous: String::new(),
             key: String::new(),
             two_factor_code: String::new(),
+            trust_device: false,
         };
         let hash = proto::Hash {
             salt: "sal".into(),

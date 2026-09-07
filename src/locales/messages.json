@@ -2502,5 +2502,41 @@
   "Informe o ID RustDesk, usando letras, números, hífen ou sublinhado.": {
     "en": "Enter the RustDesk ID using letters, numbers, hyphens or underscores, without spaces.",
     "es": "Introduzca el ID RustDesk usando letras, números, guiones o guiones bajos, sin espacios."
+  },
+  "Verificação em duas etapas": {
+    "en": "Two-factor verification",
+    "es": "Verificación en dos pasos"
+  },
+  "Código do autenticador": {
+    "en": "Authenticator code",
+    "es": "Código del autenticador"
+  },
+  "Seis dígitos, válidos por cerca de 30 segundos. O código não é salvo.": {
+    "en": "Six digits, valid for about 30 seconds. The code is not saved.",
+    "es": "Seis dígitos, válidos por unos 30 segundos. El código no se guarda."
+  },
+  "Confiar neste Mac": {
+    "en": "Trust this Mac",
+    "es": "Confiar en este Mac"
+  },
+  "A máquina deixa de pedir código para este computador. É o que permite execuções desassistidas, e enfraquece a proteção dela: qualquer pessoa com a senha, a partir deste Mac, entra sem segundo fator.": {
+    "en": "The machine stops asking this computer for a code. This is what makes unattended runs possible, and it weakens that machine's protection: anyone with the password, from this Mac, gets in without a second factor.",
+    "es": "La máquina deja de pedir código a este ordenador. Es lo que permite ejecuciones desatendidas, y debilita su protección: cualquiera con la contraseña, desde este Mac, entra sin segundo factor."
+  },
+  "Máquina conectada. Ela não pedirá código a este Mac nas próximas conexões.": {
+    "en": "Machine connected. It will not ask this Mac for a code again.",
+    "es": "Máquina conectada. No volverá a pedir código a este Mac."
+  },
+  "Senha permanente do RustDesk": {
+    "en": "RustDesk permanent password",
+    "es": "Contraseña permanente de RustDesk"
+  },
+  "Não há senha salva para este ID RustDesk.": {
+    "en": "No password is saved for this RustDesk ID.",
+    "es": "No hay contraseña guardada para este ID de RustDesk."
+  },
+  "Código de verificação incorreto ou expirado. Ele muda a cada 30 segundos.": {
+    "en": "Wrong or expired verification code. It changes every 30 seconds.",
+    "es": "Código de verificación incorrecto o caducado. Cambia cada 30 segundos."
   }
 }

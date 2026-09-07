@@ -435,7 +435,7 @@ async fn connect_saved_machine(
     app: tauri::AppHandle,
     state: tauri::State<'_, AppState>,
     id: String,
-) -> Result<bool, String> {
+) -> Result<String, String> {
     if state.busy.load(Ordering::SeqCst) {
         return Err("Pause a tarefa antes de trocar de conexão.".into());
     }
@@ -453,18 +453,18 @@ async fn connect_saved_machine(
             .await
             .map_err(|_| "Não foi possível acessar o Chaves.")??;
     match password {
-        Some(password) => {
+        Some(password) => connection_outcome(
             start_machine_connection(
                 app,
                 &state,
                 machine,
                 password,
                 settings.performance.capture_interval_ms,
+                &Default::default(),
             )
-            .await?;
-            Ok(true)
-        }
-        None => Ok(false),
+            .await,
+        ),
+        None => Ok("password".into()),
     }
 }
 #[tauri::command]
@@ -473,7 +473,8 @@ async fn connect_machine(
     state: tauri::State<'_, AppState>,
     id: String,
     password: Option<String>,
-) -> Result<(), String> {
+    second_factor: Option<remote::SecondFactor>,
+) -> Result<String, String> {
     if state.busy.load(Ordering::SeqCst) {
         return Err("Pause a tarefa antes de trocar de conexão.".into());
     }
@@ -487,7 +488,29 @@ async fn connect_machine(
         Some(p) if !p.is_empty() => p,
         _ => store::get_secret(&id, &machine_binding(m))?,
     };
-    start_machine_connection(app, &state, m, password, s.performance.capture_interval_ms).await
+    connection_outcome(
+        start_machine_connection(
+            app,
+            &state,
+            m,
+            password,
+            s.performance.capture_interval_ms,
+            &second_factor.unwrap_or_default(),
+        )
+        .await,
+    )
+}
+
+/// A machine that wants a second factor is not a failure: the interface asks
+/// for a code and connects again.
+fn connection_outcome(result: Result<(), String>) -> Result<String, String> {
+    match result {
+        Ok(()) => Ok("connected".into()),
+        Err(error) if error == rustdesk::session::SECOND_FACTOR_REQUIRED => {
+            Ok("second-factor".into())
+        }
+        Err(error) => Err(error),
+    }
 }
 async fn start_machine_connection(
     app: tauri::AppHandle,
@@ -495,6 +518,7 @@ async fn start_machine_connection(
     m: &Machine,
     password: String,
     capture_interval_ms: u32,
+    second_factor: &remote::SecondFactor,
 ) -> Result<(), String> {
     if state.busy.load(Ordering::SeqCst) {
         return Err("Pause a tarefa antes de trocar de conexão.".into());
@@ -517,6 +541,7 @@ async fn start_machine_connection(
             &helper,
             capture_interval_ms,
             &state.store.settings()?.rustdesk,
+            second_factor,
         )
         .await
 }

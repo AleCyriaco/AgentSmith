@@ -2,6 +2,7 @@ pub mod address;
 pub mod codec;
 pub mod crypto;
 pub mod decoder;
+pub mod device;
 pub mod input;
 mod live_test;
 pub mod manual;

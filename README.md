@@ -6,7 +6,7 @@
 
 AgentSmith is a desktop workspace for operating Windows computers from a Mac. Connect through Microsoft RDP, describe a task, review its steps, and let a supervised AI loop observe the screen, propose mouse and keyboard actions, and check the result.
 
-**Preview 0.14.0** · Current build target: **Apple Silicon and macOS 26+**. RDP and RustDesk both carry AI sessions; the RustDesk transport has been verified against one live machine, video and input included, and its second-factor flow is not yet reachable from the interface. Windows as the controller and NanoKVM connectors are not implemented yet.
+**Preview 0.14.0** · Current build target: **Apple Silicon and macOS 26+**. RDP and RustDesk both carry AI sessions; the RustDesk transport has been verified against one live machine, video and input included, including two-factor machines. Windows as the controller and NanoKVM connectors are not implemented yet.
 
 ![AgentSmith operations center in English with demonstration data](docs/images/operations.png)
 

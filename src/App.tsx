@@ -17,6 +17,17 @@ import { loginClients, withAuth } from './auth';
 const pages = [{ id: 'operate', label: 'Central de operação', icon: Monitor }, { id: 'machines', label: 'Máquinas', icon: Computer }, { id: 'models', label: 'Provedores e modelos', icon: Cpu }, { id: 'routes', label: 'Roteamento de IA', icon: Route }, { id: 'architecture', label: 'Como funciona', icon: Layers3 }];
 const statuses: Record<string, string> = { ready: 'Pronta para revisar', running: 'Em execução', verifying: 'Verificando', waiting: 'Aguardando ciclo', expired: 'Período encerrado', paused: 'Pausada', blocked: 'Precisa de atenção', completed: 'Concluída', cancelled: 'Parada', connected: 'Conectado', connecting: 'Conectando', disconnected: 'Desconectado', error: 'Falha de conexão' };
 const protocolNames: Record<string, string> = { rdp: 'Microsoft RDP', rustdesk: 'RustDesk', nanokvm: 'NanoKVM', nanokvm_pro: 'NanoKVM Pro', nanokvm_usb: 'NanoKVM-USB' };
+function SecondFactorForm({ machine, close, connect }: {
+    machine: Machine;
+    close: () => void;
+    connect: (code: string, trust: boolean) => Promise<void>;
+}) {
+    const [code, setCode] = useState(''), [trust, setTrust] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState('');
+    return <Modal title={t("Verificação em duas etapas")} sub={`${machine.name} · ID ${machine.host}`} close={close}><form onSubmit={e => { e.preventDefault(); setBusy(true); setError(''); void connect(code, trust).catch(e => setError(String(e))).finally(() => setBusy(false)); }}>
+ <Label title={t("Código do autenticador")} hint={t("Seis dígitos, válidos por cerca de 30 segundos. O código não é salvo.")}><input required autoFocus inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="one-time-code" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} placeholder="000000"/></Label>
+ <label className="checkbox-row"><input type="checkbox" checked={trust} onChange={e => setTrust(e.target.checked)}/><span><strong>{t("Confiar neste Mac")}</strong><small>{t("A máquina deixa de pedir código para este computador. É o que permite execuções desassistidas, e enfraquece a proteção dela: qualquer pessoa com a senha, a partir deste Mac, entra sem segundo fator.")}</small></span></label>
+ {error && <div className="login-error" role="alert">{systemText(error)}</div>}<div className="modal-actions"><button type="button" className="button secondary" onClick={close}>{t("Cancelar")}</button><button disabled={busy || code.length !== 6} className="button primary"><Power size={15}/> {busy ? t("Conectando…") : t("Conectar")}</button></div></form></Modal>;
+}
 function RustdeskDefaults({ settings, persist }: {
     settings: Settings;
     persist: (next: Settings) => Promise<void>;
@@ -90,7 +101,7 @@ export default function App() {
     const [modelModal, setModelModal] = useState<{
         vendor: Vendor;
         profile?: Profile;
-    } | null>(null), [machineModal, setMachineModal] = useState<Machine | 'new' | null>(null), [connectModal, setConnectModal] = useState<Machine | null>(null);
+    } | null>(null), [machineModal, setMachineModal] = useState<Machine | 'new' | null>(null), [connectModal, setConnectModal] = useState<Machine | null>(null), [secondFactorModal, setSecondFactorModal] = useState<Machine | null>(null);
     const detachedView = new URLSearchParams(window.location.search).get('view') === 'rdp';
     const observedSession = useRef('');
     const native = isTauri();
@@ -212,9 +223,13 @@ export default function App() {
         setConnectingSaved(true);
         setError('');
         try {
-            const started = await call<boolean>('connect_saved_machine', { id: m.id });
-            if (!started) {
+            const outcome = await call<string>('connect_saved_machine', { id: m.id });
+            if (outcome === 'password') {
                 setConnectModal(m);
+                return;
+            }
+            if (outcome === 'second-factor') {
+                setSecondFactorModal(m);
                 return;
             }
             setSelectedMachine(m.id);
@@ -236,12 +251,30 @@ export default function App() {
             return;
         const m = connectModal;
         if (remember && password)
-            await call('save_credential', { id: m.id, binding: `rdp://${m.host}:${m.port}|${m.domain}|${m.username}`, secret: password });
-        await call('connect_machine', { id: m.id, password: password || null });
-        setSelectedMachine(m.id);
+            await call('save_credential', { id: m.id, binding: m.protocol === 'rustdesk' ? `rustdesk://${m.host}` : `rdp://${m.host}:${m.port}|${m.domain}|${m.username}`, secret: password });
+        const outcome = await call<string>('connect_machine', { id: m.id, password: password || null, secondFactor: null });
         setConnectModal(null);
+        if (outcome === 'second-factor') {
+            setSecondFactorModal(m);
+            return;
+        }
+        setSelectedMachine(m.id);
         setPage('operate');
         setManual(true);
+    }
+    async function connectWithSecondFactor(code: string, trust: boolean) {
+        if (!secondFactorModal)
+            return;
+        const m = secondFactorModal;
+        const outcome = await call<string>('connect_machine', { id: m.id, password: null, secondFactor: { code, trustDevice: trust } });
+        if (outcome === 'second-factor')
+            throw new Error(t("Código de verificação incorreto ou expirado. Ele muda a cada 30 segundos."));
+        setSecondFactorModal(null);
+        setSelectedMachine(m.id);
+        setPage('operate');
+        setManual(true);
+        if (trust)
+            setNotice(t("Máquina conectada. Ela não pedirá código a este Mac nas próximas conexões."));
     }
     const profileName = (id: string) => settings.profiles.find(p => p.id === id)?.name ?? t("Não configurado");
     async function detach() { setWindowBusy(true); try {
@@ -283,7 +316,7 @@ export default function App() {
         return false;
     } }} detach={() => void attempt(detach)} attach={() => void attempt(attach)} focus={() => detachedView ? void attempt(async () => setFocusRdp(await call<boolean>('toggle_rdp_fullscreen'))) : setFocusRdp(v => !v)}/>;
     if (detachedView)
-        return <div className={"detached-workspace "+(topCollapsed?"top-collapsed":"")}><div className="detached-language"><LanguagePicker/></div>{taskActivity}{alerts}{repeatForm}{sessionPanel}{displayForm}{performanceForm}{connectModal && <ConnectForm machine={connectModal} close={() => setConnectModal(null)} connect={connectWithPassword}/>}</div>;
+        return <div className={"detached-workspace "+(topCollapsed?"top-collapsed":"")}><div className="detached-language"><LanguagePicker/></div>{taskActivity}{alerts}{repeatForm}{sessionPanel}{displayForm}{performanceForm}{connectModal && <ConnectForm machine={connectModal} close={() => setConnectModal(null)} connect={connectWithPassword}/>}{secondFactorModal && <SecondFactorForm machine={secondFactorModal} close={() => setSecondFactorModal(null)} connect={connectWithSecondFactor}/>}</div>;
     return <div className={'app-shell ' + (sidebarCollapsed ? 'sidebar-collapsed ' : '') + (page === 'operate' ? 'operation-shell '+(topCollapsed?'top-collapsed ':'') : '') + (focusRdp && page === 'operate' ? 'rdp-focus' : '')}><aside id="workspace-sidebar" className="sidebar" aria-label={t("Navegação principal")}><Brand /><a className="brand-credit" href="https://prodigy-lab.com" target="_blank" rel="noopener noreferrer" title={t('Abrir site da prodigy-lab')} onClick={event=>{if(native){event.preventDefault();void attempt(()=>call('open_prodigy_site'))}}}>by prodigy-lab <ExternalLink size={10}/></a><div className="workspace-label"><span className="workspace-dot"/>{t(" Workspace pessoal ")}<ChevronDown size={13}/></div><div className="nav-caption">{t("OPERAÇÃO REMOTA COM IA")}</div><nav>{pages.map(p => <button key={p.id} className={page === p.id ? 'active' : ''} onClick={() => setPage(p.id)}><p.icon size={18}/>{t(p.label)}{p.id === 'machines' && <span className="nav-count">{settings.machines.length}</span>}</button>)}</nav><div className="sidebar-bottom"><div className="local-indicator"><span className="status-dot"/>{settings.localOnly ? t("IA somente neste Mac") : t("Execução neste Mac")}<LockKeyhole size={13}/></div><p>{t("Você define o objetivo.")}<br />{t("Smith cuida dos próximos passos.")}</p><div className="version"><Command size={13}/> macOS <span>{t("{version} · Prévia", {version:"v0.13.0"})}</span></div></div></aside>
  <div className="main-shell"><header><div className="header-navigation"><button type="button" className="icon-button sidebar-toggle" onClick={() => setSidebarCollapsed(value => !value)} aria-controls="workspace-sidebar" aria-expanded={!sidebarCollapsed} aria-label={sidebarCollapsed ? t("Expandir barra lateral") : t("Recolher barra lateral")} title={sidebarCollapsed ? t("Expandir barra lateral") : t("Recolher barra lateral")}>{sidebarCollapsed ? <PanelLeftOpen size={19}/> : <PanelLeftClose size={19}/>}</button><div className="breadcrumbs">{t("Workspace ")}<span>/</span> <strong>{t(pages.find(p => p.id === page)?.label??'')}</strong></div></div><div className="header-right"><LanguagePicker/><span className={'badge ' + (session.status === 'connected' ? 'green' : '')}>{session.status === 'connected' ? <><span className="status-dot"/>{t(" Sessão ativa")}</> : <><span className="neutral-dot"/>{t(" Nenhuma sessão ativa")}</>}</span><div className="avatar">AS</div></div></header>
  {taskActivity}{repeatForm}{planModal && <PlanEditor run={planModal.run} mode={planModal.mode} close={()=>setPlanModal(null)} save={async edit=>{const saved=await call<Run>("edit_plan",{id:planModal.run.id,edit});setSelectedRun(saved.id);await refresh();setPlanModal(null)}} remove={async()=>{await call("delete_plan",{id:planModal.run.id,updatedAt:planModal.run.updatedAt});setSelectedRun(null);setRuns(old=>old.filter(r=>r.id!==planModal.run.id));setPlanModal(null);setNotice(t("Execução excluída. Outras execuções do mesmo plano permanecem no histórico."));void attempt(refresh)}}/>}{textStep && <TextCheckForm run={textStep.run} index={textStep.index} call={call} close={()=>setTextStep(null)} saved={async()=>{await refresh();setTextStep(null)}}/>}<main>{!native && <div className="banner">{t("Visualização da interface · Os recursos de conexão e IA funcionam no aplicativo para macOS.")}</div>}{error && <div className="alert"><span>{systemText(error)}</span><button onClick={() => setError('')} aria-label={t("Dispensar")}><X size={16}/></button></div>}{notice && <div className="toast"><CheckCircle2 size={17}/>{systemText(notice)}</div>}
@@ -301,7 +334,7 @@ export default function App() {
  {removeProfile && <Modal title={t("Remover perfil")} sub={removeProfile.name} close={() => {if (!removingProfile) setRemoveProfile(null);}}><p>{t("O perfil e sua chave salva serão removidos. O histórico, os modelos baixados e o login compartilhado no cliente oficial serão mantidos.")}</p><p>{t("As referências no roteamento de IA serão removidas; a alternativa existente passa a ser principal. Confira o roteamento antes de executar outra tarefa.")}</p>{removeProfileError && <div className="login-error" role="alert">{systemText(removeProfileError)}</div>}<div className="modal-actions"><button className="button secondary" disabled={removingProfile} onClick={() => setRemoveProfile(null)}>{t("Cancelar")}</button><button className="button stop-button" disabled={removingProfile || running || busy} onClick={async () => {setRemovingProfile(true);setRemoveProfileError('');try {const next=await call<Settings>('remove_profile',{id:removeProfile.id});setSettings(next);localStorage.setItem('agentsmith-settings-updated',String(Date.now()));setRemoveProfile(null);setNotice(t("Perfil removido. Confira o roteamento de IA."));}catch(e){setRemoveProfileError(String(e));}finally{setRemovingProfile(false);}}}><Trash2 size={15}/>{t(removingProfile ? "Removendo…" : "Remover perfil")}</button></div></Modal>}
  {modelModal && <ModelForm vendor={modelModal.vendor} profile={modelModal.profile} close={() => setModelModal(null)} save={saveModel} call={call} attempt={attempt}/>}
  {machineModal && <MachineForm machine={machineModal === 'new' ? undefined : machineModal} close={() => setMachineModal(null)} save={saveMachine} call={call}/>}
- {connectModal && <ConnectForm machine={connectModal} close={() => setConnectModal(null)} connect={connectWithPassword}/>}
+ {connectModal && <ConnectForm machine={connectModal} close={() => setConnectModal(null)} connect={connectWithPassword}/>}{secondFactorModal && <SecondFactorForm machine={secondFactorModal} close={() => setSecondFactorModal(null)} connect={connectWithSecondFactor}/>}
  </div>;
 }
 function PerformanceForm({ value, close, save }: {
@@ -376,8 +409,9 @@ function ConnectForm({ machine, close, connect }: {
     connect: (p: string, remember: boolean) => Promise<void>;
 }) {
     const [p, setP] = useState(''), [remember, setRemember] = useState(true), [busy, setBusy] = useState(false), [error, setError] = useState('');
-    return <Modal title={t("Conectar a {0}", { "0": machine.name })} sub={`${machine.host}:${machine.port} · ${machine.username}`} close={close}><form onSubmit={e => { e.preventDefault(); setBusy(true); setError(''); void connect(p, remember).catch(e => setError(String(e))).finally(() => setBusy(false)); }}>
- <Label title={t("Senha do Windows")} hint={t("Não há senha salva para este endereço e usuário.")}><input type="password" required autoFocus autoComplete="current-password" value={p} onChange={e => setP(e.target.value)}/></Label>
+    const rustdesk = machine.protocol === 'rustdesk';
+    return <Modal title={t("Conectar a {0}", { "0": machine.name })} sub={rustdesk ? `ID ${machine.host}` : `${machine.host}:${machine.port} · ${machine.username}`} close={close}><form onSubmit={e => { e.preventDefault(); setBusy(true); setError(''); void connect(p, remember).catch(e => setError(String(e))).finally(() => setBusy(false)); }}>
+ <Label title={rustdesk ? t("Senha permanente do RustDesk") : t("Senha do Windows")} hint={rustdesk ? t("Não há senha salva para este ID RustDesk.") : t("Não há senha salva para este endereço e usuário.")}><input type="password" required autoFocus autoComplete="current-password" value={p} onChange={e => setP(e.target.value)}/></Label>
  <label className="checkbox-row"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)}/><span><strong>{t("Salvar senha no Chaves do macOS")}</strong><small>{t("Na próxima conexão, Smith usará a senha salva automaticamente.")}</small></span></label>
- {error && <div className="login-error" role="alert">{systemText(error)}</div>}<div className="modal-actions"><button type="button" className="button secondary" onClick={close}>{t("Cancelar")}</button><button disabled={busy || machine.protocol !== 'rdp'} className="button primary"><Power size={15}/> {busy ? t("Conectando…") : t("Conectar")}</button></div></form></Modal>;
+ {error && <div className="login-error" role="alert">{systemText(error)}</div>}<div className="modal-actions"><button type="button" className="button secondary" onClick={close}>{t("Cancelar")}</button><button disabled={busy || !['rdp', 'rustdesk'].includes(machine.protocol)} className="button primary"><Power size={15}/> {busy ? t("Conectando…") : t("Conectar")}</button></div></form></Modal>;
 }

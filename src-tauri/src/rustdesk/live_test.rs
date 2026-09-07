@@ -27,6 +27,9 @@ fn options() -> Option<Options> {
         rendezvous: std::env::var("RUSTDESK_SERVER").unwrap_or_default(),
         key: std::env::var("RUSTDESK_KEY").unwrap_or_default(),
         two_factor_code: std::env::var("RUSTDESK_2FA").unwrap_or_default(),
+        // Asking a real machine to trust this Mac is a lasting change; the
+        // check never does it as a side effect.
+        trust_device: false,
     })
 }
 

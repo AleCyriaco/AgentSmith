@@ -117,9 +117,12 @@ impl Remote {
         helper: &Path,
         capture_interval_ms: u32,
         rustdesk: &RustdeskServer,
+        second_factor: &SecondFactor,
     ) -> Result<(), String> {
         if m.protocol == "rustdesk" {
-            return self.connect_rustdesk(m, password, rustdesk).await;
+            return self
+                .connect_rustdesk(m, password, rustdesk, second_factor)
+                .await;
         }
         if m.protocol != "rdp" {
             return Err("Este conector está previsto na arquitetura, mas ainda não foi implementado nesta versão.".into());
@@ -268,6 +271,7 @@ impl Remote {
         m: &Machine,
         password: &str,
         fallback: &RustdeskServer,
+        second_factor: &SecondFactor,
     ) -> Result<(), String> {
         self.disconnect().await?;
         let generation = self.generation.load(Ordering::SeqCst);
@@ -282,7 +286,8 @@ impl Remote {
             key: pick(&m.rustdesk_key, &fallback.key),
             // No prompt for a second-factor code yet; a machine that requires
             // one fails with an explanation instead of hanging.
-            two_factor_code: String::new(),
+            two_factor_code: second_factor.code.clone(),
+            trust_device: second_factor.trust_device,
         })
         .await?;
         let path = session.path;
@@ -471,6 +476,16 @@ impl Remote {
         }
     }
 }
+/// What the operator answered to a machine's second-factor challenge.
+#[derive(Clone, Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SecondFactor {
+    #[serde(default)]
+    pub code: String,
+    #[serde(default)]
+    pub trust_device: bool,
+}
+
 /// The machine's own setting when it has one, else the shared fallback.
 fn pick(machine: &str, fallback: &str) -> String {
     let machine = machine.trim();
@@ -701,6 +716,7 @@ mod tests {
             rendezvous: pick("", ""),
             key: pick("", ""),
             two_factor_code: String::new(),
+            trust_device: false,
         }
         .rendezvous_address()
         .starts_with(crate::rustdesk::session::DEFAULT_RENDEZVOUS));

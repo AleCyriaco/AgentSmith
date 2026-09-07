@@ -27,14 +27,16 @@ Audio, clipboard and file transfer are disabled at login. AgentSmith reads the s
 
 ## Second factor
 
-A machine with two-factor authentication answers the password with a challenge. The code is time-based and never stored; it is supplied per connection. AgentSmith sends no hardware id with it, so the machine is not asked to trust this Mac and **every** connection asks for a fresh code. That makes unattended runs impractical on such a machine; asking the machine to remember this one is a persistent change to its security and is deliberately left to a later, explicit choice.
+A machine with two-factor authentication answers the password with a challenge. AgentSmith asks for the current six-digit code and connects again with it. The code is time-based and is never stored.
+
+**Trust this Mac** is offered beside that field, unticked. Ticking it sends a hashed, stable identity for this installation, and the machine stops asking this computer for a code. That is what makes unattended runs possible on such a machine, and it is a lasting reduction of that machine's protection: from then on, anyone with the password, from this Mac, gets in without a second factor. The identity is a hash, so the machine can recognise this Mac again without learning anything about it. AgentSmith never sends it unless the box is ticked.
 
 ## Current limits
 
 - **Verified once, against one machine.** A session reached a Windows 11 host running RustDesk 1.4.9 through a self-hosted rendezvous server: relay path, both signature layers, the cipher, a second-factor challenge, VP9 negotiation, and a key frame followed by delta frames decoded to a 1800×1130 opaque image. Pointer moves were then accepted and the picture changed after them, which is the evidence available that input reached the machine short of watching its screen. Not yet exercised: the direct (non-relay) path, a machine offering more than one Windows session, the public rendezvous server, clicks and typing, and sessions longer than half a minute.
 - One display: the machine's current display sets the session resolution. Switching displays mid-session is not implemented.
 - A Windows machine running several sessions is attached to the one it marks active, or otherwise the first it offers. RustDesk asks a person; AgentSmith cannot, so the choice is fixed and not yet configurable per machine.
-- The interface has nowhere to enter a second-factor code, so a machine that requires one connects only from the live check, not from the application.
+- Trusting a Mac cannot be undone from AgentSmith; revoke it in RustDesk on the machine itself.
 - Direct connections and relays over TCP only. The UDP, KCP and WebRTC transports newer RustDesk builds can negotiate are not implemented; a machine reachable only that way will not connect.
 - No file transfer, clipboard, audio, or mouse dragging.
 - Resolution and scale settings apply to RDP; a RustDesk machine reports its own.
