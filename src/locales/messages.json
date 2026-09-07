@@ -2258,5 +2258,21 @@
   "O caminho de texto não produziu uma decisão válida; solicitando apoio visual.": {
     "en": "The text path did not produce a valid decision; requesting visual assistance.",
     "es": "La vía de texto no produjo una decisión válida; solicitando apoyo visual."
+  },
+  "v0.11.1 · Prévia": {
+    "en": "v0.11.1 · Preview",
+    "es": "v0.11.1 · Vista previa"
+  },
+  "Corrigindo resposta do apoio visual": {
+    "en": "Correcting the visual assistance response",
+    "es": "Corrigiendo la respuesta del apoyo visual"
+  },
+  "{0} · etapa {1}: {2}": {
+    "en": "{0} · step {1}: {2}",
+    "es": "{0} · paso {1}: {2}"
+  },
+  "{0}: resposta visual rejeitada: {1} Nenhuma entrada enviada; solicitando nova decisão.": {
+    "en": "{0}: visual response rejected: {1} No input sent; requesting a new decision.",
+    "es": "{0}: respuesta visual rechazada: {1} No se envió ninguna entrada; solicitando otra decisión."
   }
 }

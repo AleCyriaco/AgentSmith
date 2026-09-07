@@ -237,6 +237,21 @@ pub async fn routed(
     prompt: &str,
     image: Option<&str>,
 ) -> Result<(String, String), String> {
+    routed_validated(s, role, system, prompt, image, |text, _| {
+        Ok(text.to_string())
+    })
+    .await
+}
+// Repair invalid model outputs before falling back. All attempts are read-only;
+// the caller receives only one validated result to execute after checking freshness.
+pub async fn routed_validated<T>(
+    s: &Settings,
+    role: &str,
+    system: &str,
+    prompt: &str,
+    image: Option<&str>,
+    mut validate: impl FnMut(&str, &str) -> Result<T, String>,
+) -> Result<(T, String), String> {
     let ids = s.routes.get(role).ok_or("Configure a rota de modelos.")?;
     let mut errors = vec![];
     for id in ids {
@@ -264,11 +279,23 @@ pub async fn routed(
                 }
             })?
         };
-        match call(p, &key, s.local_only, system, prompt, image).await {
-            Ok(t) => return Ok((t, p.name.clone())),
-            Err(e) => {
-                errors.push(e.message);
-                if !e.retryable {
+        let mut request = prompt.to_string();
+        for attempt in 0..2 {
+            match call(p, &key, s.local_only, system, &request, image).await {
+                Ok(text) => match validate(&text, &p.name) {
+                    Ok(value) => return Ok((value, p.name.clone())),
+                    Err(error) => {
+                        errors.push(format!("{}: {}", p.name, error));
+                        if attempt == 0 {
+                            request = format!("{prompt}\nCORREÇÃO OBRIGATÓRIA: a resposta anterior foi rejeitada: {error} Nenhuma entrada foi enviada ao Windows. Observe novamente a mesma imagem e retorne UMA ação JSON válida. Não copie valores de exemplo. blocked exige explicar o que falta, com o nome do campo, recurso ou autorização. Se o impedimento for real, preserve-o e explique; não invente ação para contorná-lo.");
+                        }
+                    }
+                },
+                Err(e) => {
+                    errors.push(e.message);
+                    if !e.retryable {
+                        return Err(errors.join(" • "));
+                    }
                     break;
                 }
             }
@@ -424,6 +451,94 @@ mod tests {
         assert_eq!(response_text("responses",&json!({"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":"ok"}]}]})).unwrap(),"ok");
     }
 
+    #[tokio::test]
+    async fn invalid_visual_block_is_repaired_then_falls_back_but_real_block_is_preserved() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            for (index, response) in [
+                r#"{"kind":"blocked","reason":"impedimento"}"#,
+                r#"{"kind":"blocked","reason":"impedimento"}"#,
+                r#"{"kind":"key","keys":["ctrl","l"]}"#,
+                r#"{"kind":"blocked","reason":"Falta senha."}"#,
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut bytes = Vec::new();
+                let mut buf = [0; 4096];
+                let body = loop {
+                    let n = socket.read(&mut buf).await.unwrap();
+                    assert!(n > 0);
+                    bytes.extend_from_slice(&buf[..n]);
+                    if let Some(at) = bytes.windows(4).position(|b| b == b"\r\n\r\n") {
+                        let h = String::from_utf8_lossy(&bytes[..at]).to_lowercase();
+                        let len: usize = h
+                            .lines()
+                            .find_map(|l| l.strip_prefix("content-length: "))
+                            .unwrap()
+                            .parse()
+                            .unwrap();
+                        if bytes.len() >= at + 4 + len {
+                            break serde_json::from_slice::<Value>(&bytes[at + 4..at + 4 + len])
+                                .unwrap();
+                        }
+                    }
+                };
+                assert_eq!(
+                    body["model"],
+                    if index == 2 { "secondary" } else { "primary" }
+                );
+                assert_eq!(
+                    body.to_string().contains("CORREÇÃO OBRIGATÓRIA"),
+                    index == 1
+                );
+                let output = json!({"choices":[{"message":{"content":response}}]}).to_string();
+                socket.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{output}",output.len()).as_bytes()).await.unwrap();
+            }
+        });
+        let mut s = Settings::default();
+        s.local_only = true;
+        for name in ["primary", "secondary"] {
+            let mut p = profile("chat");
+            p.id = uuid::Uuid::new_v4().to_string();
+            p.name = name.into();
+            p.model = name.into();
+            p.base_url = base.clone();
+            p.vendor = "local".into();
+            s.routes
+                .entry("vision".into())
+                .or_default()
+                .push(p.id.clone());
+            s.profiles.push(p);
+        }
+        let frame = Snapshot {
+            width: 100,
+            height: 80,
+            data_url: "data:image/png;base64,aGVsbG8=".into(),
+            sequence: 1,
+            captured_at: 1,
+        };
+        let prepared = crate::vision::Prepared {
+            frame: frame.clone(),
+            region: crate::vision::Region::full(&frame),
+        };
+        tokio::time::timeout(std::time::Duration::from_secs(15),async {
+            let mut rejected=0;
+            let (action,provider)=routed_validated(&s,"vision","system","Escolha a próxima ação",Some(&frame.data_url),|text,_| {
+                let action=crate::observation::validated_visual_action(text,&prepared,&frame);
+                if action.is_err(){rejected+=1;} action
+            }).await.unwrap();
+            assert_eq!(rejected,2);assert_eq!(provider,"secondary");
+            assert!(matches!(action,crate::remote::Action::Key{..}));
+            let (action,provider)=routed_validated(&s,"vision","system","Escolha a próxima ação",Some(&frame.data_url),|text,_|crate::observation::validated_visual_action(text,&prepared,&frame)).await.unwrap();
+            assert_eq!(provider,"primary");
+            assert!(matches!(action,crate::remote::Action::Blocked{ref reason} if reason=="Falta senha."));
+            server.await.unwrap();
+        }).await.unwrap();
+    }
     #[tokio::test]
     async fn http_adapters_send_correct_auth_paths_and_images() {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};

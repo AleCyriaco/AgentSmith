@@ -2,7 +2,7 @@
 
 Desktop macOS para planejamento e operação visual de máquinas Windows, com múltiplos provedores de LLM.
 
-Prévia 0.11.0. Este build foi produzido para Apple Silicon/macOS 26+ porque as bibliotecas FreeRDP disponíveis nesta máquina têm esse deployment target. A aplicação não foi homologada em versões anteriores nem Intel.
+Prévia 0.11.1. Este build foi produzido para Apple Silicon/macOS 26+ porque as bibliotecas FreeRDP disponíveis nesta máquina têm esse deployment target. A aplicação não foi homologada em versões anteriores nem Intel.
 
 ## Desenvolvimento
 
@@ -98,7 +98,7 @@ Excluir pede confirmação do plano selecionado e remove sua entrada do históri
 
 ## Repositório
 
-O repositório contém o código da versão 0.11.0 e os scripts para reconstruir os componentes nativos. Dependências instaladas, modelos baixados, aplicativos compilados, credenciais e dados locais de execução não são versionados. Consulte [Primeiros passos](docs/getting-started.md) e [Arquitetura](docs/architecture.md).
+O repositório contém o código da versão 0.11.1 e os scripts para reconstruir os componentes nativos. Dependências instaladas, modelos baixados, aplicativos compilados, credenciais e dados locais de execução não são versionados. Consulte [Primeiros passos](docs/getting-started.md) e [Arquitetura](docs/architecture.md).
 
 
 ## OCR + texto primeiro — 0.11.0
@@ -114,3 +114,10 @@ Critérios explícitos de texto exato continuam sendo conferidos diretamente pel
 O cache mantém no máximo duas observações em memória durante uma execução. Compara pixels exatos da região e resolução antes de reutilizar; alterações fora de uma região não invalidam sua leitura, mas exigem nova observação para a tela inteira. Pausar/retomar, reiniciar e um novo ciclo criam um novo cache. Capturas não são salvas em arquivos. Antes de enviar ações do caminho textual ou confirmar sucesso, o motor confere novamente a captura para descartar respostas antigas.
 
 Veja [o fluxo e a validação da versão](docs/ocr-text-first.md).
+
+
+## Correção de bloqueios genéricos — 0.11.1
+
+Respostas como `blocked: impedimento`, vazias ou copiadas dos exemplos não encerram imediatamente a tarefa. No caminho textual, solicitam apoio visual. No caminho visual, o modelo recebe uma única solicitação de correção; se a resposta continuar inválida, o próximo perfil visual configurado é consultado. O motor não envia entradas durante essas tentativas e continua conferindo a validade da captura antes da ação final.
+
+Um bloqueio concreto, como falta de senha ou autorização, permanece um bloqueio e não dispara tentativas para contorná-lo. O aviso inclui modelo e etapa. O histórico identifica respostas rejeitadas e as teclas enviadas (sem registrar conteúdo digitado). A regressão de resposta literal “impedimento” foi reproduzida em teste HTTP simulado, inclusive a passagem ao segundo modelo e a preservação de bloqueios reais.

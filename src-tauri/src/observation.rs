@@ -122,12 +122,69 @@ impl Decision {
             Self::Key { keys } => Action::Key { keys },
             Self::Scroll { direction, amount } => Action::Scroll { direction, amount },
             Self::Wait { seconds } => Action::Wait { seconds },
-            Self::Blocked { reason } => Action::Blocked { reason },
+            Self::Blocked { reason } => {
+                if generic_block_reason(&reason) {
+                    return Err(
+                        "O modelo de texto informou um bloqueio sem explicar o motivo.".into(),
+                    );
+                }
+                Action::Blocked { reason }
+            }
             Self::NeedVision { reason } => return Err(reason),
         })
     }
 }
 
+// Reject example labels, not real constraints. A concrete refusal is never retried away.
+pub fn generic_block_reason(reason: &str) -> bool {
+    let normalized = reason
+        .trim()
+        .trim_matches(|c: char| !c.is_alphanumeric())
+        .to_lowercase();
+    normalized.is_empty()
+        || [
+            "impedimento",
+            "blocked",
+            "bloqueado",
+            "bloqueada",
+            "bloqueio",
+            "obstacle",
+            "reason",
+            "motivo",
+            "razão",
+            "razon",
+            "razón",
+            "impediment",
+            "unknown",
+            "n/a",
+            "falta de autorização ou informação do usuário",
+            "descreva o motivo concreto",
+        ]
+        .contains(&normalized.as_str())
+}
+pub fn validated_visual_action(
+    text: &str,
+    prepared: &vision::Prepared,
+    current: &Snapshot,
+) -> Result<Action, String> {
+    let action: Action = crate::llm::parse_json(text)?;
+    if let Action::Blocked { reason } = &action {
+        if generic_block_reason(reason) {
+            return Err("Bloqueio genérico: falta um motivo concreto.".into());
+        }
+    }
+    let action = prepared.action(action, current)?;
+    if !matches!(
+        action,
+        Action::Wait { .. }
+            | Action::Blocked { .. }
+            | Action::Inspect { .. }
+            | Action::StepDone { .. }
+    ) {
+        crate::remote::action_commands(&action, current.width, current.height)?;
+    }
+    Ok(action)
+}
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -203,6 +260,39 @@ mod tests {
         );
         assert_eq!(cache.entries.len(), 2);
         assert!(cache.lookup(&original, region).is_none());
+    }
+    #[test]
+    fn example_block_reasons_are_invalid_but_concrete_constraints_are_preserved() {
+        for reason in [
+            "impedimento",
+            " Impedimento. ",
+            "blocked",
+            "...",
+            "",
+            "descreva o motivo concreto",
+        ] {
+            assert!(generic_block_reason(reason));
+            assert!(Decision::Blocked {
+                reason: reason.into()
+            }
+            .action(&reading())
+            .is_err());
+        }
+        for reason in [
+            "Falta senha.",
+            "O usuário não autorizou a instalação.",
+            "Arquivo harness v0.5 não encontrado na pasta Downloads.",
+        ] {
+            assert!(!generic_block_reason(reason));
+            assert!(matches!(
+                Decision::Blocked {
+                    reason: reason.into()
+                }
+                .action(&reading())
+                .unwrap(),
+                Action::Blocked { .. }
+            ));
+        }
     }
     #[test]
     fn text_clicks_are_grounded_and_cannot_smuggle_coordinates_or_actions() {

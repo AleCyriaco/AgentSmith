@@ -189,7 +189,7 @@ async fn text_choice(
     };
     run.status = "running".into();
     report(store, run, "Escolhendo ação com OCR e modelo de texto")?;
-    let prompt = format!("{context}\nVerificação: {evidence}\nEscolha UMA ação. Clique apenas em texto identificado por ID: {{\"kind\":\"click\",\"target\":0}}, double_click ou right_click com target; {{\"kind\":\"key\",\"keys\":[\"win\",\"r\"]}}; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":1}}; {{\"kind\":\"need_vision\",\"reason\":\"informação visual que falta\"}}; {{\"kind\":\"blocked\",\"reason\":\"falta de autorização ou informação do usuário\"}}. Se não conseguir localizar um elemento, use need_vision. Não use blocked por limitação do OCR. Use atalhos Windows conhecidos; não invente coordenadas. Antes de digitar assegure foco por atalho explícito ou peça visão. Não repita uma ação cujo resultado ainda seja incerto. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Sem ferramenta de shell.");
+    let prompt = format!("{context}\nVerificação: {evidence}\nEscolha UMA ação. Clique apenas em texto identificado por ID: {{\"kind\":\"click\",\"target\":0}}, double_click ou right_click com target; {{\"kind\":\"key\",\"keys\":[\"win\",\"r\"]}}; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":1}}; {{\"kind\":\"need_vision\",\"reason\":\"informação visual que falta\"}}; {{\"kind\":\"blocked\",\"reason\":\"falta de autorização ou informação do usuário\"}}. Se não conseguir localizar um elemento, use need_vision. Não use blocked por limitação do OCR. Use atalhos Windows conhecidos; não invente coordenadas. Antes de digitar assegure foco por atalho explícito ou peça visão. Não repita uma ação cujo resultado ainda seja incerto. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Não copie textos de exemplo nos valores JSON; descreva o motivo real de blocked. Sem ferramenta de shell.");
     let started = std::time::Instant::now();
     let (text, provider) = llm::routed(s, "operator", &system, &prompt, None).await?;
     run.log.push(format!(
@@ -533,30 +533,25 @@ async fn execute(
                         String::new()
                     };
                     let context=format!("{context}{current_ocr}\n{crop_hint}\nA imagem cobre a região x={}, y={}, largura={}, altura={} da sessão, redimensionada para {}x{}. Use SOMENTE coordenadas na imagem enviada. Não some o deslocamento da região.",prepared.region.x,prepared.region.y,prepared.region.width,prepared.region.height,sent_frame.width,sent_frame.height);
-                    let prompt=format!("{context}\nVerificação: {}\nImagem atual: {}x{} pixels. Escolha UMA próxima ação. Coordenadas no tamanho original da imagem. Não use coordenadas do desktop do Mac. Formatos aceitos: {{\"kind\":\"click\",\"x\":10,\"y\":20}}, double_click ou right_click com x/y; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"key\",\"keys\":[\"ctrl\",\"s\"]}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":2}}; {{\"kind\":\"blocked\",\"reason\":\"impedimento\"}}. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Sem comandos de shell como ferramenta. Respeite o roteiro original; se uma ação já pode ter sido aplicada, confira antes de repetir.",verdict.evidence,sent_frame.width,sent_frame.height);
+                    let prompt=format!("{context}\nVerificação: {}\nImagem atual: {}x{} pixels. Escolha UMA próxima ação. Coordenadas no tamanho original da imagem. Não use coordenadas do desktop do Mac. Formatos aceitos: {{\"kind\":\"click\",\"x\":10,\"y\":20}}, double_click ou right_click com x/y; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"key\",\"keys\":[\"ctrl\",\"s\"]}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":2}}; {{\"kind\":\"blocked\",\"reason\":\"descreva o motivo concreto\"}}. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Não copie textos de exemplo nos valores JSON; blocked exige motivo real, com o recurso ou autorização que falta. Sem comandos de shell como ferramenta. Respeite o roteiro original; se uma ação já pode ter sido aplicada, confira antes de repetir.",verdict.evidence,sent_frame.width,sent_frame.height);
                     let started = std::time::Instant::now();
-                    let (text, provider) = checked(
-                        remote,
-                        epoch,
-                        llm::routed(
-                            &visual_settings,
-                            "vision",
-                            SYSTEM,
-                            &prompt,
-                            Some(&sent_frame.data_url),
-                        ),
-                    )
-                    .await?;
+                    let (action, provider) = checked(
+                        remote, epoch,
+                        llm::routed_validated(&visual_settings, "vision", SYSTEM, &prompt, Some(&sent_frame.data_url), |text, provider| {
+                            let result = crate::observation::validated_visual_action(text, &prepared, &current);
+                            if let Err(error) = &result {
+                                run.log.push(format!("{provider}: resposta visual rejeitada: {error} Nenhuma entrada enviada; solicitando nova decisão."));
+                                report(store, run, "Corrigindo resposta do apoio visual")?;
+                            }
+                            result
+                        }),
+                    ).await.map_err(|error| format!("O apoio visual não forneceu uma ação válida para a etapa {}. {error}", index + 1))?;
                     run.log.push(format!(
                         "{provider} · próxima ação: {:.1}s · imagem {} × {}.",
                         started.elapsed().as_secs_f64(),
                         sent_frame.width,
                         sent_frame.height
                     ));
-                    let action = prepared.action(
-                        operator_response::<Action>(&text, &provider, "operação")?,
-                        &current,
-                    )?;
                     (action, provider, prepared, current, false)
                 }
             };
@@ -605,7 +600,9 @@ async fn execute(
                     run.log.push(format!("Recorte solicitado: {x},{y} · {width} × {height}. Nenhuma entrada enviada."));
                     checkpoint(store, run)?;
                 }
-                Action::Blocked { reason } => return Err(reason),
+                Action::Blocked { reason } => {
+                    return Err(format!("{provider} · etapa {}: {reason}", index + 1))
+                }
                 Action::Wait { seconds } => {
                     focus = None;
                     waits += 1;
@@ -656,7 +653,7 @@ async fn execute(
                         Action::Click { .. } => "clique".into(),
                         Action::DoubleClick { .. } => "clique duplo".into(),
                         Action::RightClick { .. } => "clique direito".into(),
-                        Action::Key { .. } => "combinação de teclas".into(),
+                        Action::Key { keys } => format!("teclas {}", keys.join("+")),
                         _ => "rolagem".into(),
                     };
                     run.log
