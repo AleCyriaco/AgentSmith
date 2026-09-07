@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "test": "vitest run",
     "desktop": "tauri dev",
-    "bundle": "npm run ocr && tauri build --bundles app",
+    "bundle": "npm run ocr && tauri build --bundles app && codesign --force --deep --sign - src-tauri/target/release/bundle/macos/AgentSmith.app && codesign --verify --deep --strict src-tauri/target/release/bundle/macos/AgentSmith.app",
     "helper": "python3 scripts/build_helper.py",
     "vision": "python3 scripts/bundle_vision.py",
     "ocr": "python3 scripts/build_ocr.py"

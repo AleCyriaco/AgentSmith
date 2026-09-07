@@ -37,8 +37,13 @@ fn main() {
         .file("../native/vpx_decoder.c")
         .opt_level(2)
         .compile("agentsmith_vpx");
-    println!("cargo:rustc-link-search=native={}", vpx.join("lib").display());
-    println!("cargo:rustc-link-lib=static=vpx");
+    // Name the archive outright. With both libvpx.a and libvpx.dylib in the
+    // same directory, `-lvpx` on macOS takes the dylib even when asked for a
+    // static link, and the app then depends on a Homebrew path that other Macs
+    // do not have.
+    let archive = vpx.join("lib/libvpx.a");
+    assert!(archive.is_file(), "libvpx.a not found at {}", archive.display());
+    println!("cargo:rustc-link-arg={}", archive.display());
     println!("cargo:rerun-if-changed=../native/vpx_decoder.c");
     println!("cargo:rerun-if-env-changed=VPX_PREFIX");
 
