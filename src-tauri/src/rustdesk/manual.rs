@@ -158,7 +158,7 @@ mod tests {
     #[test]
     fn external_client_has_no_tauri_capability() {
         let value: serde_json::Value =
-            serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
+            serde_json::from_str(include_str!("../../capabilities/default.json")).unwrap();
         assert!(value.get("remote").is_none());
         assert_eq!(value["windows"], serde_json::json!(["main", "remote-rdp"]));
     }

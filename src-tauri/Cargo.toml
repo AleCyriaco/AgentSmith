@@ -6,6 +6,8 @@ license = "MIT"
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+prost-build = "0.13"
+protoc-bin-vendored = "3"
 
 [dependencies]
 tauri = { version = "2", features = [] }
@@ -20,6 +22,11 @@ base64 = "0.22"
 libc = "0.2"
 sha2 = "0.10"
 image = { version = "0.25", default-features = false, features = ["png"] }
+prost = "0.13"
+ed25519-dalek = "2"
+crypto_box = "0.9"
+crypto_secretbox = "0.1"
+rand = "0.8"
 
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = "3"

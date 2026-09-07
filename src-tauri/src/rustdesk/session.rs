@@ -1,0 +1,567 @@
+//! Establishes an authenticated RustDesk session: rendezvous, hole punch or
+//! relay, signed-identity handshake, and password login.
+use crate::rustdesk::{
+    address,
+    crypto::{self, RELAY_PORT, RENDEZVOUS_PORT},
+    proto::{self, message, rendezvous_message},
+    stream::Stream,
+};
+use sha2::{Digest, Sha256};
+
+/// RustDesk protocol level AgentSmith implements and announces to the peer.
+pub const PROTOCOL_VERSION: &str = "1.3.0";
+pub const DEFAULT_RENDEZVOUS: &str = "rs-ny.rustdesk.com";
+
+#[derive(Clone, Debug)]
+pub struct Options {
+    /// The peer's RustDesk ID.
+    pub id: String,
+    pub password: String,
+    /// Rendezvous host, with optional port. Empty uses RustDesk's public server.
+    pub rendezvous: String,
+    /// Base64 Ed25519 key of that rendezvous server. Empty uses the public one.
+    pub key: String,
+}
+
+impl Options {
+    pub fn rendezvous_address(&self) -> String {
+        let host = if self.rendezvous.trim().is_empty() {
+            DEFAULT_RENDEZVOUS
+        } else {
+            self.rendezvous.trim()
+        };
+        address::with_default_port(host, RENDEZVOUS_PORT)
+    }
+
+    pub fn signing_key(&self) -> Result<[u8; 32], String> {
+        crypto::signing_key(if self.key.trim().is_empty() {
+            crypto::PUBLIC_RENDEZVOUS_KEY
+        } else {
+            self.key.trim()
+        })
+    }
+}
+
+/// What the peer told us about itself once logged in.
+#[derive(Clone, Debug, Default)]
+pub struct Peer {
+    pub hostname: String,
+    pub username: String,
+    pub platform: String,
+    pub version: String,
+    pub width: u32,
+    pub height: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Codec {
+    Vp8,
+    Vp9,
+}
+
+#[derive(Debug)]
+pub enum Event {
+    /// One encoded video frame for the decoder.
+    Video {
+        codec: Codec,
+        data: Vec<u8>,
+        key: bool,
+    },
+    /// A message we handled internally and the caller can ignore.
+    Idle,
+    Closed(String),
+}
+
+pub struct Session {
+    stream: Stream,
+    pub peer: Peer,
+}
+
+/// Turns the rendezvous server's refusal into something an operator can act on.
+fn punch_failure(response: &proto::PunchHoleResponse) -> String {
+    if !response.other_failure.is_empty() {
+        return response.other_failure.clone();
+    }
+    match response.failure() {
+        proto::punch_hole_response::Failure::IdNotExist => {
+            "Este ID RustDesk não existe no servidor de encontro.".into()
+        }
+        proto::punch_hole_response::Failure::Offline => {
+            "A máquina RustDesk está offline.".into()
+        }
+        proto::punch_hole_response::Failure::LicenseMismatch => {
+            "A chave do servidor RustDesk não confere.".into()
+        }
+        proto::punch_hole_response::Failure::LicenseOveruse => {
+            "A licença do servidor RustDesk está esgotada.".into()
+        }
+    }
+}
+
+/// A stable controller identity, so the peer shows the same origin every time
+/// without AgentSmith having to register itself as a RustDesk host.
+fn controller_id() -> String {
+    let host = std::env::var("HOSTNAME").unwrap_or_else(|_| "agentsmith".into());
+    let digest = Sha256::digest(format!("agentsmith|{host}").as_bytes());
+    let value = u32::from_be_bytes([digest[0], digest[1], digest[2], digest[3]]);
+    format!("{:09}", value % 1_000_000_000)
+}
+
+/// Announces only the codecs AgentSmith can actually decode, so the peer does
+/// not send a stream that would arrive as a blank screen.
+fn login_options() -> proto::OptionMessage {
+    use proto::option_message::BoolOption;
+    proto::OptionMessage {
+        image_quality: proto::ImageQuality::Balanced as i32,
+        // AgentSmith reads the screen; audio, clipboard and file transfer are not used.
+        disable_audio: BoolOption::Yes as i32,
+        disable_clipboard: BoolOption::Yes as i32,
+        enable_file_transfer: BoolOption::No as i32,
+        show_remote_cursor: BoolOption::Yes as i32,
+        supported_decoding: Some(proto::SupportedDecoding {
+            ability_vp8: 1,
+            ability_vp9: 1,
+            ability_h264: 0,
+            ability_h265: 0,
+            ability_av1: 0,
+            prefer: proto::supported_decoding::PreferCodec::Vp9 as i32,
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+fn login_request(options: &Options, hash: &proto::Hash) -> proto::LoginRequest {
+    proto::LoginRequest {
+        username: options.id.clone(),
+        password: crypto::login_password(&options.password, &hash.salt, &hash.challenge),
+        my_id: controller_id(),
+        my_name: "AgentSmith".into(),
+        option: Some(login_options()),
+        video_ack_required: false,
+        session_id: rand::random(),
+        version: PROTOCOL_VERSION.into(),
+        my_platform: "Mac OS".into(),
+    }
+}
+
+/// The peer reports every display; AgentSmith drives the one it marked current.
+fn active_display(info: &proto::PeerInfo) -> Option<&proto::DisplayInfo> {
+    info.displays
+        .get(info.current_display.max(0) as usize)
+        .or_else(|| info.displays.first())
+}
+
+impl Session {
+    pub async fn connect(options: &Options) -> Result<Self, String> {
+        let id = options.id.trim();
+        if id.is_empty() {
+            return Err("Informe o ID RustDesk da máquina.".into());
+        }
+        let signer = options.signing_key()?;
+        let (mut stream, signed_peer_key) = Self::reach_peer(options, id).await?;
+        Self::handshake(&mut stream, &signed_peer_key, &signer, id).await?;
+        let peer = Self::login(&mut stream, options).await?;
+        Ok(Self { stream, peer })
+    }
+
+    /// Asks the rendezvous server for the peer and returns a stream to it plus
+    /// the server-signed blob that carries the peer's signing key.
+    async fn reach_peer(options: &Options, id: &str) -> Result<(Stream, Vec<u8>), String> {
+        let rendezvous = options.rendezvous_address();
+        let mut server = Stream::connect(&rendezvous).await?;
+        server
+            .send_rendezvous(proto::RendezvousMessage {
+                union: Some(rendezvous_message::Union::PunchHoleRequest(
+                    proto::PunchHoleRequest {
+                        id: id.into(),
+                        licence_key: options.key.trim().into(),
+                        conn_type: proto::ConnType::DefaultConn as i32,
+                        version: PROTOCOL_VERSION.into(),
+                        nat_type: proto::NatType::Asymmetric as i32,
+                        ..Default::default()
+                    },
+                )),
+            })
+            .await?;
+        match server.recv_rendezvous().await?.union {
+            Some(rendezvous_message::Union::PunchHoleResponse(response)) => {
+                if response.socket_addr.is_empty() {
+                    return Err(punch_failure(&response));
+                }
+                let signed = response.pk.clone();
+                if let Some(peer) = address::decode(&response.socket_addr) {
+                    if let Ok(direct) = Stream::connect(&peer.to_string()).await {
+                        return Ok((direct, signed));
+                    }
+                }
+                // The direct path is blocked by NAT; fall back to the relay.
+                let relay = Self::open_relay(options, id, &response.relay_server).await?;
+                Ok((relay, signed))
+            }
+            // The peer itself asked for a relay and the server already paired one.
+            Some(rendezvous_message::Union::RelayResponse(response)) => {
+                if !response.refuse_reason.is_empty() {
+                    return Err(response.refuse_reason);
+                }
+                let signed = match response.union {
+                    Some(proto::relay_response::Union::Pk(pk)) => pk,
+                    _ => Vec::new(),
+                };
+                let stream =
+                    Self::join_relay(options, id, &response.relay_server, &response.uuid).await?;
+                Ok((stream, signed))
+            }
+            _ => Err("O servidor de encontro respondeu de forma inesperada.".into()),
+        }
+    }
+
+    /// Negotiates a fresh relay pairing, then joins it.
+    async fn open_relay(options: &Options, id: &str, relay: &str) -> Result<Stream, String> {
+        if relay.trim().is_empty() {
+            return Err("A máquina não está acessível e o servidor não ofereceu retransmissão.".into());
+        }
+        let uuid = uuid::Uuid::new_v4().to_string();
+        let mut server = Stream::connect(&options.rendezvous_address()).await?;
+        server
+            .send_rendezvous(proto::RendezvousMessage {
+                union: Some(rendezvous_message::Union::RequestRelay(
+                    proto::RequestRelay {
+                        id: id.into(),
+                        uuid: uuid.clone(),
+                        relay_server: relay.into(),
+                        secure: true,
+                        licence_key: options.key.trim().into(),
+                        conn_type: proto::ConnType::DefaultConn as i32,
+                        ..Default::default()
+                    },
+                )),
+            })
+            .await?;
+        match server.recv_rendezvous().await?.union {
+            Some(rendezvous_message::Union::RelayResponse(response))
+                if response.refuse_reason.is_empty() =>
+            {
+                Self::join_relay(options, id, relay, &uuid).await
+            }
+            Some(rendezvous_message::Union::RelayResponse(response)) => Err(response.refuse_reason),
+            _ => Err("A retransmissão RustDesk não foi aceita.".into()),
+        }
+    }
+
+    async fn join_relay(
+        options: &Options,
+        id: &str,
+        relay: &str,
+        uuid: &str,
+    ) -> Result<Stream, String> {
+        let mut stream = Stream::connect(&address::with_default_port(relay, RELAY_PORT)).await?;
+        stream
+            .send_rendezvous(proto::RendezvousMessage {
+                union: Some(rendezvous_message::Union::RequestRelay(
+                    proto::RequestRelay {
+                        id: id.into(),
+                        uuid: uuid.into(),
+                        licence_key: options.key.trim().into(),
+                        conn_type: proto::ConnType::DefaultConn as i32,
+                        ..Default::default()
+                    },
+                )),
+            })
+            .await?;
+        Ok(stream)
+    }
+
+    /// Binds the session to the machine the operator named, then encrypts it.
+    ///
+    /// AgentSmith refuses an unauthenticated peer: an AI loop that types and
+    /// clicks must not run over a session that anyone on the path could read or
+    /// redirect, so there is no plaintext fallback here.
+    async fn handshake(
+        stream: &mut Stream,
+        signed_peer_key: &[u8],
+        signer: &[u8; 32],
+        id: &str,
+    ) -> Result<(), String> {
+        if signed_peer_key.is_empty() {
+            return Err(
+                "O servidor de encontro não assinou a identidade desta máquina; AgentSmith não abre sessão sem autenticação."
+                    .into(),
+            );
+        }
+        let peer_signing_key = crypto::verify_signed_identity(signed_peer_key, signer, id)?;
+        let Some(message::Union::SignedId(signed)) = stream.recv().await?.union else {
+            return Err("O par não iniciou o handshake com sua identidade.".into());
+        };
+        let peer_session_key =
+            crypto::verify_signed_identity(&signed.id, &peer_signing_key, id)?;
+        let exchange = crypto::seal_session_key(peer_session_key)?;
+        stream
+            .send(proto::Message {
+                union: Some(message::Union::PublicKey(proto::PublicKey {
+                    asymmetric_value: exchange.asymmetric_value,
+                    symmetric_value: exchange.symmetric_value,
+                })),
+            })
+            .await?;
+        stream.secure(exchange.cipher);
+        Ok(())
+    }
+
+    async fn login(stream: &mut Stream, options: &Options) -> Result<Peer, String> {
+        let Some(message::Union::Hash(hash)) = stream.recv().await?.union else {
+            return Err("O par não pediu autenticação como esperado.".into());
+        };
+        stream
+            .send(proto::Message {
+                union: Some(message::Union::LoginRequest(login_request(options, &hash))),
+            })
+            .await?;
+        loop {
+            match stream.recv().await?.union {
+                Some(message::Union::LoginResponse(response)) => match response.union {
+                    Some(proto::login_response::Union::PeerInfo(info)) => {
+                        return Ok(Self::describe(&info))
+                    }
+                    Some(proto::login_response::Union::Error(error)) => {
+                        return Err(Self::login_error(&error))
+                    }
+                    None => return Err("O par recusou o acesso sem explicar.".into()),
+                },
+                Some(message::Union::PeerInfo(info)) => return Ok(Self::describe(&info)),
+                Some(message::Union::Misc(misc)) => {
+                    if let Some(proto::misc::Union::CloseReason(reason)) = misc.union {
+                        return Err(Self::login_error(&reason));
+                    }
+                }
+                _ => continue,
+            }
+        }
+    }
+
+    fn login_error(error: &str) -> String {
+        match error {
+            "Wrong Password" => "Senha RustDesk incorreta.".into(),
+            "No Password Access" => {
+                "A máquina exige aprovação manual e não aceita senha.".into()
+            }
+            other => format!("O par RustDesk recusou o acesso: {other}"),
+        }
+    }
+
+    fn describe(info: &proto::PeerInfo) -> Peer {
+        let display = active_display(info);
+        Peer {
+            hostname: info.hostname.clone(),
+            username: info.username.clone(),
+            platform: info.platform.clone(),
+            version: info.version.clone(),
+            width: display.map(|d| d.width.max(0) as u32).unwrap_or(0),
+            height: display.map(|d| d.height.max(0) as u32).unwrap_or(0),
+        }
+    }
+
+    /// Pumps one message, answering the peer's own housekeeping directly.
+    pub async fn next(&mut self) -> Result<Event, String> {
+        match self.stream.recv().await?.union {
+            Some(message::Union::VideoFrame(frame)) => Ok(Self::video(frame)),
+            Some(message::Union::TestDelay(delay)) => {
+                if !delay.from_client {
+                    self.stream
+                        .send(proto::Message {
+                            union: Some(message::Union::TestDelay(proto::TestDelay {
+                                from_client: true,
+                                ..delay
+                            })),
+                        })
+                        .await?;
+                }
+                Ok(Event::Idle)
+            }
+            Some(message::Union::Misc(misc)) => match misc.union {
+                Some(proto::misc::Union::CloseReason(reason)) => Ok(Event::Closed(reason)),
+                _ => Ok(Event::Idle),
+            },
+            Some(message::Union::PeerInfo(info)) => {
+                self.peer = Self::describe(&info);
+                Ok(Event::Idle)
+            }
+            _ => Ok(Event::Idle),
+        }
+    }
+
+    fn video(frame: proto::VideoFrame) -> Event {
+        let (codec, frames) = match frame.union {
+            Some(proto::video_frame::Union::Vp9s(frames)) => (Codec::Vp9, frames),
+            Some(proto::video_frame::Union::Vp8s(frames)) => (Codec::Vp8, frames),
+            // The peer ignored our declared abilities; treat it as no picture
+            // rather than pretending a frame arrived.
+            _ => return Event::Idle,
+        };
+        match frames.frames.into_iter().next() {
+            Some(first) => Event::Video {
+                codec,
+                data: first.data,
+                key: first.key,
+            },
+            None => Event::Idle,
+        }
+    }
+
+    /// Asks for a fresh key frame, used after connecting or resuming.
+    pub async fn request_refresh(&mut self) -> Result<(), String> {
+        self.stream
+            .send(proto::Message {
+                union: Some(message::Union::Misc(proto::Misc {
+                    union: Some(proto::misc::Union::RefreshVideo(true)),
+                })),
+            })
+            .await
+    }
+
+    pub async fn send_mouse(&mut self, mask: i32, x: i32, y: i32) -> Result<(), String> {
+        self.stream
+            .send(proto::Message {
+                union: Some(message::Union::MouseEvent(proto::MouseEvent {
+                    mask,
+                    x,
+                    y,
+                    modifiers: Vec::new(),
+                })),
+            })
+            .await
+    }
+
+    pub async fn send_key(&mut self, event: proto::KeyEvent) -> Result<(), String> {
+        self.stream
+            .send(proto::Message {
+                union: Some(message::Union::KeyEvent(event)),
+            })
+            .await
+    }
+
+    pub fn is_secure(&self) -> bool {
+        self.stream.is_secure()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rendezvous_defaults_to_the_public_server_and_keeps_custom_ones() {
+        let mut options = Options {
+            id: "123456789".into(),
+            password: String::new(),
+            rendezvous: String::new(),
+            key: String::new(),
+        };
+        assert_eq!(options.rendezvous_address(), "rs-ny.rustdesk.com:21116");
+        assert_eq!(options.signing_key().unwrap().len(), 32);
+        options.rendezvous = " rs.example.com:9 ".into();
+        assert_eq!(options.rendezvous_address(), "rs.example.com:9");
+        options.key = "chave-que-nao-e-base64!!".into();
+        assert!(options.signing_key().is_err());
+    }
+
+    #[test]
+    fn refusals_reach_the_operator_as_a_cause_not_a_code() {
+        let mut response = proto::PunchHoleResponse {
+            failure: proto::punch_hole_response::Failure::Offline as i32,
+            ..Default::default()
+        };
+        assert!(punch_failure(&response).contains("offline"));
+        response.failure = proto::punch_hole_response::Failure::IdNotExist as i32;
+        assert!(punch_failure(&response).contains("não existe"));
+        response.other_failure = "servidor em manutenção".into();
+        assert_eq!(punch_failure(&response), "servidor em manutenção");
+        assert!(Session::login_error("Wrong Password").contains("incorreta"));
+        assert!(Session::login_error("qualquer outra").contains("qualquer outra"));
+    }
+
+    #[test]
+    fn login_never_carries_the_password_and_declares_only_decodable_codecs() {
+        let options = Options {
+            id: "123456789".into(),
+            password: "segredo".into(),
+            rendezvous: String::new(),
+            key: String::new(),
+        };
+        let hash = proto::Hash {
+            salt: "sal".into(),
+            challenge: "desafio".into(),
+        };
+        let request = login_request(&options, &hash);
+        assert_eq!(
+            request.password,
+            crypto::login_password("segredo", "sal", "desafio")
+        );
+        assert!(!request.password.windows(7).any(|w| w == b"segredo"));
+        assert_eq!(request.my_id.len(), 9);
+        let decoding = request.option.unwrap().supported_decoding.unwrap();
+        assert_eq!((decoding.ability_vp8, decoding.ability_vp9), (1, 1));
+        assert_eq!(
+            (decoding.ability_h264, decoding.ability_h265, decoding.ability_av1),
+            (0, 0, 0)
+        );
+    }
+
+    #[test]
+    fn the_peers_current_display_sets_the_session_resolution() {
+        let display = |width, height| proto::DisplayInfo {
+            width,
+            height,
+            ..Default::default()
+        };
+        let info = proto::PeerInfo {
+            hostname: "WIN-LAB".into(),
+            displays: vec![display(1280, 800), display(1920, 1080)],
+            current_display: 1,
+            ..Default::default()
+        };
+        let peer = Session::describe(&info);
+        assert_eq!((peer.width, peer.height), (1920, 1080));
+        assert_eq!(peer.hostname, "WIN-LAB");
+        // An out-of-range index must not lose the session.
+        let peer = Session::describe(&proto::PeerInfo {
+            current_display: 9,
+            ..info.clone()
+        });
+        assert_eq!((peer.width, peer.height), (1280, 800));
+        // A peer that reports no display leaves the resolution unknown, not wrong.
+        let peer = Session::describe(&proto::PeerInfo::default());
+        assert_eq!((peer.width, peer.height), (0, 0));
+    }
+
+    #[test]
+    fn only_decodable_video_becomes_a_frame() {
+        let frames = |data: &[u8]| proto::EncodedVideoFrames {
+            frames: vec![proto::EncodedVideoFrame {
+                data: data.to_vec(),
+                key: true,
+                pts: 0,
+            }],
+        };
+        let event = Session::video(proto::VideoFrame {
+            union: Some(proto::video_frame::Union::Vp9s(frames(b"quadro"))),
+            display: 0,
+        });
+        assert!(matches!(event, Event::Video { codec: Codec::Vp9, ref data, key: true } if data == b"quadro"));
+        // H264 was never advertised; a peer sending it produces no picture.
+        assert!(matches!(
+            Session::video(proto::VideoFrame {
+                union: Some(proto::video_frame::Union::H264s(frames(b"x"))),
+                display: 0,
+            }),
+            Event::Idle
+        ));
+        assert!(matches!(
+            Session::video(proto::VideoFrame {
+                union: Some(proto::video_frame::Union::Vp8s(proto::EncodedVideoFrames::default())),
+                display: 0,
+            }),
+            Event::Idle
+        ));
+    }
+}
