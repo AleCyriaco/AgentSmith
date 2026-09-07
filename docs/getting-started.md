@@ -55,3 +55,11 @@ Keep the Mac awake, AgentSmith open, and the Windows session connected. Errors s
 ## After a restart or interruption
 
 Reconnect manually, inspect the Windows state, and resume only when the task is still appropriate. Pending operations are not guaranteed to have executed exactly once. If earlier steps were incorrectly confirmed, restart or edit the plan instead of trusting stale progress.
+
+## Alerts and decisions
+
+Unattended work has nobody at the screen, so AgentSmith can reach you over SimpleX instead. Open **Alerts and decisions** and follow the three steps: paste the `smp://` address of a SimpleX server you run, pair your own SimpleX with the address AgentSmith shows, and send a test alert to prove the path.
+
+Every task that ends produces a notice saying what happened and how far it got. A task that blocks is put as a question instead: answer **1** to resume it or **2** to stop it, from wherever you are. Only an unambiguous reply counts — anything else is left unanswered rather than guessed.
+
+This needs the official `simplex-chat` client at `~/.local/bin/simplex-chat`; there is no Homebrew formula for it, and the desktop app exposes no API. Only your own server is used, never SimpleX's public ones. The server address carries a password and is kept in the Keychain.

@@ -6,6 +6,7 @@ export type Machine = {rustdeskWebUrl?:string;rustdeskServer?:string;rustdeskKey
 export type PerformanceSettings={captureIntervalMs:number;postActionDelayMs:number;visionMaxWidth:number;nativeOcr:boolean;allowCrops:boolean};
 export const defaultPerformance:PerformanceSettings={captureIntervalMs:300,postActionDelayMs:650,visionMaxWidth:1600,nativeOcr:true,allowCrops:true};
 export type Settings = {profiles:Profile[]; machines:Machine[]; routes:{planner:string[];operator:string[];verifier:string[];vision?:string[]}; localOnly:boolean; maxActions:number;performance?:PerformanceSettings;rustdesk?:RustdeskServer};
+export type SimplexStatus={active:boolean;address:string;contacts:number;message:string};
 export type RustdeskServer={server:string;key:string};
 export type Region={x:number;y:number;width:number;height:number};
 export type TextCheck={expected:string;region:Region;screenWidth:number;screenHeight:number};

@@ -590,6 +590,26 @@ async fn simplex_save_server(
     .map_err(|_| "Não foi possível acessar o Chaves.")??;
     state.simplex.start(&server).await
 }
+/// Sends a test notice, so pairing can be proven from the phone that will
+/// receive the real ones.
+#[tauri::command]
+async fn simplex_test_notice(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    let status = state.simplex.status().await;
+    if !status.active {
+        return Err("Ligue o canal antes de enviar um aviso.".into());
+    }
+    if status.contacts == 0 {
+        return Err("Nenhum contato pareado ainda. Adicione o endereço no seu SimpleX e envie uma mensagem qualquer.".into());
+    }
+    state
+        .simplex
+        .notify(
+            "Aviso de teste",
+            "Se você recebeu isto, o canal está funcionando. É por aqui que chegam os avisos e os pedidos de decisão.",
+        )
+        .await;
+    Ok(())
+}
 #[tauri::command]
 async fn disconnect_machine(state: tauri::State<'_, AppState>) -> Result<(), String> {
     state.remote.disconnect().await
@@ -845,6 +865,7 @@ fn main() {
             simplex_stop,
             simplex_status,
             simplex_save_server,
+            simplex_test_notice,
             load_settings,
             local_engine_status,
             local_model_download,

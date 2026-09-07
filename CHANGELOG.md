@@ -2,6 +2,8 @@
 
 ## 0.14.0 — RustDesk as a session transport
 
+- Add **Alerts and decisions**: a SimpleX channel on the operator's own server that reports how every task ended and asks what to do when one blocks, answered from a phone.
+
 - Speak the RustDesk protocol directly, so a RustDesk destination carries plans like an RDP one: authenticated, encrypted, decoded to the same frames, and driven by the same actions.
 - Verify both signature layers before opening a session, and refuse a session that cannot be authenticated instead of falling back to plaintext as RustDesk does.
 - Decode VP8 and VP9 with libvpx, linked statically so the bundle gains no dylib; announce only those codecs so a peer cannot answer with an undecodable stream.

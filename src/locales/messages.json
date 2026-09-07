@@ -2542,5 +2542,133 @@
   "Esta máquina não guarda dispositivos confiáveis, então pedirá um código toda vez. Para mudar isso, ative os dispositivos confiáveis no RustDesk da própria máquina.": {
     "en": "This machine does not keep trusted devices, so it will ask for a code every time. To change that, enable trusted devices in RustDesk on the machine itself.",
     "es": "Esta máquina no guarda dispositivos de confianza, así que pedirá un código cada vez. Para cambiarlo, active los dispositivos de confianza en RustDesk en la propia máquina."
+  },
+  "Avisos e decisões": {
+    "en": "Alerts and decisions",
+    "es": "Avisos y decisiones"
+  },
+  "AVISOS E DECISÕES": {
+    "en": "ALERTS AND DECISIONS",
+    "es": "AVISOS Y DECISIONES"
+  },
+  "Smith fala com você quando precisa.": {
+    "en": "Smith speaks up when it needs you.",
+    "es": "Smith te avisa cuando te necesita."
+  },
+  "Um canal SimpleX no seu próprio servidor. Recebe o desfecho de cada tarefa e, quando uma para, pergunta o que fazer — você responde do celular.": {
+    "en": "A SimpleX channel on your own server. It reports how each task ended and, when one stops, asks what to do — you answer from your phone.",
+    "es": "Un canal SimpleX en su propio servidor. Informa cómo terminó cada tarea y, cuando una se detiene, pregunta qué hacer: usted responde desde el móvil."
+  },
+  "PASSO 1": {
+    "en": "STEP 1",
+    "es": "PASO 1"
+  },
+  "PASSO 2": {
+    "en": "STEP 2",
+    "es": "PASO 2"
+  },
+  "PASSO 3": {
+    "en": "STEP 3",
+    "es": "PASO 3"
+  },
+  "Seu servidor SimpleX": {
+    "en": "Your SimpleX server",
+    "es": "Su servidor SimpleX"
+  },
+  "Cole o endereço smp:// do servidor que você mantém. Ele contém uma senha, então é guardado no Chaves do macOS e nunca aparece nas configurações.": {
+    "en": "Paste the smp:// address of the server you run. It contains a password, so it is kept in the macOS Keychain and never appears in settings.",
+    "es": "Pegue la dirección smp:// del servidor que usted mantiene. Contiene una contraseña, así que se guarda en el Llavero de macOS y nunca aparece en la configuración."
+  },
+  "Endereço do servidor": {
+    "en": "Server address",
+    "es": "Dirección del servidor"
+  },
+  "Só o seu servidor é usado. AgentSmith nunca recorre aos servidores públicos do SimpleX.": {
+    "en": "Only your server is used. AgentSmith never falls back to SimpleX's public servers.",
+    "es": "Solo se usa su servidor. AgentSmith nunca recurre a los servidores públicos de SimpleX."
+  },
+  " Salvar e ligar": {
+    "en": "Save and start",
+    "es": "Guardar y activar"
+  },
+  "Ligando…": {
+    "en": "Starting…",
+    "es": "Activando…"
+  },
+  "Desligar canal": {
+    "en": "Stop channel",
+    "es": "Detener canal"
+  },
+  "Ligar com o endereço salvo": {
+    "en": "Start with the saved address",
+    "es": "Activar con la dirección guardada"
+  },
+  "Parear seu SimpleX": {
+    "en": "Pair your SimpleX",
+    "es": "Vincular su SimpleX"
+  },
+  "Ligue o canal primeiro. O endereço de pareamento aparece aqui assim que o cliente subir.": {
+    "en": "Start the channel first. The pairing address appears here as soon as the client comes up.",
+    "es": "Active el canal primero. La dirección de vinculación aparece aquí en cuanto el cliente se inicie."
+  },
+  "O cliente subiu, mas ainda não informou um endereço. Desligue e ligue o canal novamente.": {
+    "en": "The client came up but has not reported an address yet. Stop and start the channel again.",
+    "es": "El cliente se inició pero aún no informó una dirección. Detenga y active el canal de nuevo."
+  },
+  "Abra este endereço no seu SimpleX, no celular ou no Mac, e envie uma mensagem qualquer para confirmar. Quem tiver este endereço recebe os avisos e pode decidir por você.": {
+    "en": "Open this address in your SimpleX, on the phone or on the Mac, and send any message to confirm. Whoever holds this address receives the alerts and can decide on your behalf.",
+    "es": "Abra esta dirección en su SimpleX, en el móvil o en el Mac, y envíe cualquier mensaje para confirmar. Quien tenga esta dirección recibe los avisos y puede decidir por usted."
+  },
+  "Endereço de pareamento": {
+    "en": "Pairing address",
+    "es": "Dirección de vinculación"
+  },
+  " Copiar endereço": {
+    "en": "Copy address",
+    "es": "Copiar dirección"
+  },
+  "Copiado": {
+    "en": "Copied",
+    "es": "Copiado"
+  },
+  "Confirmar": {
+    "en": "Confirm",
+    "es": "Confirmar"
+  },
+  "Canal ligado": {
+    "en": "Channel on",
+    "es": "Canal activo"
+  },
+  "Canal desligado": {
+    "en": "Channel off",
+    "es": "Canal inactivo"
+  },
+  "{count} contato(s) pareado(s)": {
+    "en": "{count} paired contact(s)",
+    "es": "{count} contacto(s) vinculado(s)"
+  },
+  "Nenhum contato pareado": {
+    "en": "No paired contact",
+    "es": "Ningún contacto vinculado"
+  },
+  "O aviso de teste é enviado a todos os contatos pareados. Ele prova o caminho inteiro, do Mac até o seu aparelho.": {
+    "en": "The test alert goes to every paired contact. It proves the whole path, from the Mac to your device.",
+    "es": "El aviso de prueba se envía a todos los contactos vinculados. Prueba todo el camino, del Mac a su dispositivo."
+  },
+  " Enviar aviso de teste": {
+    "en": "Send test alert",
+    "es": "Enviar aviso de prueba"
+  },
+  "Enviando…": {
+    "en": "Sending…",
+    "es": "Enviando…"
+  },
+  "Aviso enviado": {
+    "en": "Alert sent",
+    "es": "Aviso enviado"
+  },
+  "O alcance depende da Tailscale ativa no aparelho, porque o certificado do servidor foi emitido para o endereço dela. Fora da Tailscale, o aviso fica na fila do servidor até o aparelho voltar.": {
+    "en": "Reach depends on Tailscale being active on the device, because the server's certificate was issued for its Tailscale address. Off Tailscale, an alert waits in the server's queue until the device returns.",
+    "es": "El alcance depende de que Tailscale esté activo en el dispositivo, porque el certificado del servidor se emitió para su dirección de Tailscale. Fuera de Tailscale, el aviso espera en la cola del servidor hasta que el dispositivo vuelva."
   }
 }
