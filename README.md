@@ -6,7 +6,7 @@
 
 AgentSmith is a desktop workspace for operating Windows computers from a Mac. Connect through Microsoft RDP, describe a task, review its steps, and let a supervised AI loop observe the screen, propose mouse and keyboard actions, and check the result.
 
-**Preview 0.13.0** · Current build target: **Apple Silicon and macOS 26+**. RustDesk web is available as a manual client in a separate window. AI automation over RustDesk, Windows as the controller, and NanoKVM connectors are not implemented yet.
+**Preview 0.14.0** · Current build target: **Apple Silicon and macOS 26+**. RDP and RustDesk both carry AI sessions; the RustDesk transport has not yet been verified against a live machine. Windows as the controller and NanoKVM connectors are not implemented yet.
 
 ![AgentSmith operations center in English with demonstration data](docs/images/operations.png)
 
@@ -28,7 +28,7 @@ These are design benefits, not a guarantee of lower cost or successful automatio
 | Area | Available in this preview |
 | --- | --- |
 | Remote Windows | Native FreeRDP session, screenshots, mouse clicks, typing, shortcuts, scrolling |
-| RustDesk web | Manual client window, saved remote ID, official or custom HTTPS web-client URL; no AI bridge yet |
+| RustDesk | Native session: authenticated and encrypted, VP8/VP9 video, mouse and keyboard, public or self-hosted server; manual web client still available |
 | Plans | Generate verifiable steps; edit, reorder, delete, restart, and retain execution history |
 | Operator | OCR-first text decisions, visual assistance, structured action validation, fresh-screen checks |
 | Verification | Visual confirmation of text-proposed completion; explicit OCR criteria checked by the engine |
@@ -66,7 +66,7 @@ See [AI routing and performance](docs/ai-routing.md) for local, hybrid, and cost
 
 | Guide | Contents |
 | --- | --- |
-| [RustDesk client](docs/rustdesk.md) | Manual connection, server requirements, privacy, current limits |
+| [RustDesk transport](docs/rustdesk.md) | Setup, authentication, video and input, current limits, licensing |
 | [Getting started](docs/getting-started.md) | Requirements, build commands, first connection, everyday controls |
 | [AI routing](docs/ai-routing.md) | Role selection, local models, performance, capability tests |
 | [Architecture](docs/architecture.md) | Components, data flow, remote adapter boundary, persistence |
@@ -110,7 +110,7 @@ A reachable Windows RDP host and appropriate access are required. VPN or network
 
 The plan can still stop on an intermediate step even when the overall goal is already visible. OCR may miss icons or empty fields, and vision may choose incorrect coordinates. A valid JSON response is not proof that an action is correct. The app is a preview, not a universally reliable unattended operator.
 
-Next priorities: goal-level reconciliation, task-based model evaluation, RustDesk automation and NanoKVM adapters, broader macOS compatibility, notarized distribution, and a Windows controller. These are roadmap items, not available features.
+Next priorities: goal-level reconciliation, task-based model evaluation, end-to-end validation of the RustDesk transport, NanoKVM adapters, broader macOS compatibility, notarized distribution, and a Windows controller. These are roadmap items, not available features.
 
 ## Project and third-party rights
 

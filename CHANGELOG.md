@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.0 — RustDesk as a session transport
+
+- Speak the RustDesk protocol directly, so a RustDesk destination carries plans like an RDP one: authenticated, encrypted, decoded to the same frames, and driven by the same actions.
+- Verify both signature layers before opening a session, and refuse a session that cannot be authenticated instead of falling back to plaintext as RustDesk does.
+- Decode VP8 and VP9 with libvpx, linked statically so the bundle gains no dylib; announce only those codecs so a peer cannot answer with an undecodable stream.
+- Reach a machine by hole punch and fall back to a relay; accept an optional self-hosted rendezvous server and its key per machine.
+- Store the RustDesk password in the Keychain under its ID, separate from any RDP password for the same host, and answer the peer's challenge rather than sending it.
+- Assert that both transports accept and refuse exactly the same actions.
+- Implement the wire format independently, with no RustDesk source copied or linked; AgentSmith stays MIT.
+- Not yet verified end to end against a live RustDesk machine.
+
 ## 0.13.0 — RustDesk manual web client
 
 - Open the official RustDesk client in its own native window from Machines, without creating a machine first.

@@ -2375,22 +2375,6 @@
     "en": "{version} · Preview",
     "es": "{version} · Versión preliminar"
   },
-  "Cliente RustDesk aberto. Informe o ID e a senha na janela do cliente. A conexão é manual nesta versão.": {
-    "en": "RustDesk client opened. Enter the ID and password in its window. This version supports manual control.",
-    "es": "Cliente RustDesk abierto. Introduzca el ID y la contraseña en su ventana. Esta versión permite control manual."
-  },
-  "Cliente web · Controle manual": {
-    "en": "Web client · Manual control",
-    "es": "Cliente web · Control manual"
-  },
-  "Prévia manual": {
-    "en": "Manual preview",
-    "es": "Vista previa manual"
-  },
-  " · prévia manual": {
-    "en": " · manual preview",
-    "es": " · vista previa manual"
-  },
   "Abrir cliente RustDesk": {
     "en": "Open RustDesk client",
     "es": "Abrir cliente RustDesk"
@@ -2403,25 +2387,9 @@
     "en": "RustDesk ID",
     "es": "ID RustDesk"
   },
-  "Copie o ID exibido no RustDesk do Windows. A senha será solicitada pelo próprio cliente.": {
-    "en": "Copy the ID shown in RustDesk on Windows. The client will ask for the password.",
-    "es": "Copie el ID mostrado en RustDesk en Windows. El cliente solicitará la contraseña."
-  },
   "Endereço do cliente web": {
     "en": "Web client URL",
     "es": "URL del cliente web"
-  },
-  "Use o cliente oficial ou a URL HTTPS do seu cliente web. Não inclua ID, senha ou parâmetros na URL.": {
-    "en": "Use the official client or your web client HTTPS URL. Do not include an ID, password, or parameters in the URL.",
-    "es": "Use el cliente oficial o la URL HTTPS de su cliente web. No incluya ID, contraseña ni parámetros en la URL."
-  },
-  "RustDesk está disponível para controle manual. Captura e execução de planos por IA ainda não estão disponíveis neste conector.": {
-    "en": "RustDesk is available for manual control. Screen capture and AI plan execution are not yet available for this connector.",
-    "es": "RustDesk permite control manual. La captura de pantalla y la ejecución de planes por IA aún no están disponibles en este conector."
-  },
-  "RDP oferece controle com IA. RustDesk abre o cliente web para controle manual. NanoKVM permanece em desenvolvimento.": {
-    "en": "RDP supports AI control. RustDesk opens its web client for manual control. NanoKVM remains in development.",
-    "es": "RDP permite control con IA. RustDesk abre su cliente web para control manual. NanoKVM sigue en desarrollo."
   },
   "FreeRDP com IA · RustDesk web manual · NanoKVM nas próximas etapas": {
     "en": "FreeRDP with AI · Manual RustDesk web · NanoKVM planned",
@@ -2434,14 +2402,6 @@
   "Cliente RustDesk": {
     "en": "RustDesk client",
     "es": "Cliente RustDesk"
-  },
-  "Cliente web em janela própria": {
-    "en": "Web client in its own window",
-    "es": "Cliente web en su propia ventana"
-  },
-  "Copie o ID e informe a senha diretamente no cliente. Abrir a janela não confirma conexão com o Windows.": {
-    "en": "Copy the ID and enter the password directly in the client. Opening the window does not confirm a Windows connection.",
-    "es": "Copie el ID e introduzca la contraseña directamente en el cliente. Abrir la ventana no confirma la conexión con Windows."
   },
   "Informe um endereço HTTPS válido para o cliente web RustDesk.": {
     "en": "Enter a valid HTTPS URL for the RustDesk web client.",
@@ -2462,5 +2422,53 @@
   "Não foi possível abrir o cliente web RustDesk.": {
     "en": "Could not open the RustDesk web client.",
     "es": "No se pudo abrir el cliente web RustDesk."
+  },
+  "Copie o ID exibido no RustDesk do Windows.": {
+    "en": "Copy the ID shown in RustDesk on the Windows machine.",
+    "es": "Copie el ID que aparece en RustDesk en la máquina Windows."
+  },
+  "Senha permanente (opcional)": {
+    "en": "Permanent password (optional)",
+    "es": "Contraseña permanente (opcional)"
+  },
+  "Defina uma senha permanente no RustDesk do Windows e informe aqui. Sem ela, cada sessão depende de aprovação manual na máquina.": {
+    "en": "Set a permanent password in RustDesk on the Windows machine and enter it here. Without it, every session depends on manual approval at the machine.",
+    "es": "Defina una contraseña permanente en RustDesk en la máquina Windows e introdúzcala aquí. Sin ella, cada sesión depende de una aprobación manual en la máquina."
+  },
+  "Servidor próprio (opcional)": {
+    "en": "Self-hosted server (optional)",
+    "es": "Servidor propio (opcional)"
+  },
+  "Deixe em branco para usar o servidor público do RustDesk.": {
+    "en": "Leave empty to use RustDesk's public server.",
+    "es": "Déjelo vacío para usar el servidor público de RustDesk."
+  },
+  "Chave pública em base64 do seu servidor. Obrigatória para autenticar um servidor próprio.": {
+    "en": "Your server's base64 public key. Required to authenticate a self-hosted server.",
+    "es": "Clave pública en base64 de su servidor. Obligatoria para autenticar un servidor propio."
+  },
+  "Endereço do cliente web (opcional)": {
+    "en": "Web client address (optional)",
+    "es": "Dirección del cliente web (opcional)"
+  },
+  "Usado apenas pelo cliente manual, não pela sessão com IA. Não inclua ID, senha ou parâmetros na URL.": {
+    "en": "Used only by the manual client, not by the AI session. Do not include an ID, password, or parameters in the URL.",
+    "es": "Solo lo usa el cliente manual, no la sesión con IA. No incluya ID, contraseña ni parámetros en la URL."
+  },
+  "A sessão só abre se a identidade da máquina for autenticada pelo servidor. AgentSmith não conecta sem criptografia.": {
+    "en": "The session opens only if the machine's identity is authenticated by the server. AgentSmith does not connect without encryption.",
+    "es": "La sesión solo se abre si el servidor autentica la identidad de la máquina. AgentSmith no conecta sin cifrado."
+  },
+  "Cliente manual": {
+    "en": "Manual client",
+    "es": "Cliente manual"
+  },
+  "Servidor público RustDesk": {
+    "en": "RustDesk public server",
+    "es": "Servidor público de RustDesk"
+  },
+  "RDP e RustDesk oferecem controle com IA. O cliente web RustDesk continua disponível para controle manual. NanoKVM permanece em desenvolvimento.": {
+    "en": "RDP and RustDesk both offer AI control. The RustDesk web client remains available for manual control. NanoKVM is still in development.",
+    "es": "RDP y RustDesk ofrecen control con IA. El cliente web de RustDesk sigue disponible para el control manual. NanoKVM continúa en desarrollo."
   }
 }

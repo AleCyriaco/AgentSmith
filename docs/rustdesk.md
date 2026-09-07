@@ -1,42 +1,42 @@
-# RustDesk client — manual preview
+# RustDesk transport
 
-Version 0.13.0 introduces a RustDesk web-client window inside the AgentSmith desktop application. It is a manual connection milestone, not yet an OCR/AI transport.
+AgentSmith speaks the RustDesk protocol directly. A RustDesk destination is a session like an RDP one: frames reach OCR and the visual models, and the executor's mouse and keyboard actions reach the machine. The manual web client is still available, now as a separate convenience rather than the only option.
 
-## Try it
+## Connect a machine
 
-1. Open **Machines → Try RustDesk client**. The official client opens in its own window.
-2. In RustDesk on the target Windows machine, obtain its remote ID and authorize access.
-3. Enter the ID in the web client and provide its password or obtain approval on Windows.
-4. Use the mouse and keyboard in that window. Verify the connection on the remote screen itself.
+1. On the Windows machine, open RustDesk, note the ID, and set a permanent password. Without one, every connection needs someone to approve it on that machine.
+2. In AgentSmith, choose **Add machine → RustDesk**, and enter the name, the ID, and that password. The password is stored in the macOS Keychain under the RustDesk ID, separate from any RDP password for the same host.
+3. Leave **Self-hosted server** empty to use RustDesk's public rendezvous server. For your own server, enter its address and its base64 public key; the key is what authenticates the machine.
+4. Select the machine and choose **Connect**. **Manual client** still opens the official web client in its own window.
 
-Opening the client does not prove that Windows is connected. No attempt is made to bypass host approval or authentication. A real session needs the user's authorized RustDesk host.
+## What the transport does
 
-## Save a destination
+The rendezvous server is asked for the machine; AgentSmith connects directly when the network allows it and falls back to a relay when it does not. Two signatures are checked before anything else: the rendezvous server signs the machine's signing key, and the machine then signs its own session key. Both must verify, and both must name the ID you asked for.
 
-Use **Add machine**, select **RustDesk · manual preview**, and enter a name and RustDesk ID. The **Web client URL** can remain empty to use `https://rustdesk.com/web/`, or point to your own HTTPS client. Supply a client page URL, not a raw ID/relay address. URLs with embedded credentials, query parameters, or fragments are rejected.
+**AgentSmith refuses a session it cannot authenticate.** RustDesk itself falls back to an unencrypted connection when no signed identity is available; AgentSmith does not, because an AI loop typing and clicking through a session must not run over one that a machine on the path could read or redirect. A destination without a verifiable identity fails to connect and says why.
 
-Select the saved machine and choose **Open RustDesk client**. The ID is shown in the window title and in a selectable field in the Operations center. Enter credentials directly in the RustDesk client; this integration does not read or forward the RDP password or other Keychain secrets. Existing RDP configuration is preserved.
+The password never travels. The machine sends a salt and a per-connection challenge, and AgentSmith answers with `sha256(sha256(password + salt) + challenge)`.
 
-A nonpersistent browser session is used. Client preferences and authentication may need to be entered again after the window closes. Third-party account login popups and navigation to another origin are intentionally unavailable in this initial integration.
+## Video and input
 
-## Servers and compatibility
+AgentSmith announces VP8 and VP9 only, the codecs it decodes, so a machine cannot answer with a stream that would arrive as a blank screen. Frames are decoded with libvpx, linked statically, and converted to the same RGBA images the RDP transport produces — the OCR, vision, verification and repetition paths are unchanged.
 
-The official client can use RustDesk's public infrastructure. For a self-hosted server, configure the client's ID/relay settings and the server's WSS/CORS support. The official documentation describes WebSocket endpoints on ports 21118/21119. Hosting the current official web client yourself has separate RustDesk Server Pro requirements. A custom URL does not configure your relay automatically. [Official web-client guide](https://www.rustdesk.com/blog/rustdesk-web-client-v2-preview/)
+Actions cross unchanged too. Clicks move the pointer first. Shortcuts travel as layout keys with their modifiers, so the machine applies Ctrl+S as a shortcut. Typed text travels as Unicode, so the machine's keyboard layout cannot change which characters arrive. Pausing releases every button and modifier. A test asserts that the RDP and RustDesk transports accept and refuse exactly the same actions, since the executor does not know which one it is driving.
 
-The page is rendered by macOS WebKit. Rendering the start page is not certification of every codec, keyboard layout, server, or Windows version. If authentication, video, or input fails, compare the same host with RustDesk's supported standalone/browser client and check the server configuration.
+Audio, clipboard and file transfer are disabled at login. AgentSmith reads the screen; the rest is surface it does not need.
 
-## What remains to implement
+## Current limits
 
-AgentSmith cannot capture RustDesk frames, feed them into OCR/vision, or execute AI mouse/keyboard proposals over this client yet. Plan generation and execution for RustDesk destinations are blocked with a specific explanation. The RDP executor remains separate.
+- **Not yet verified against a live RustDesk machine.** The protocol, cipher, address handling, colour conversion and action translation are covered by unit tests, and the identity checks are tested against wrong and forged signatures. An end-to-end session with a real Windows host is not recorded as verified.
+- One display: the machine's current display sets the session resolution. Switching displays mid-session is not implemented.
+- Direct connections and relays over TCP only. The UDP, KCP and WebRTC transports newer RustDesk builds can negotiate are not implemented; a machine reachable only that way will not connect.
+- No file transfer, clipboard, audio, or mouse dragging.
+- Resolution and scale settings apply to RDP; a RustDesk machine reports its own.
 
-The next transport milestone needs a stable, licensed bridge for decoded frames, input, actual connection state, target identity, cancellation, and permission changes. It must validate observations and coordinates before input and pass the same executor tests as RDP. DOM injection or simply opening the website is not such a bridge.
+## Licensing
 
-## Licensing and privacy
+No RustDesk source is copied into AgentSmith, and none is linked. The wire format is described independently in `src-tauri/protos/rustdesk.proto` from the project's public protocol definitions, and implemented here. AgentSmith stays MIT; RustDesk is AGPL-3.0 and remains a separate program. libvpx is BSD-3-Clause. The manual web client still loads a third-party website under its own terms.
 
-No RustDesk or community-fork source is copied into AgentSmith by this integration. AgentSmith remains MIT; the loaded website, service, and any future incorporated component retain their own terms. The community web-client fork is a separate project, not bundled here. [Community fork](https://github.com/MonsieurBiche/rustdesk-web-client)
+## Privacy
 
-The website sees the browser connection and the data you enter there. It may use third-party services or telemetry. The isolated window has no AgentSmith IPC permissions or access to its credentials; no RustDesk frame is sent to an LLM by AgentSmith. See [privacy](privacy.md).
-
-## Validation for 0.13.0
-
-80 Rust tests and 27 frontend tests passed; one environment-dependent local-vision test remains ignored. The native macOS build and local signature verification passed. The RustDesk site rendered in the native WebKit window, and a saved destination opened its own client window. Authenticated video/input to the Windows host is not yet recorded as verified; loading and navigating the web UI is not an end-to-end connection test.
+A RustDesk session is a remote screen like any other: what the AI sees is what the configured models receive, under the routing you set. See [privacy](privacy.md). The manual client window remains isolated, without AgentSmith IPC or Keychain access.

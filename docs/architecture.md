@@ -46,7 +46,7 @@ FreeRDP runs as a child process with private pipes for session configuration, fr
 
 Display resolution and Windows scale are connection settings. View zoom changes presentation. Reduced/cropped model images retain coordinates that the engine maps back into the original remote frame and validates.
 
-RustDesk opens an external HTTPS web client in a separate, nonpersistent WebView with no AgentSmith IPC capability. It supports manual interaction only and never sets the native Remote session to connected. AI planning/start/restart/repeat commands reject RustDesk destinations. NanoKVM entries remain disabled for connection. A future adapter must expose current frames, input control, identity, lifecycle, and cancellation. Merely launching another remote-access client does not satisfy that boundary.
+RustDesk is a native transport beside RDP. Both fill the same frame slot and accept the same actions, so the executor does not know which one it drives; a test asserts the two accept and refuse identical action sets. The session is authenticated through two signature layers and encrypted, and AgentSmith refuses to open one it cannot authenticate. The external HTTPS web client remains available as a separate, nonpersistent WebView with no AgentSmith IPC capability; it is manual only and never sets the native Remote session to connected. NanoKVM entries remain disabled for connection. A future adapter must expose current frames, input control, identity, lifecycle, and cancellation. Merely launching another remote-access client does not satisfy that boundary.
 
 ## Persistence and inference
 

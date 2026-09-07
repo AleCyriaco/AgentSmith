@@ -24,7 +24,7 @@ For a bundle, run `npm run bundle` after preparing the native helpers. Open `src
 ## Configure a first task
 
 1. Choose **English** from the language menu if desired.
-2. Open **Machines → Add machine**. Enter a name, hostname, port, Windows account and optional domain. RDP is the connector for AI execution. For manual RustDesk access, see the [RustDesk client guide](rustdesk.md).
+2. Open **Machines → Add machine**. Enter a name, hostname, port, Windows account and optional domain. RDP and RustDesk both carry AI execution; a RustDesk destination needs its ID and permanent password instead. See the [RustDesk transport guide](rustdesk.md).
 3. Optionally save the password. It is stored in macOS Keychain and bound to the machine and connection details. An empty password field while editing preserves the saved credential.
 4. Open **Providers and models**, add a profile, and run **Test connection** followed by **Test operator** where available. A connection test only checks a text response.
 5. Open **AI routing**. Select a planner, operator, verifier, and image-capable visual assistant. See [routing guidance](ai-routing.md).

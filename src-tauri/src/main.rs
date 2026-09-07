@@ -310,7 +310,12 @@ fn save_credential(
     store::save_secret(&id, &binding, &secret)
 }
 fn machine_binding(m: &Machine) -> String {
-    format!("rdp://{}:{}|{}|{}", m.host, m.port, m.domain, m.username)
+    match m.protocol.as_str() {
+        // A RustDesk destination is identified by its ID alone, and its
+        // password is the peer's, not a Windows account's.
+        "rustdesk" => format!("rustdesk://{}", m.host),
+        _ => format!("rdp://{}:{}|{}|{}", m.host, m.port, m.domain, m.username),
+    }
 }
 #[tauri::command]
 async fn test_operator_profile(
@@ -440,9 +445,7 @@ async fn connect_saved_machine(
         .iter()
         .find(|m| m.id == id)
         .ok_or("Máquina não encontrada.")?;
-    if machine.protocol != "rdp" {
-        return Err("Este conector ainda não foi implementado.".into());
-    }
+    rustdesk::require_automation(machine)?;
     let binding = machine_binding(machine);
     let account = id.clone();
     let password =
