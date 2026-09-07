@@ -288,11 +288,18 @@ impl Remote {
             machine_id: m.id.clone(),
             status: "connected".into(),
             message: format!(
-                "Sessão RustDesk ativa ({path}) com {} ({}×{})",
+                "Sessão RustDesk ativa ({path}) com {}{} ({}×{})",
                 if peer.hostname.is_empty() {
                     m.name.clone()
                 } else {
                     peer.hostname.clone()
+                },
+                // The account the machine is signed in as decides what a plan
+                // can reach there, so it belongs in the session line.
+                if peer.username.is_empty() {
+                    String::new()
+                } else {
+                    format!(" · {}", peer.username)
                 },
                 peer.width,
                 peer.height
