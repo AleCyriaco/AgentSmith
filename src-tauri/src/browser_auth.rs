@@ -771,16 +771,40 @@ async fn generate_inner(
             if let Some(data) = data {
                 parts.push(json!({"type":"image","mimeType":"image/png","data":data}));
             }
-            let result = rpc
-                .request("session/prompt", json!({"sessionId":sid,"prompt":parts}))
-                .await?;
-            if result["stopReason"] != "end_turn" {
-                return Err("O agente interrompeu a resposta. Nenhuma ação será executada.".into());
-            }
-            nonempty(rpc.text.clone())
+            let params = acp_prompt(&p.vendor, sid, parts, system);
+            let structured = params["_meta"]["outputSchema"].is_object();
+            let result = rpc.request("session/prompt", params).await?;
+            acp_answer(&result, &rpc.text, structured)
         }
         _ => Err("Provedor inválido.".into()),
     }
+}
+// Grok Build's own headless client uses outputSchema on PromptRequest and
+// reads the validated result from PromptResponse._meta, not streamed prose.
+fn acp_prompt(vendor: &str, sid: &Value, parts: Vec<Value>, system: &str) -> Value {
+    let mut params = json!({"sessionId":sid,"prompt":parts});
+    if vendor == "xai" {
+        if let Some(schema) = crate::harness::output_schema(system) {
+            params["_meta"] = json!({"outputSchema":schema,"screenMode":"headless"});
+        }
+    }
+    params
+}
+fn acp_answer(result: &Value, text: &str, structured: bool) -> Result<String, String> {
+    if result["stopReason"] != "end_turn" {
+        return Err("O agente interrompeu a resposta. Nenhuma ação será executada.".into());
+    }
+    if structured {
+        let meta = &result["_meta"];
+        if meta.get("structuredOutputError").is_some() {
+            return Err("Grok Build não conseguiu validar a resposta no contrato solicitado. Nenhuma ação foi executada.".into());
+        }
+        if let Some(value) = meta.get("structuredOutput").filter(|v| v.is_object()) {
+            return Ok(value.to_string());
+        }
+        return Err("Grok Build não retornou a saída estruturada solicitada. Atualize o componente oficial e teste novamente. Nenhuma ação foi executada.".into());
+    }
+    nonempty(text.into())
 }
 fn nonempty(text: String) -> Result<String, String> {
     if text.trim().is_empty() {
@@ -803,6 +827,38 @@ fn parse_claude(bytes: &[u8]) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn grok_schema_metadata_is_scoped_and_takes_priority_over_prose() {
+        let system = crate::harness::system("text-action");
+        let p = acp_prompt("xai", &json!("s"), vec![], &system);
+        assert!(p["_meta"]["outputSchema"]["anyOf"].is_array());
+        assert!(acp_prompt("google", &json!("s"), vec![], &system)
+            .get("_meta")
+            .is_none());
+        assert!(acp_prompt("xai", &json!("s"), vec![], "connection test")
+            .get("_meta")
+            .is_none());
+        let result = json!({"stopReason":"end_turn","_meta":{"structuredOutput":{"kind":"click","target":0}}});
+        let text = acp_answer(&result, "Let me explain this action...", true).unwrap();
+        let decision: crate::observation::Decision = serde_json::from_str(&text).unwrap();
+        assert!(matches!(
+            decision,
+            crate::observation::Decision::Click { target: 0 }
+        ));
+        assert!(acp_answer(
+            &json!({"stopReason":"end_turn"}),
+            "{\"kind\":\"click\",\"target\":0}",
+            true
+        )
+        .is_err());
+        assert!(acp_answer(&json!({"stopReason":"end_turn","_meta":{"structuredOutputError":"invalid","structuredOutput":{"kind":"click","target":0}}}), "", true).is_err());
+        assert!(acp_answer(&json!({"stopReason":"cancelled","_meta":{"structuredOutput":{"kind":"click","target":0}}}), "", true).is_err());
+        assert_eq!(
+            acp_answer(&json!({"stopReason":"end_turn"}), "ok", false).unwrap(),
+            "ok"
+        );
+    }
+
     #[test]
     fn browser_jobs_start_and_cancel_without_a_tokio_context() {
         // Mirrors the native button callback, not an async test/runtime thread.

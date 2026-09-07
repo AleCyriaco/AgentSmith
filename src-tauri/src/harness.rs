@@ -19,6 +19,79 @@ pub fn actions(visual: bool, combined: bool) -> String {
     };
     format!("Escolha UMA ação. {clicks} JSON: kind=click|double_click|right_click com os campos acima; kind=key,keys:[nomes]; kind=type_text,text:string (1..400 caracteres); kind=scroll,direction:up|down,amount:1..10; kind=wait,seconds:1..10; kind=blocked,reason:motivo concreto de informação/autorização faltante ou parada exigida pelo usuário. {} {KEYS} Antes de digitar, confirme foco ou estabeleça-o com clique/atalho apropriado. Não repita uma entrada sem efeito: revise foco/alvo ou peça detalhe. Resultado pendente exige continuar/aguardar, não inventar impedimento. Preserve qualquer parada explícita do usuário. {finish}",if visual { "kind=inspect,x,y,width,height solicita recorte sem entrada, quando recortes estiverem habilitados." } else { "kind=need_vision,reason:string solicita imagem quando OCR não basta." })
 }
+/// A trusted system marker selects the wire contract; task/OCR text cannot select it.
+pub fn system(contract: &str) -> String {
+    format!(
+        "{SYSTEM} [contract:{contract}]{}",
+        if contract == "plan" {
+            ""
+        } else {
+            " [compact-output]"
+        }
+    )
+}
+pub fn output_schema(system: &str) -> Option<Value> {
+    let contract = [
+        "plan",
+        "text-action",
+        "text-combined",
+        "text-verify",
+        "visual-action",
+        "visual-verify",
+    ]
+    .into_iter()
+    .find(|c| system.contains(&format!("[contract:{c}]")))?;
+    fn object(properties: Value) -> Value {
+        let required: Vec<_> = properties.as_object().unwrap().keys().cloned().collect();
+        json!({"type":"object","properties":properties,"required":required,"additionalProperties":false})
+    }
+    let short = json!({"type":"string","minLength":1,"maxLength":300});
+    let integer = json!({"type":"integer","minimum":0});
+    let verdict = object(
+        json!({"status":{"type":"string","enum":if contract == "text-combined" {vec!["verified"]} else {vec!["verified","not_verified","need_vision"]}},"evidence":short,"element_ids":{"type":"array","items":integer}}),
+    );
+    match contract {
+        "plan" => Some(object(
+            json!({"title":short,"steps":{"type":"array","minItems":1,"maxItems":30,"items":object(json!({"title":short,"success":{"type":"string","minLength":1}}))}}),
+        )),
+        "text-verify" => Some(verdict),
+        "visual-verify" => Some(object(
+            json!({"verified":{"type":"boolean"},"evidence":short}),
+        )),
+        _ => {
+            let visual = contract == "visual-action";
+            let mut choices = vec![];
+            for kind in ["click", "double_click", "right_click"] {
+                let mut props = json!({"kind":{"type":"string","enum":[kind]}});
+                if visual {
+                    props["x"] = integer.clone();
+                    props["y"] = integer.clone();
+                } else {
+                    props["target"] = integer.clone();
+                }
+                choices.push(object(props));
+            }
+            choices.extend([
+                object(json!({"kind":{"type":"string","enum":["type_text"]},"text":{"type":"string","minLength":1,"maxLength":400}})),
+                object(json!({"kind":{"type":"string","enum":["key"]},"keys":{"type":"array","minItems":1,"maxItems":5,"items":{"type":"string"}}})),
+                object(json!({"kind":{"type":"string","enum":["scroll"]},"direction":{"type":"string","enum":["up","down"]},"amount":{"type":"integer","minimum":1,"maximum":10}})),
+                object(json!({"kind":{"type":"string","enum":["wait"]},"seconds":{"type":"integer","minimum":1,"maximum":10}})),
+                object(json!({"kind":{"type":"string","enum":["blocked"]},"reason":short})),
+            ]);
+            if visual {
+                choices.push(object(json!({"kind":{"type":"string","enum":["inspect"]},"x":integer,"y":integer,"width":{"type":"integer","minimum":1},"height":{"type":"integer","minimum":1}})));
+            } else {
+                choices.push(object(
+                    json!({"kind":{"type":"string","enum":["need_vision"]},"reason":short}),
+                ));
+            }
+            if contract == "text-combined" {
+                choices.push(verdict);
+            }
+            Some(json!({"anyOf":choices}))
+        }
+    }
+}
 pub fn context(run: &Run, index: usize, recent: &[Value]) -> String {
     let completed: Vec<_> = run.steps[..index]
         .iter()
@@ -39,6 +112,62 @@ pub fn input_summary(action: &Action) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn output_contracts_keep_ocr_ids_separate_from_image_coordinates() {
+        assert!(output_schema(SYSTEM).is_none());
+        let text = output_schema(&system("text-action")).unwrap();
+        let visual = output_schema(&system("visual-action")).unwrap();
+        assert!(text["anyOf"][0]["properties"].get("target").is_some());
+        assert!(text["anyOf"][0]["properties"].get("x").is_none());
+        assert!(visual["anyOf"][0]["properties"].get("target").is_none());
+        assert!(visual["anyOf"][0]["properties"].get("x").is_some());
+        let combined = output_schema(&system("text-combined")).unwrap();
+        assert_eq!(
+            combined["anyOf"].as_array().unwrap().last().unwrap()["properties"]["status"]["enum"],
+            json!(["verified"])
+        );
+        assert_eq!(
+            output_schema(&system("plan")).unwrap()["properties"]["steps"]["maxItems"],
+            30
+        );
+        assert!(output_schema(&system("text-verify")).unwrap()["properties"]
+            .get("status")
+            .is_some());
+        assert!(
+            output_schema(&system("visual-verify")).unwrap()["properties"]
+                .get("verified")
+                .is_some()
+        );
+        fn closed_objects(value: &Value) {
+            if let Some(object) = value.as_object() {
+                if object.get("type") == Some(&json!("object")) {
+                    assert_eq!(object["additionalProperties"], false);
+                    assert_eq!(
+                        object["properties"].as_object().unwrap().len(),
+                        object["required"].as_array().unwrap().len()
+                    );
+                }
+                for child in object.values() {
+                    closed_objects(child);
+                }
+            } else if let Some(array) = value.as_array() {
+                for child in array {
+                    closed_objects(child);
+                }
+            }
+        }
+        for contract in [
+            "plan",
+            "text-action",
+            "text-combined",
+            "text-verify",
+            "visual-action",
+            "visual-verify",
+        ] {
+            closed_objects(&output_schema(&system(contract)).unwrap());
+        }
+    }
+
     #[test]
     fn contract_defines_input_semantics_with_small_fixed_overhead() {
         let text = actions(false, true);

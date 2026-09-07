@@ -47,7 +47,6 @@ impl InputProgress {
     }
 }
 
-use crate::harness::SYSTEM;
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Plan {
@@ -75,19 +74,26 @@ pub async fn plan(store: &Store, machine_id: String, instructions: String) -> Re
         return Err("Selecione uma máquina cadastrada.".into());
     }
     let prompt=format!("Divida o roteiro em 1 a 30 etapas curtas operáveis por mouse e teclado. Cada etapa precisa de um critério de sucesso que possa ser conferido visualmente. Preserve números, nomes e restrições do usuário. Não acrescente trabalho não solicitado. Formato: {{\"title\":\"Título curto\",\"steps\":[{{\"title\":\"Ação\",\"success\":\"Condição observável\"}}]}}. Roteiro do usuário:\n{instructions}");
-    let (p, provider) = llm::routed_validated(&s, "planner", SYSTEM, &prompt, None, |text, _| {
-        let p: Plan = llm::parse_json(text)?;
-        if p.title.trim().is_empty()
-            || p.steps.is_empty()
-            || p.steps.len() > 30
-            || p.steps
-                .iter()
-                .any(|s| s.title.trim().is_empty() || s.success.trim().is_empty())
-        {
-            return Err("Retorne title e 1..30 steps com title/success não vazios.".into());
-        }
-        Ok(p)
-    })
+    let (p, provider) = llm::routed_validated(
+        &s,
+        "planner",
+        &crate::harness::system("plan"),
+        &prompt,
+        None,
+        |text, _| {
+            let p: Plan = llm::parse_json(text)?;
+            if p.title.trim().is_empty()
+                || p.steps.is_empty()
+                || p.steps.len() > 30
+                || p.steps
+                    .iter()
+                    .any(|s| s.title.trim().is_empty() || s.success.trim().is_empty())
+            {
+                return Err("Retorne title e 1..30 steps com title/success não vazios.".into());
+            }
+            Ok(p)
+        },
+    )
     .await?;
     if p.title.trim().is_empty()
         || p.steps.is_empty()
@@ -238,7 +244,7 @@ async fn text_choice(
     explicit_rule: bool,
 ) -> Result<TextChoice, String> {
     use crate::observation::VerdictStatus;
-    let system = format!("{SYSTEM} [compact-output]");
+    let system = crate::harness::system("text-action");
     let context = format!("{context}{}", crate::observation::context(read));
     let combined = s
         .routes
@@ -257,7 +263,7 @@ async fn text_choice(
             crate::harness::actions(false, !explicit_rule)
         );
         let start = std::time::Instant::now();
-        let (choice, provider) = llm::routed_validated(s,"operator",&system,&prompt,None,|text,provider| {
+        let (choice, provider) = llm::routed_validated(s,"operator",&crate::harness::system(if explicit_rule {"text-action"} else {"text-combined"}),&prompt,None,|text,provider| {
             if let Ok(verdict) = llm::parse_json::<crate::observation::Verdict>(text) {
                 if explicit_rule || verdict.status != VerdictStatus::Verified { return Err("Escolha uma ação ou need_vision; o motor ainda não confirmou esta etapa.".into()); }
                 if !verdict.supported(read) { return Ok(TextChoice::Vision("Evidência OCR insuficiente ou incerta.".into())); }
@@ -278,15 +284,21 @@ async fn text_choice(
         report(store, run, "Verificando com OCR e modelo de texto")?;
         let prompt = format!("{context}\n{}", crate::harness::TEXT_VERIFY);
         let started = std::time::Instant::now();
-        let (verdict, provider) =
-            llm::routed_validated(s, "verifier", &system, &prompt, None, |text, _| {
+        let (verdict, provider) = llm::routed_validated(
+            s,
+            "verifier",
+            &crate::harness::system("text-verify"),
+            &prompt,
+            None,
+            |text, _| {
                 let v: crate::observation::Verdict = llm::parse_json(text)?;
                 if v.evidence.trim().is_empty() || v.evidence.chars().count() > 300 {
                     return Err("evidence deve conter um fato curto.".into());
                 }
                 Ok(v)
-            })
-            .await?;
+            },
+        )
+        .await?;
         run.log.push(format!(
             "{provider} · verificação por texto: {:.1}s · sem imagem.",
             started.elapsed().as_secs_f64()
@@ -600,7 +612,7 @@ async fn execute_with_observations(
                             llm::routed_validated(
                                 &confirmation_settings,
                                 "vision",
-                                SYSTEM,
+                                &crate::harness::system("visual-verify"),
                                 &prompt,
                                 Some(&sent_frame.data_url),
                                 |text, _| {
@@ -689,7 +701,7 @@ async fn execute_with_observations(
                     let started = std::time::Instant::now();
                     let (action, provider) = checked(
                         remote, epoch,
-                        llm::routed_validated(&visual_settings, "vision", SYSTEM, &prompt, Some(&sent_frame.data_url), |text, provider| {
+                        llm::routed_validated(&visual_settings, "vision", &crate::harness::system("visual-action"), &prompt, Some(&sent_frame.data_url), |text, provider| {
                             let result = crate::observation::validated_visual_action(text, &prepared, &current);
                             if let Err(error) = &result {
                                 run.log.push(format!("{provider}: resposta visual rejeitada: {error} Nenhuma entrada enviada; solicitando nova decisão."));
@@ -1880,7 +1892,7 @@ pub async fn test_operator_profile(settings: &Settings, id: &str) -> Result<Stri
     let (_, provider) = llm::routed_validated(
         &s,
         "operator",
-        &format!("{SYSTEM} [compact-output]"),
+        &crate::harness::system("text-action"),
         &prompt,
         None,
         |text, p| match validated_text_choice(text, p, &read)? {
