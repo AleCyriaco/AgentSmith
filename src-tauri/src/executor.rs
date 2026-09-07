@@ -189,7 +189,7 @@ async fn text_choice(
     };
     run.status = "running".into();
     report(store, run, "Escolhendo ação com OCR e modelo de texto")?;
-    let prompt = format!("{context}\nVerificação: {evidence}\nEscolha UMA ação. Clique apenas em texto identificado por ID: {{\"kind\":\"click\",\"target\":0}}, double_click ou right_click com target; {{\"kind\":\"key\",\"keys\":[\"win\",\"r\"]}}; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":1}}; {{\"kind\":\"need_vision\",\"reason\":\"informação visual que falta\"}}; {{\"kind\":\"blocked\",\"reason\":\"falta de autorização ou informação do usuário\"}}. Se não conseguir localizar um elemento, use need_vision. Não use blocked por limitação do OCR. Use atalhos Windows conhecidos; não invente coordenadas. Antes de digitar assegure foco por atalho explícito ou peça visão. Não repita uma ação cujo resultado ainda seja incerto. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Não copie textos de exemplo nos valores JSON; descreva o motivo real de blocked. Sem ferramenta de shell.");
+    let prompt = format!("{context}\nVerificação: {evidence}\nEscolha UMA ação. Clique apenas em texto identificado por ID: {{\"kind\":\"click\",\"target\":0}}, double_click ou right_click com target; {{\"kind\":\"key\",\"keys\":[\"win\",\"r\"]}}; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":1}}; {{\"kind\":\"need_vision\",\"reason\":\"informação visual que falta\"}}; {{\"kind\":\"blocked\",\"reason\":\"falta de autorização ou informação do usuário\"}}. Se não conseguir localizar um elemento, use need_vision. Não use blocked por limitação do OCR nem porque o resultado ainda não foi alcançado. Nesse caso escolha a próxima ação ou need_vision. Preserve sempre as condições de parada explícitas do roteiro. Use atalhos Windows conhecidos; não invente coordenadas. Antes de digitar assegure foco por atalho explícito ou peça visão. Não repita uma ação cujo resultado ainda seja incerto. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Não copie textos de exemplo nos valores JSON; descreva o motivo real de blocked. Sem ferramenta de shell.");
     let started = std::time::Instant::now();
     let (text, provider) = llm::routed(s, "operator", &system, &prompt, None).await?;
     run.log.push(format!(
@@ -209,6 +209,24 @@ async fn execute(
     s: &Settings,
     epoch: u64,
 ) -> Result<(), String> {
+    execute_with_observations(
+        store,
+        remote,
+        run,
+        s,
+        epoch,
+        crate::observation::Cache::default(),
+    )
+    .await
+}
+async fn execute_with_observations(
+    store: &Store,
+    remote: &Remote,
+    run: &mut Run,
+    s: &Settings,
+    epoch: u64,
+    mut observations: crate::observation::Cache,
+) -> Result<(), String> {
     for role in ["operator", "verifier"] {
         if !s.routes.get(role).is_some_and(|ids| {
             ids.iter().any(|id| {
@@ -221,7 +239,6 @@ async fn execute(
         }
     }
     let visual_settings = llm::visual_settings(s);
-    let mut observations = crate::observation::Cache::default();
     for index in 0..run.steps.len() {
         if run.steps[index].status == "done" {
             continue;
@@ -389,26 +406,25 @@ async fn execute(
             } else {
                 TextChoice::Vision("OCR sem informação suficiente.".into())
             };
-            let (action, provider, prepared, current, text_path) = match choice {
+            // Textual success is a proposal, not proof of a screen state. Explicit
+            // OCR rules above are the only completion path that skips visual review.
+            let (choice, confirmation_settings) = match choice {
                 TextChoice::Done(evidence, provider) => {
-                    if !crate::vision::region_unchanged(
-                        &frame,
-                        &remote.snapshot()?,
-                        crate::vision::Region::full(&frame),
-                    ) {
-                        continue;
-                    }
-                    run.steps[index].status = "done".into();
-                    run.steps[index].evidence = Some(evidence.clone());
+                    drop(evidence); // Discard the unconfirmed claim; do not prime the visual reviewer.
                     run.log.push(format!(
-                        "Etapa {} verificada por {} com OCR: {}",
-                        index + 1,
-                        provider,
-                        evidence
+                        "{provider} propôs concluir a etapa; aguardando confirmação visual."
                     ));
-                    checkpoint(store, run)?;
-                    break;
+                    (
+                        TextChoice::Vision(
+                            "Confirmar o critério na tela atual antes de concluir a etapa.".into(),
+                        ),
+                        llm::confirmation_settings(&visual_settings, &provider),
+                    )
                 }
+                other => (other, visual_settings.clone()),
+            };
+            let (action, provider, prepared, current, text_path) = match choice {
+                TextChoice::Done(_, _) => unreachable!("Text proposals must pass visual review"),
                 TextChoice::Action(action, provider) => {
                     let prepared = crate::vision::Prepared {
                         frame: frame.clone(),
@@ -450,7 +466,7 @@ async fn execute(
                             run.steps.len()
                         ),
                     )?;
-                    let prompt=format!("{context}{ocr_context}\nVerifique na imagem se a condição de sucesso JÁ está cumprida. Em caso de dúvida, verified=false. Não confunda um botão com uma confirmação de operação concluída. Formato: {{\"verified\":false,\"evidence\":\"Fato visível ou motivo da incerteza\"}}.");
+                    let prompt=format!("{context}{ocr_context}\nVerifique SOMENTE na imagem atual se a condição de sucesso desta etapa JÁ está cumprida. Não use o roteiro, conclusões de outras etapas ou a proposta de outro modelo como evidência. Cada requisito deve aparecer na tela; um perfil GitHub não comprova um repositório, Releases ou uma versão. Se a tela mostrar apenas o desktop, uma página web não está comprovada. Em caso de dúvida, verified=false. Não confunda um botão com uma confirmação de operação concluída. Formato: {{\"verified\":false,\"evidence\":\"Fato visível ou motivo da incerteza\"}}.");
                     let (verdict, provider) = if let Some(rule) = &text_check {
                         (Verdict{verified:false,evidence:format!("A regra exige o texto exato {:?} na região definida. OCR ainda não confirmou uma nova ocorrência. No loop, faça o resultado mudar antes de conferi-lo novamente.",rule.expected)},"OCR nativo".to_string())
                     } else {
@@ -459,7 +475,7 @@ async fn execute(
                             remote,
                             epoch,
                             llm::routed(
-                                &visual_settings,
+                                &confirmation_settings,
                                 "vision",
                                 SYSTEM,
                                 &prompt,
@@ -533,7 +549,7 @@ async fn execute(
                         String::new()
                     };
                     let context=format!("{context}{current_ocr}\n{crop_hint}\nA imagem cobre a região x={}, y={}, largura={}, altura={} da sessão, redimensionada para {}x{}. Use SOMENTE coordenadas na imagem enviada. Não some o deslocamento da região.",prepared.region.x,prepared.region.y,prepared.region.width,prepared.region.height,sent_frame.width,sent_frame.height);
-                    let prompt=format!("{context}\nVerificação: {}\nImagem atual: {}x{} pixels. Escolha UMA próxima ação. Coordenadas no tamanho original da imagem. Não use coordenadas do desktop do Mac. Formatos aceitos: {{\"kind\":\"click\",\"x\":10,\"y\":20}}, double_click ou right_click com x/y; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"key\",\"keys\":[\"ctrl\",\"s\"]}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":2}}; {{\"kind\":\"blocked\",\"reason\":\"descreva o motivo concreto\"}}. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Não copie textos de exemplo nos valores JSON; blocked exige motivo real, com o recurso ou autorização que falta. Sem comandos de shell como ferramenta. Respeite o roteiro original; se uma ação já pode ter sido aplicada, confira antes de repetir.",verdict.evidence,sent_frame.width,sent_frame.height);
+                    let prompt=format!("{context}\nVerificação: {}\nImagem atual: {}x{} pixels. Escolha UMA próxima ação. Coordenadas no tamanho original da imagem. Não use coordenadas do desktop do Mac. Formatos aceitos: {{\"kind\":\"click\",\"x\":10,\"y\":20}}, double_click ou right_click com x/y; {{\"kind\":\"type_text\",\"text\":\"até 400 caracteres\"}}; {{\"kind\":\"key\",\"keys\":[\"ctrl\",\"s\"]}}; {{\"kind\":\"scroll\",\"direction\":\"down\",\"amount\":2}}; {{\"kind\":\"wait\",\"seconds\":2}}; {{\"kind\":\"blocked\",\"reason\":\"descreva o motivo concreto\"}}. Teclas: letras, números, ctrl, alt, shift, win, enter, tab, esc, backspace, delete, space, up, down, left, right, home, end, pageup, pagedown, f1 a f12. Não copie textos de exemplo nos valores JSON; blocked exige motivo real, com o recurso ou autorização que falta. Resultado ainda não atingido não é impedimento: se o arquivo ainda não foi baixado, escolha a próxima ação para chegar ao download, respeitando os critérios de parada do roteiro. Não confunda ausência de confirmação com proibição de continuar. Sem comandos de shell como ferramenta. Respeite o roteiro original; se uma ação já pode ter sido aplicada, confira antes de repetir.",verdict.evidence,sent_frame.width,sent_frame.height);
                     let started = std::time::Instant::now();
                     let (action, provider) = checked(
                         remote, epoch,
@@ -1201,6 +1217,115 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(run.action_count, 3); // choosing an action alone never executes it
+    }
+    #[tokio::test]
+    async fn invented_textual_success_cannot_complete_a_step_when_visual_review_disagrees() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            for (index,response) in [
+                r#"{"status":"verified","evidence":"afirmação inventada de sucesso","element_ids":[0]}"#,
+                r#"{"verified":false,"evidence":"A tela mostra apenas o desktop, não o GitHub."}"#,
+                r#"{"kind":"blocked","reason":"Falta senha."}"#,
+            ].into_iter().enumerate() {
+                let (mut socket,_)=listener.accept().await.unwrap();let mut bytes=Vec::new();let mut buf=[0;4096];
+                let body=loop {
+                    let n=socket.read(&mut buf).await.unwrap();assert!(n>0);bytes.extend_from_slice(&buf[..n]);
+                    if let Some(at)=bytes.windows(4).position(|b|b==b"\r\n\r\n") {
+                        let h=String::from_utf8_lossy(&bytes[..at]).to_lowercase();
+                        let len:usize=h.lines().find_map(|l|l.strip_prefix("content-length: ")).unwrap().parse().unwrap();
+                        if bytes.len()>=at+4+len {break serde_json::from_slice::<serde_json::Value>(&bytes[at+4..at+4+len]).unwrap();}
+                    }
+                };
+                assert_eq!(body["model"],if index==1 {"secondary"} else {"primary"});
+                assert_eq!(body.to_string().contains("data:image"),index>0);
+                assert!(!body.to_string().contains("afirmação inventada de sucesso"));
+                let result=serde_json::json!({"choices":[{"message":{"content":response}}]}).to_string();
+                socket.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{result}",result.len()).as_bytes()).await.unwrap();
+            }
+        });
+        let store = Store::new(std::path::Path::new(":memory:")).unwrap();
+        let mut run = test_run("false-success", "running");
+        run.steps[0].status = "pending".into();
+        run.steps[0].evidence = None;
+        run.steps[0].success = "Perfil GitHub visível".into();
+        run.action_count = 0;
+        let mut settings = Settings::default();
+        settings.local_only = true;
+        for name in ["primary", "secondary"] {
+            let id = uuid::Uuid::new_v4().to_string();
+            settings.profiles.push(Profile {
+                id: id.clone(),
+                name: name.into(),
+                vendor: "local".into(),
+                protocol: "chat".into(),
+                base_url: format!("http://{address}"),
+                model: name.into(),
+                vision: true,
+                enabled: true,
+                auth_method: "api_key".into(),
+            });
+            settings
+                .routes
+                .entry("vision".into())
+                .or_default()
+                .push(id.clone());
+            if name == "primary" {
+                for role in ["operator", "verifier"] {
+                    settings.routes.insert(role.into(), vec![id.clone()]);
+                }
+            }
+        }
+        let mut png = std::io::Cursor::new(Vec::new());
+        image::DynamicImage::new_rgb8(100, 80)
+            .write_to(&mut png, image::ImageFormat::Png)
+            .unwrap();
+        let frame = Snapshot {
+            width: 100,
+            height: 80,
+            data_url: format!(
+                "data:image/png;base64,{}",
+                STANDARD.encode(png.into_inner())
+            ),
+            sequence: 1,
+            captured_at: now(),
+        };
+        let read = crate::ocr::Reading {
+            width: 100,
+            height: 80,
+            elapsed_ms: 1,
+            lines: vec![crate::ocr::Line {
+                text: "Lixeira".into(),
+                confidence: 1.,
+                x: 10,
+                y: 20,
+                width: 40,
+                height: 20,
+            }],
+        };
+        let mut observations = crate::observation::Cache::default();
+        observations.remember(&frame, crate::vision::Region::full(&frame), read);
+        let remote = Remote::observed_fixture(frame, "machine");
+        let error = tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            execute_with_observations(
+                &store,
+                &remote,
+                &mut run,
+                &settings,
+                remote.epoch.load(Ordering::SeqCst),
+                observations,
+            ),
+        )
+        .await
+        .unwrap()
+        .unwrap_err();
+        assert!(error.contains("Falta senha"));
+        assert_ne!(run.steps[0].status, "done");
+        assert!(run.steps[0].evidence.is_none());
+        assert!(!run.log.iter().any(|l| l.contains("Etapa 1 verificada")));
+        server.await.unwrap();
     }
     #[tokio::test]
     async fn weekly_boundary_keeps_executor_epoch_and_stop_cancels_the_next_window() {

@@ -68,6 +68,14 @@ pub enum Action {
     },
 }
 impl Remote {
+    #[cfg(test)]
+    pub fn observed_fixture(frame: Snapshot, machine_id: &str) -> Self {
+        let remote = Self::new();
+        *remote.frame.lock().unwrap() = Some(frame);
+        remote.info.lock().unwrap().status = "connected".into();
+        remote.info.lock().unwrap().machine_id = machine_id.into();
+        remote
+    }
     pub fn new() -> Self {
         Self {
             connection: tokio::sync::Mutex::new(None),

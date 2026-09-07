@@ -123,7 +123,7 @@ impl Decision {
             Self::Scroll { direction, amount } => Action::Scroll { direction, amount },
             Self::Wait { seconds } => Action::Wait { seconds },
             Self::Blocked { reason } => {
-                if generic_block_reason(&reason) {
+                if generic_block_reason(&reason) || pending_result(&reason) {
                     return Err(
                         "O modelo de texto informou um bloqueio sem explicar o motivo.".into(),
                     );
@@ -162,6 +162,54 @@ pub fn generic_block_reason(reason: &str) -> bool {
         ]
         .contains(&normalized.as_str())
 }
+// Narrow recovery for descriptions of an unfinished result. Permission, safety,
+// ambiguity and explicit failure reasons are deliberately excluded from repair.
+pub fn pending_result(reason: &str) -> bool {
+    let text = reason.to_lowercase();
+    if [
+        "autoriz",
+        "senha",
+        "credencia",
+        "eleva",
+        "permiss",
+        "ambíg",
+        "ambigu",
+        "inequív",
+        "inequiv",
+        "identific",
+        "seguran",
+        "negad",
+        "erro",
+        "autentic",
+        "captcha",
+        "approval",
+        "password",
+        "permission",
+        "denied",
+        "error",
+        "unsafe",
+        "stop",
+        "parar",
+        "bloqueio",
+        "bloquead",
+    ]
+    .iter()
+    .any(|word| text.contains(word))
+    {
+        return false;
+    }
+    [
+        "nenhum arquivo portable foi baixado",
+        "não há evidência de que o download",
+        "sem indicação de download concluído",
+        "download ainda não foi realizado",
+        "no evidence that the download",
+        "download has not been completed",
+        "no hay evidencia de que la descarga",
+    ]
+    .iter()
+    .any(|phrase| text.contains(phrase))
+}
 pub fn validated_visual_action(
     text: &str,
     prepared: &vision::Prepared,
@@ -169,8 +217,8 @@ pub fn validated_visual_action(
 ) -> Result<Action, String> {
     let action: Action = crate::llm::parse_json(text)?;
     if let Action::Blocked { reason } = &action {
-        if generic_block_reason(reason) {
-            return Err("Bloqueio genérico: falta um motivo concreto.".into());
+        if generic_block_reason(reason) || pending_result(reason) {
+            return Err("O motivo não identifica um impedimento concreto; resultado pendente exige próxima ação ou observação. Preserve qualquer condição explícita de parada do roteiro.".into());
         }
     }
     let action = prepared.action(action, current)?;
@@ -284,6 +332,32 @@ mod tests {
             "Arquivo harness v0.5 não encontrado na pasta Downloads.",
         ] {
             assert!(!generic_block_reason(reason));
+            assert!(matches!(
+                Decision::Blocked {
+                    reason: reason.into()
+                }
+                .action(&reading())
+                .unwrap(),
+                Action::Blocked { .. }
+            ));
+        }
+    }
+    #[test]
+    fn unfinished_download_is_not_a_blocker_but_authorization_and_ambiguity_are() {
+        let pending = "Nenhum arquivo portable foi baixado; o desktop mostra apenas ícones de aplicativos e pastas, sem indicação de download concluído. Não há evidência de que o download tenha sido realizado.";
+        assert!(pending_result(pending));
+        assert!(Decision::Blocked {
+            reason: pending.into()
+        }
+        .action(&reading())
+        .is_err());
+        for reason in [
+            "Não há evidência de que o download tenha autorização do usuário.",
+            "Não há identificação inequívoca do portable. Parar conforme roteiro.",
+            "Download ainda não foi realizado: acesso negado.",
+            "Falta senha.",
+        ] {
+            assert!(!pending_result(reason));
             assert!(matches!(
                 Decision::Blocked {
                     reason: reason.into()

@@ -2,7 +2,7 @@
 
 Desktop macOS para planejamento e operação visual de máquinas Windows, com múltiplos provedores de LLM.
 
-Prévia 0.11.1. Este build foi produzido para Apple Silicon/macOS 26+ porque as bibliotecas FreeRDP disponíveis nesta máquina têm esse deployment target. A aplicação não foi homologada em versões anteriores nem Intel.
+Prévia 0.11.2. Este build foi produzido para Apple Silicon/macOS 26+ porque as bibliotecas FreeRDP disponíveis nesta máquina têm esse deployment target. A aplicação não foi homologada em versões anteriores nem Intel.
 
 ## Desenvolvimento
 
@@ -98,7 +98,7 @@ Excluir pede confirmação do plano selecionado e remove sua entrada do históri
 
 ## Repositório
 
-O repositório contém o código da versão 0.11.1 e os scripts para reconstruir os componentes nativos. Dependências instaladas, modelos baixados, aplicativos compilados, credenciais e dados locais de execução não são versionados. Consulte [Primeiros passos](docs/getting-started.md) e [Arquitetura](docs/architecture.md).
+O repositório contém o código da versão 0.11.2 e os scripts para reconstruir os componentes nativos. Dependências instaladas, modelos baixados, aplicativos compilados, credenciais e dados locais de execução não são versionados. Consulte [Primeiros passos](docs/getting-started.md) e [Arquitetura](docs/architecture.md).
 
 
 ## OCR + texto primeiro — 0.11.0
@@ -121,3 +121,12 @@ Veja [o fluxo e a validação da versão](docs/ocr-text-first.md).
 Respostas como `blocked: impedimento`, vazias ou copiadas dos exemplos não encerram imediatamente a tarefa. No caminho textual, solicitam apoio visual. No caminho visual, o modelo recebe uma única solicitação de correção; se a resposta continuar inválida, o próximo perfil visual configurado é consultado. O motor não envia entradas durante essas tentativas e continua conferindo a validade da captura antes da ação final.
 
 Um bloqueio concreto, como falta de senha ou autorização, permanece um bloqueio e não dispara tentativas para contorná-lo. O aviso inclui modelo e etapa. O histórico identifica respostas rejeitadas e as teclas enviadas (sem registrar conteúdo digitado). A regressão de resposta literal “impedimento” foi reproduzida em teste HTTP simulado, inclusive a passagem ao segundo modelo e a preservação de bloqueios reais.
+
+
+## Conferência de conclusões — 0.11.2
+
+Uma proposta de sucesso do verificador textual não conclui mais uma etapa sozinha. Ela passa ao apoio visual, que recebe a tela atual e o critério original, sem receber a afirmação de sucesso como evidência. Se houver outro modelo na rota visual, diferente do proponente, ele tem preferência nessa conferência. Nenhum perfil fora da rota do usuário é adicionado. Se não houver modelo visual, a tarefa pede sua configuração. Regras explícitas OCR continuam sendo verificadas diretamente pelo motor, sem imagem enviada ao LLM.
+
+Essa conferência acrescenta uma consulta visual nos pontos de conclusão. É uma escolha por confiabilidade após uma execução real ter confirmado quatro etapas diferentes na mesma tela. Não elimina a possibilidade de erro dos modelos. Progresso incorreto de tentativas anteriores deve ser descartado usando **Reiniciar**, que preserva o histórico original.
+
+Descrições de download ainda não concluído recebem correção de decisão, em vez de serem aceitas automaticamente como impedimentos. Essa recuperação é limitada a expressões de resultado pendente: motivos de autorização, senha, segurança, ambiguidade, identificação do arquivo, erro e condições explícitas de parada permanecem bloqueios. Teste integrado reproduz uma falsa confirmação textual sobre o GitHub, recebe discordância do segundo modelo visual e comprova que a etapa não é concluída.

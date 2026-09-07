@@ -2274,5 +2274,17 @@
   "{0}: resposta visual rejeitada: {1} Nenhuma entrada enviada; solicitando nova decisão.": {
     "en": "{0}: visual response rejected: {1} No input sent; requesting a new decision.",
     "es": "{0}: respuesta visual rechazada: {1} No se envió ninguna entrada; solicitando otra decisión."
+  },
+  "v0.11.2 · Prévia": {
+    "en": "v0.11.2 · Preview",
+    "es": "v0.11.2 · Vista previa"
+  },
+  "Propõe a conclusão por texto; o apoio visual confirma. Critérios OCR exatos são conferidos pelo motor.": {
+    "en": "Proposes completion from text; visual assistance confirms. Exact OCR criteria are checked by the engine.",
+    "es": "Propone completar con texto; el apoyo visual confirma. El motor comprueba los criterios OCR exactos."
+  },
+  "{0} propôs concluir a etapa; aguardando confirmação visual.": {
+    "en": "{0} proposed completing the step; awaiting visual confirmation.",
+    "es": "{0} propuso completar el paso; esperando confirmación visual."
   }
 }

@@ -335,6 +335,20 @@ pub fn visual_settings(s: &Settings) -> Settings {
     );
     result
 }
+// Prefer a configured visual model different from the textual verifier. Never
+// add a cloud profile or select a model outside the user's visual route.
+pub fn confirmation_settings(s: &Settings, proposer: &str) -> Settings {
+    let mut result = s.clone();
+    if let Some(ids) = result.routes.get_mut("vision") {
+        ids.sort_by_key(|id| {
+            s.profiles
+                .iter()
+                .find(|p| &p.id == id)
+                .is_some_and(|p| p.name == proposer)
+        });
+    }
+    result
+}
 pub fn parse_json<T: serde::de::DeserializeOwned>(text: &str) -> Result<T, String> {
     let text = text.trim();
     let text = if let Some(t) = text

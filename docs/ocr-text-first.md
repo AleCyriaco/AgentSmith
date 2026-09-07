@@ -5,7 +5,7 @@
 1. Capturar a sessão Windows, sem capturar o desktop do Mac.
 2. Havendo critério explícito, ler primeiro a região configurada e conferir o texto exato no motor. Confirmar somente com a resolução esperada, confiança mínima, correspondência única e pixels ainda iguais. Em repetição, exigir uma nova ocorrência após não correspondência.
 3. Ler a tela por OCR ou reutilizar a leitura em memória se seus pixels estiverem iguais.
-4. Enviar JSON de textos, confiança e caixas ao modelo de Verificar, sem imagem. Confirmações precisam citar IDs existentes de alta confiança. Esta é uma verificação do LLM, sujeita a erros; somente critérios explícitos são determinísticos.
+4. Enviar JSON de textos, confiança e caixas ao modelo de Verificar, sem imagem. Propostas de conclusão precisam citar IDs existentes de alta confiança e, desde a 0.11.2, passam por conferência visual antes de avançar. A conferência usa preferencialmente outro modelo já configurado na rota visual e não recebe a afirmação proposta como prova. LLMs continuam sujeitos a erros; somente critérios explícitos são verificados diretamente pelo motor.
 5. Se não confirmado, enviar a observação ao modelo de Operar, sem imagem. Ele retorna uma ação ou solicita apoio visual.
 6. O motor resolve os IDs OCR para coordenadas e valida a ação. Um clique textual não aceita coordenadas livres. IDs e caixas só valem para a observação atual.
 7. Conferir se a captura continua válida antes da ação. Enviar mouse/teclado exclusivamente à sessão Windows. Aguardar atualização e repetir.
