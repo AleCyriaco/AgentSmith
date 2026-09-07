@@ -93,7 +93,7 @@ async fn rustdesk_live_session_connects_decodes_and_accepts_input() {
                     decoder = Some((codec, Decoder::new(codec).expect("decodificador")));
                 }
                 let (_, active) = decoder.as_mut().unwrap();
-                match active.decode(&data).expect("decodificação") {
+                match active.decode(&data, true).expect("decodificação") {
                     Some(picture) => {
                         decoded += 1;
                         assert_eq!(
@@ -155,7 +155,7 @@ async fn rustdesk_live_session_connects_decodes_and_accepts_input() {
                         if *current != codec {
                             continue;
                         }
-                        if let Ok(Some(picture)) = active.decode(&data) {
+                        if let Ok(Some(picture)) = active.decode(&data, true) {
                             if latest.as_deref() != Some(picture.rgba.as_slice()) {
                                 changed = true;
                             }

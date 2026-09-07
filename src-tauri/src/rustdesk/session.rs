@@ -15,6 +15,9 @@ pub const DEFAULT_RENDEZVOUS: &str = "rs-ny.rustdesk.com";
 /// Returned when the machine wants a second factor and none was supplied, so
 /// the interface can ask for a code instead of showing a dead end.
 pub const SECOND_FACTOR_REQUIRED: &str = "second-factor";
+/// Same, for a machine that does not keep trusted devices: a code will be
+/// wanted on every connection, and saying so beats a checkbox that does nothing.
+pub const SECOND_FACTOR_WITHOUT_TRUST: &str = "second-factor-no-trust";
 
 #[derive(Clone, Debug)]
 pub struct Options {
@@ -202,7 +205,11 @@ impl Session {
         // recognise it; every other failure names its stage.
         let peer = match Self::login(&mut stream, options).await {
             Ok(peer) => peer,
-            Err(error) if error == SECOND_FACTOR_REQUIRED => return Err(error),
+            Err(error)
+                if error == SECOND_FACTOR_REQUIRED || error == SECOND_FACTOR_WITHOUT_TRUST =>
+            {
+                return Err(error)
+            }
             Err(error) => return Err(format!("Login ({path}): {error}")),
         };
         Self::attach_session(&mut stream, &peer)
@@ -371,7 +378,11 @@ impl Session {
         let mut answered_second_factor = false;
         loop {
             match stream.recv().await?.union {
-                Some(message::Union::LoginResponse(response)) => match response.union {
+                Some(message::Union::LoginResponse(response)) => {
+                  // The machine says on this same answer whether it can be
+                  // asked to remember a device.
+                  let keeps_trusted = response.enable_trusted_devices;
+                  match response.union {
                     Some(proto::login_response::Union::PeerInfo(info)) => {
                         return Ok(Self::describe(&info))
                     }
@@ -380,7 +391,12 @@ impl Session {
                     {
                         let code = options.two_factor_code.trim();
                         if code.is_empty() {
-                            return Err(SECOND_FACTOR_REQUIRED.into());
+                            return Err(if keeps_trusted {
+                                SECOND_FACTOR_REQUIRED
+                            } else {
+                                SECOND_FACTOR_WITHOUT_TRUST
+                            }
+                            .into());
                         }
                         answered_second_factor = true;
                         stream
@@ -403,7 +419,8 @@ impl Session {
                         return Err(Self::login_error(&error))
                     }
                     None => return Err("O par recusou o acesso sem explicar.".into()),
-                },
+                  }
+                }
                 Some(message::Union::PeerInfo(info)) => return Ok(Self::describe(&info)),
                 Some(message::Union::Misc(misc)) => {
                     if let Some(proto::misc::Union::CloseReason(reason)) = misc.union {

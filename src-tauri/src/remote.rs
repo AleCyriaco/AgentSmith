@@ -128,7 +128,7 @@ impl Remote {
     ) -> Result<(), String> {
         if m.protocol == "rustdesk" {
             return self
-                .connect_rustdesk(m, password, rustdesk, second_factor)
+                .connect_rustdesk(m, password, rustdesk, second_factor, capture_interval_ms)
                 .await;
         }
         if m.protocol != "rdp" {
@@ -282,6 +282,7 @@ impl Remote {
         password: &str,
         fallback: &RustdeskServer,
         second_factor: &SecondFactor,
+        capture_interval_ms: u32,
     ) -> Result<(), String> {
         self.disconnect().await?;
         let generation = self.generation.load(Ordering::SeqCst);
@@ -341,9 +342,14 @@ impl Remote {
         let contact = self.contact.clone();
         let gen = self.generation.clone();
         contact.store(now(), Ordering::SeqCst);
+        // A machine can stream far faster than the interface reads. Every frame
+        // is still decoded, because a delta frame needs the ones before it, but
+        // only one per interval is converted and encoded for display.
+        let interval = std::time::Duration::from_millis(capture_interval_ms.max(20) as u64);
         tokio::spawn(async move {
             let _ = commands.request_refresh().await;
             let mut decoder: Option<(Codec, Decoder)> = None;
+            let mut shown: Option<std::time::Instant> = None;
             let mut seq = 0u64;
             let ended = loop {
                 if gen.load(Ordering::SeqCst) != generation {
@@ -383,16 +389,18 @@ impl Remote {
                                 }
                             }
                             let Some((_, active)) = decoder.as_mut() else { continue };
-                            // A frame that cannot be decoded costs one picture,
-                            // not the session. A delta frame leaves the screen
-                            // behind until a key frame arrives, so ask for one
-                            // instead of waiting for the machine to send it.
-                            let Ok(Some(picture)) = active.decode(&data) else {
-                                if !key {
+                            let due = shown.is_none_or(|last| last.elapsed() >= interval);
+                            let Ok(Some(picture)) = active.decode(&data, due) else {
+                                // A frame that yields no picture costs one
+                                // picture, not the session. A delta frame leaves
+                                // the screen behind until a key frame arrives,
+                                // so ask for one instead of waiting.
+                                if due && !key {
                                     let _ = commands.request_refresh().await;
                                 }
                                 continue;
                             };
+                            shown = Some(std::time::Instant::now());
                             seq += 1;
                             let encoded = tokio::task::spawn_blocking(move || {
                                 encode_frame(picture.rgba, picture.width, picture.height, seq)

@@ -2519,10 +2519,6 @@
     "en": "Trust this Mac",
     "es": "Confiar en este Mac"
   },
-  "A máquina deixa de pedir código para este computador. É o que permite execuções desassistidas, e enfraquece a proteção dela: qualquer pessoa com a senha, a partir deste Mac, entra sem segundo fator.": {
-    "en": "The machine stops asking this computer for a code. This is what makes unattended runs possible, and it weakens that machine's protection: anyone with the password, from this Mac, gets in without a second factor.",
-    "es": "La máquina deja de pedir código a este ordenador. Es lo que permite ejecuciones desatendidas, y debilita su protección: cualquiera con la contraseña, desde este Mac, entra sin segundo factor."
-  },
   "Máquina conectada. Ela não pedirá código a este Mac nas próximas conexões.": {
     "en": "Machine connected. It will not ask this Mac for a code again.",
     "es": "Máquina conectada. No volverá a pedir código a este Mac."
@@ -2538,5 +2534,13 @@
   "Código de verificação incorreto ou expirado. Ele muda a cada 30 segundos.": {
     "en": "Wrong or expired verification code. It changes every 30 seconds.",
     "es": "Código de verificación incorrecto o caducado. Cambia cada 30 segundos."
+  },
+  "A máquina deixa de pedir código a este computador nas próximas conexões. É o que permite execuções desassistidas, e enfraquece a proteção dela: qualquer pessoa com a senha, a partir deste Mac, entra sem segundo fator.": {
+    "en": "The machine stops asking this computer for a code on later connections. This is what makes unattended runs possible, and it weakens that machine's protection: anyone with the password, from this Mac, gets in without a second factor.",
+    "es": "La máquina deja de pedir código a este ordenador en las próximas conexiones. Es lo que permite ejecuciones desatendidas, y debilita su protección: cualquiera con la contraseña, desde este Mac, entra sin segundo factor."
+  },
+  "Esta máquina não guarda dispositivos confiáveis, então pedirá um código toda vez. Para mudar isso, ative os dispositivos confiáveis no RustDesk da própria máquina.": {
+    "en": "This machine does not keep trusted devices, so it will ask for a code every time. To change that, enable trusted devices in RustDesk on the machine itself.",
+    "es": "Esta máquina no guarda dispositivos de confianza, así que pedirá un código cada vez. Para cambiarlo, active los dispositivos de confianza en RustDesk en la propia máquina."
   }
 }

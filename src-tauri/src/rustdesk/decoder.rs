@@ -65,9 +65,17 @@ impl Decoder {
         Ok(Self { handle })
     }
 
-    /// Decodes one encoded frame. `Ok(None)` means the frame carried no
-    /// picture, which is normal for a stream still waiting on a key frame.
-    pub fn decode(&mut self, data: &[u8]) -> Result<Option<Picture>, String> {
+    /// Decodes one encoded frame.
+    ///
+    /// Every frame must be fed to the decoder, because a delta frame is
+    /// meaningless without the ones before it. `wanted` says whether the
+    /// picture is also going to be shown: when it is not, the colour
+    /// conversion — by far the expensive half — is skipped.
+    ///
+    /// `Ok(None)` means no picture came out, which is normal for a stream
+    /// still waiting on a key frame, and is also what a skipped conversion
+    /// returns.
+    pub fn decode(&mut self, data: &[u8], wanted: bool) -> Result<Option<Picture>, String> {
         if data.is_empty() {
             return Ok(None);
         }
@@ -80,6 +88,9 @@ impl Decoder {
         let (width, height) = (frame.width.max(0) as u32, frame.height.max(0) as u32);
         if width == 0 || height == 0 || width > MAX_SIDE || height > MAX_SIDE {
             return Err("O par enviou um quadro com dimensões inaceitáveis.".into());
+        }
+        if !wanted {
+            return Ok(None);
         }
         let (x_shift, y_shift) = (frame.x_shift.clamp(0, 2) as u32, frame.y_shift.clamp(0, 2) as u32);
         let chroma_rows = ((height + (1 << y_shift) - 1) >> y_shift) as usize;
@@ -248,10 +259,12 @@ mod tests {
     #[test]
     fn hostile_bitstreams_are_refused_without_a_picture() {
         let mut decoder = Decoder::new(Codec::Vp9).unwrap();
-        assert!(decoder.decode(&[]).unwrap().is_none());
-        assert!(decoder.decode(&[0xFF; 64]).unwrap().is_none());
-        assert!(decoder.decode(b"nao e um quadro vp9").unwrap().is_none());
+        for wanted in [true, false] {
+            assert!(decoder.decode(&[], wanted).unwrap().is_none());
+            assert!(decoder.decode(&[0xFF; 64], wanted).unwrap().is_none());
+            assert!(decoder.decode(b"nao e um quadro vp9", wanted).unwrap().is_none());
+        }
         let mut vp8 = Decoder::new(Codec::Vp8).unwrap();
-        assert!(vp8.decode(&[0x00; 3]).unwrap().is_none());
+        assert!(vp8.decode(&[0x00; 3], true).unwrap().is_none());
     }
 }

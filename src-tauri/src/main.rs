@@ -506,8 +506,11 @@ async fn connect_machine(
 fn connection_outcome(result: Result<(), String>) -> Result<String, String> {
     match result {
         Ok(()) => Ok("connected".into()),
-        Err(error) if error == rustdesk::session::SECOND_FACTOR_REQUIRED => {
-            Ok("second-factor".into())
+        Err(error)
+            if error == rustdesk::session::SECOND_FACTOR_REQUIRED
+                || error == rustdesk::session::SECOND_FACTOR_WITHOUT_TRUST =>
+        {
+            Ok(error)
         }
         Err(error) => Err(error),
     }
