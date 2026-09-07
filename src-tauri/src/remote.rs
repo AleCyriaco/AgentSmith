@@ -300,28 +300,39 @@ impl Remote {
             trust_device: second_factor.trust_device,
         })
         .await?;
+        // The handshake already fails closed, but this is the boundary where an
+        // AI is handed the machine, so the invariant is checked and not assumed.
+        if !session.is_secure() {
+            return Err("A sessão RustDesk abriu sem criptografia e não será usada.".into());
+        }
         let path = session.path;
         let (peer, mut events, mut commands) = session.split();
         *self.info.lock().unwrap() = SessionInfo {
             machine_id: m.id.clone(),
             status: "connected".into(),
-            message: format!(
-                "Sessão RustDesk ativa ({path}) com {}{} ({}×{})",
+            // What a plan can reach depends on the account, and how the machine
+            // behaves depends on its platform and client version, so the session
+            // line names all three rather than only the address.
+            message: [
+                format!("Sessão RustDesk ativa ({path})"),
                 if peer.hostname.is_empty() {
                     m.name.clone()
                 } else {
                     peer.hostname.clone()
                 },
-                // The account the machine is signed in as decides what a plan
-                // can reach there, so it belongs in the session line.
-                if peer.username.is_empty() {
+                peer.username.clone(),
+                peer.platform.clone(),
+                if peer.version.is_empty() {
                     String::new()
                 } else {
-                    format!(" · {}", peer.username)
+                    format!("RustDesk {}", peer.version)
                 },
-                peer.width,
-                peer.height
-            ),
+                format!("{}×{}", peer.width, peer.height),
+            ]
+            .into_iter()
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join(" · "),
         };
         let (sender, mut inbox) = tokio::sync::mpsc::channel::<Vec<Input>>(64);
         *self.connection.lock().await = Some(Transport::RustDesk(sender));
@@ -363,7 +374,7 @@ impl Remote {
                             }
                         }
                         Ok(Event::Idle) => {}
-                        Ok(Event::Video { codec, data, .. }) => {
+                        Ok(Event::Video { codec, data, key }) => {
                             // A codec switch mid-stream needs its own decoder.
                             if !matches!(&decoder, Some((current, _)) if *current == codec) {
                                 match Decoder::new(codec) {
@@ -373,8 +384,13 @@ impl Remote {
                             }
                             let Some((_, active)) = decoder.as_mut() else { continue };
                             // A frame that cannot be decoded costs one picture,
-                            // not the session; the next key frame recovers it.
+                            // not the session. A delta frame leaves the screen
+                            // behind until a key frame arrives, so ask for one
+                            // instead of waiting for the machine to send it.
                             let Ok(Some(picture)) = active.decode(&data) else {
+                                if !key {
+                                    let _ = commands.request_refresh().await;
+                                }
                                 continue;
                             };
                             seq += 1;

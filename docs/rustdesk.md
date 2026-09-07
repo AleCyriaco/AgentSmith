@@ -21,7 +21,9 @@ The password never travels. The machine sends a salt and a per-connection challe
 
 AgentSmith announces VP8 and VP9 only, the codecs it decodes, so a machine cannot answer with a stream that would arrive as a blank screen. Frames are decoded with libvpx, linked statically, and converted to the same RGBA images the RDP transport produces — the OCR, vision, verification and repetition paths are unchanged.
 
-A RustDesk machine sends nothing while its screen is still, unlike the RDP connector which pushes a frame on a fixed interval. A picture is therefore held as current for as long as the machine is heard from at all, and expires only when it goes silent — the age of the last frame measures how long the desktop has been unchanged, not whether the session is alive. A frame that fails to decode costs that one picture; the next key frame recovers it.
+A RustDesk machine sends nothing while its screen is still, unlike the RDP connector which pushes a frame on a fixed interval. A picture is therefore held as current for as long as the machine is heard from at all, and expires only when it goes silent — the age of the last frame measures how long the desktop has been unchanged, not whether the session is alive. A frame that fails to decode costs that one picture; if it was a delta frame, a key frame is requested rather than waited for.
+
+The session line names the machine's host name, the account it is signed in as, its platform, its RustDesk version, and the resolution, because what a plan can reach and how the machine behaves depend on all of them.
 
 Actions cross unchanged too. Clicks move the pointer first. Shortcuts travel as layout keys with their modifiers, so the machine applies Ctrl+S as a shortcut. Typed text travels as Unicode, so the machine's keyboard layout cannot change which characters arrive. Pausing releases every button and modifier. A test asserts that the RDP and RustDesk transports accept and refuse exactly the same actions, since the executor does not know which one it is driving.
 
