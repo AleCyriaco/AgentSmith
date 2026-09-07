@@ -78,6 +78,8 @@ pub enum Event {
 pub struct Session {
     stream: Stream,
     pub peer: Peer,
+    /// How the machine was reached, for the operator and for diagnosis.
+    pub path: &'static str,
 }
 
 /// Turns the rendezvous server's refusal into something an operator can act on.
@@ -164,15 +166,24 @@ impl Session {
             return Err("Informe o ID RustDesk da máquina.".into());
         }
         let signer = options.signing_key()?;
-        let (mut stream, signed_peer_key) = Self::reach_peer(options, id).await?;
-        Self::handshake(&mut stream, &signed_peer_key, &signer, id).await?;
-        let peer = Self::login(&mut stream, options).await?;
-        Ok(Self { stream, peer })
+        let (mut stream, signed_peer_key, path) = Self::reach_peer(options, id)
+            .await
+            .map_err(|error| format!("Encontro: {error}"))?;
+        Self::handshake(&mut stream, &signed_peer_key, &signer, id)
+            .await
+            .map_err(|error| format!("Handshake ({path}): {error}"))?;
+        let peer = Self::login(&mut stream, options)
+            .await
+            .map_err(|error| format!("Login ({path}): {error}"))?;
+        Ok(Self { stream, peer, path })
     }
 
     /// Asks the rendezvous server for the peer and returns a stream to it plus
     /// the server-signed blob that carries the peer's signing key.
-    async fn reach_peer(options: &Options, id: &str) -> Result<(Stream, Vec<u8>), String> {
+    async fn reach_peer(
+        options: &Options,
+        id: &str,
+    ) -> Result<(Stream, Vec<u8>, &'static str), String> {
         let rendezvous = options.rendezvous_address();
         let mut server = Stream::connect(&rendezvous).await?;
         server
@@ -197,12 +208,12 @@ impl Session {
                 let signed = response.pk.clone();
                 if let Some(peer) = address::decode(&response.socket_addr) {
                     if let Ok(direct) = Stream::connect(&peer.to_string()).await {
-                        return Ok((direct, signed));
+                        return Ok((direct, signed, "direto"));
                     }
                 }
                 // The direct path is blocked by NAT; fall back to the relay.
                 let relay = Self::open_relay(options, id, &response.relay_server).await?;
-                Ok((relay, signed))
+                Ok((relay, signed, "retransmissão"))
             }
             // The peer itself asked for a relay and the server already paired one.
             Some(rendezvous_message::Union::RelayResponse(response)) => {
@@ -215,7 +226,7 @@ impl Session {
                 };
                 let stream =
                     Self::join_relay(options, id, &response.relay_server, &response.uuid).await?;
-                Ok((stream, signed))
+                Ok((stream, signed, "retransmissão pedida pelo par"))
             }
             _ => Err("O servidor de encontro respondeu de forma inesperada.".into()),
         }
@@ -350,6 +361,7 @@ impl Session {
             "No Password Access" => {
                 "A máquina exige aprovação manual e não aceita senha.".into()
             }
+            "" => "O par RustDesk recusou o acesso sem dizer o motivo.".into(),
             other => format!("O par RustDesk recusou o acesso: {other}"),
         }
     }

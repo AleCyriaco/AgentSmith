@@ -33,8 +33,17 @@ async fn rustdesk_live_session_connects_decodes_and_accepts_input() {
     let Some(options) = options() else {
         panic!("Defina RUSTDESK_ID (e RUSTDESK_PASSWORD) antes de rodar este teste.");
     };
+    let normalized: String = options.id.chars().filter(|c| !c.is_whitespace()).collect();
     println!("→ servidor de encontro: {}", options.rendezvous_address());
-    println!("→ ID solicitado: {}", options.id);
+    println!("→ ID solicitado: {normalized}");
+    println!(
+        "→ chave do servidor: {}",
+        if options.key.trim().is_empty() {
+            "pública do RustDesk".to_string()
+        } else {
+            format!("própria, {} caracteres", options.key.trim().len())
+        }
+    );
     if options.password.is_empty() {
         println!("  aviso: sem senha; a máquina precisará aprovar a sessão manualmente");
     }
@@ -46,9 +55,11 @@ async fn rustdesk_live_session_connects_decodes_and_accepts_input() {
         session.is_secure(),
         "a sessão abriu sem criptografia, o que não deveria ser possível"
     );
+    let path = session.path;
     let (peer, mut events, mut commands) = session.split();
     println!(
-        "✓ autenticado e cifrado · {} · {} · RustDesk {} · {}×{}",
+        "✓ autenticado e cifrado · via {} · {} · {} · RustDesk {} · {}×{}",
+        path,
         if peer.hostname.is_empty() { "sem hostname" } else { &peer.hostname },
         if peer.platform.is_empty() { "sem plataforma" } else { &peer.platform },
         peer.version,

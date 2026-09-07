@@ -282,12 +282,13 @@ impl Remote {
             key: pick(&m.rustdesk_key, &fallback.key),
         })
         .await?;
+        let path = session.path;
         let (peer, mut events, mut commands) = session.split();
         *self.info.lock().unwrap() = SessionInfo {
             machine_id: m.id.clone(),
             status: "connected".into(),
             message: format!(
-                "Sessão RustDesk ativa com {} ({}×{})",
+                "Sessão RustDesk ativa ({path}) com {} ({}×{})",
                 if peer.hostname.is_empty() {
                     m.name.clone()
                 } else {
