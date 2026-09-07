@@ -1,4 +1,4 @@
-# Operator harness — 0.12.7
+# Operator harness — 0.14.0
 
 The same action meaning applies across API adapters, official clients, and local models. Protocol compatibility does not establish visual accuracy. Test each profile with the synthetic operator check and a small Windows task.
 
@@ -8,7 +8,7 @@ The same action meaning applies across API adapters, official clients, and local
 2. Send the authorized plan, current step and criterion, prior steps, and up to four recent inputs with screen-change information.
 3. Combine operation and verification into one text decision when their routes match.
 4. Validate JSON, fields, target IDs, coordinates, text length, and shortcuts. Allow one format repair per profile; use only configured alternatives afterward.
-5. Recheck observation freshness before transmitting one input through the single RDP executor.
+5. Recheck observation freshness before transmitting one input through the single executor, over RDP or RustDesk alike.
 6. Observe again, allowing delayed screen response. Three unchanged inputs stop for review.
 
 Text-proposed success still requires visual confirmation; explicit OCR criteria are checked directly. Real blocking restrictions are preserved.

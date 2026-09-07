@@ -1,6 +1,6 @@
 # English interface tour
 
-These are screenshots of the real React UI from version 0.12.7, rendered in an isolated browser preview with fictional data. They are not fabricated product mockups or evidence of a completed Windows task. Native connections, model downloads, and execution are unavailable in this preview. No personal workspace data, live remote desktop, credential, or account session was used.
+These are screenshots of the real React UI, rendered in an isolated browser preview with fictional data. The Machines page and the two RustDesk dialogs are from version 0.14.0; the others are from 0.12.7 and unchanged since. They are not fabricated product mockups or evidence of a completed Windows task. Native connections, model downloads, and execution are unavailable in this preview. No personal workspace data, live remote desktop, credential, or account session was used.
 
 ## Operations center
 
@@ -13,6 +13,20 @@ Connection controls, task progress, remote view, and space-saving controls.
 A fictional Windows host and the available RDP connector.
 
 ![Machines in English — demonstration workspace](images/machines.png)
+
+The RustDesk card offers **Connect** for a native session and **Manual client** for the web client. The **Default server** panel holds a self-hosted rendezvous server and its key once, for every RustDesk machine.
+
+### Adding a RustDesk machine
+
+![Adding a RustDesk machine in English — demonstration workspace](images/rustdesk-machine.png)
+
+The ID as RustDesk shows it, the machine's permanent password for the Keychain, an optional server and key that override the default for this machine only, and the web-client address used by the manual client alone.
+
+### Two-factor verification
+
+![Two-factor verification in English — demonstration workspace](images/two-factor.png)
+
+A machine with two-factor authentication asks for the current code. **Trust this Mac** is unticked and says what it gives up; it is disabled when the machine does not keep trusted devices.
 
 ## Providers and models
 

@@ -58,7 +58,7 @@ See [AI routing and performance](docs/ai-routing.md) for local, hybrid, and cost
 
 ## Explore the interface
 
-[View all English screenshots](docs/screenshots.md): operations, machines, providers, routing, plan editing, repetition, and pacing.
+[View all English screenshots](docs/screenshots.md): operations, machines, RustDesk setup and two-factor verification, providers, routing, plan editing, repetition, and pacing.
 
 ![Planning and operation routing in English](docs/images/ai-routing.png)
 
@@ -76,7 +76,7 @@ See [AI routing and performance](docs/ai-routing.md) for local, hybrid, and cost
 | [Privacy and security](docs/privacy.md) | What leaves the Mac, stored data, limits and publication review |
 | [Troubleshooting](docs/troubleshooting.md) | Connection, authentication, invalid actions, stalled plans |
 | [Local vision measurements](docs/local-vision-validation.md) | Synthetic measurements and their limitations |
-| [Changelog](CHANGELOG.md) | Changes through 0.13.0 |
+| [Changelog](CHANGELOG.md) | Changes through 0.14.0 |
 | [Contributing](CONTRIBUTING.md) | Development, tests, useful bug reports |
 
 ## Build from source

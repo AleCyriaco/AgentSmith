@@ -4,6 +4,9 @@ AgentSmith speaks the RustDesk protocol directly. A RustDesk destination is a se
 
 ## Connect a machine
 
+![Adding a RustDesk machine](images/rustdesk-machine.png)
+
+
 1. On the Windows machine, open RustDesk, note the ID, and set a permanent password. Without one, every connection needs someone to approve it on that machine.
 2. In AgentSmith, choose **Add machine → RustDesk**, and enter the name, the ID, and that password. RustDesk shows the ID grouped in threes; pasting it that way is fine, the spaces are dropped. The password is stored in the macOS Keychain under the RustDesk ID, separate from any RDP password for the same host.
 3. For a self-hosted server, set it once under **Machines → RustDesk → Default server**: the ID server address and its base64 public key, exactly as RustDesk shows them under Settings → Network → ID/Relay server. A machine may override both in its own form; with neither set, RustDesk's public server is used. The key is what authenticates the machine, so a self-hosted server without one cannot open a session.
@@ -32,6 +35,9 @@ Actions cross unchanged too. Clicks move the pointer first. Shortcuts travel as 
 Audio, clipboard and file transfer are disabled at login. AgentSmith reads the screen; the rest is surface it does not need.
 
 ## Second factor
+
+![Two-factor verification](images/two-factor.png)
+
 
 A machine with two-factor authentication answers the password with a challenge. AgentSmith asks for the current six-digit code and connects again with it. The code is time-based and is never stored.
 

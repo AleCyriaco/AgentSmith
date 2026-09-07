@@ -1,10 +1,10 @@
 # Source and distribution
 
-AgentSmith original source code and documentation are licensed under the [MIT License](../LICENSE). This grant includes version 0.12.7. Preserve the copyright and license notice when redistributing copies or substantial portions. Third-party components remain governed by their own licenses.
+AgentSmith original source code and documentation are licensed under the [MIT License](../LICENSE). This grant covers every published version, 0.14.0 included. Preserve the copyright and license notice when redistributing copies or substantial portions. Third-party components remain governed by their own licenses.
 
 The public repository contains AgentSmith source, documentation, and scripts that prepare native dependencies. It excludes downloaded model weights, personal configuration, runtime databases, and generated application bundles.
 
-The 0.12.7 GitHub release publishes source and documentation. It does not include a notarized macOS installer. Existing locally built application bundles are development artifacts.
+The GitHub repository publishes source and documentation through 0.14.0. It does not include a notarized macOS installer. Existing locally built application bundles are development artifacts.
 
 ## Third-party components
 
