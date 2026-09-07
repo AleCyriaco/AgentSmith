@@ -37,6 +37,11 @@ pub struct Remote {
     connection: tokio::sync::Mutex<Option<Transport>>,
     pub info: Arc<Mutex<SessionInfo>>,
     frame: Arc<Mutex<Option<Snapshot>>>,
+    /// When the machine was last heard from. A delta-encoded transport sends
+    /// nothing while the screen is still, so the age of the last frame says
+    /// how long the screen has been unchanged, not whether the session is
+    /// alive. Acting on a picture is safe while the machine is still talking.
+    contact: Arc<AtomicU64>,
     generation: Arc<AtomicU64>,
     pub epoch: Arc<AtomicU64>,
 }
@@ -85,6 +90,7 @@ impl Remote {
     #[cfg(test)]
     pub fn observed_fixture(frame: Snapshot, machine_id: &str) -> Self {
         let remote = Self::new();
+        remote.contact.store(now(), Ordering::SeqCst);
         *remote.frame.lock().unwrap() = Some(frame);
         remote.info.lock().unwrap().status = "connected".into();
         remote.info.lock().unwrap().machine_id = machine_id.into();
@@ -95,6 +101,7 @@ impl Remote {
             connection: tokio::sync::Mutex::new(None),
             info: Arc::new(Mutex::new(SessionInfo::default())),
             frame: Arc::new(Mutex::new(None)),
+            contact: Arc::new(AtomicU64::new(0)),
             generation: Arc::new(AtomicU64::new(0)),
             epoch: Arc::new(AtomicU64::new(0)),
         }
@@ -178,7 +185,9 @@ impl Remote {
         *self.connection.lock().await = Some(Transport::Rdp(Connection { child, input }));
         let info = self.info.clone();
         let frame = self.frame.clone();
+        let contact = self.contact.clone();
         let gen = self.generation.clone();
+        contact.store(now(), Ordering::SeqCst);
         tokio::spawn(async move {
             let mut seq = 0;
             loop {
@@ -247,6 +256,7 @@ impl Remote {
                         return;
                     }
                     if encoded.is_some() {
+                        contact.store(now(), Ordering::SeqCst);
                         *frame.lock().unwrap() = encoded;
                     }
                 } else {
@@ -317,7 +327,9 @@ impl Remote {
         *self.connection.lock().await = Some(Transport::RustDesk(sender));
         let info = self.info.clone();
         let frame = self.frame.clone();
+        let contact = self.contact.clone();
         let gen = self.generation.clone();
+        contact.store(now(), Ordering::SeqCst);
         tokio::spawn(async move {
             let _ = commands.request_refresh().await;
             let mut decoder: Option<(Codec, Decoder)> = None;
@@ -334,7 +346,13 @@ impl Remote {
                             break error;
                         }
                     }
-                    event = events.next() => match event {
+                    event = events.next() => {
+                      // Any message proves the machine is still there, including
+                      // the ones carrying nothing to show.
+                      if event.is_ok() {
+                          contact.store(now(), Ordering::SeqCst);
+                      }
+                      match event {
                         Err(error) => break error,
                         Ok(Event::Closed(reason)) => {
                             break format!("O par RustDesk encerrou a sessão: {reason}")
@@ -354,10 +372,10 @@ impl Remote {
                                 }
                             }
                             let Some((_, active)) = decoder.as_mut() else { continue };
-                            let picture = match active.decode(&data) {
-                                Ok(Some(picture)) => picture,
-                                Ok(None) => continue,
-                                Err(error) => break error,
+                            // A frame that cannot be decoded costs one picture,
+                            // not the session; the next key frame recovers it.
+                            let Ok(Some(picture)) = active.decode(&data) else {
+                                continue;
                             };
                             seq += 1;
                             let encoded = tokio::task::spawn_blocking(move || {
@@ -373,6 +391,7 @@ impl Remote {
                                 *frame.lock().unwrap() = encoded;
                             }
                         }
+                      }
                     }
                 }
             };
@@ -396,13 +415,18 @@ impl Remote {
         }
         Ok(())
     }
+    /// How long the machine has been silent. Zero when it has never spoken.
+    fn silence(&self) -> u64 {
+        now().saturating_sub(self.contact.load(Ordering::SeqCst))
+    }
+
     pub fn snapshot_if_new(&self, sequence: u64) -> Result<Option<Snapshot>, String> {
         if self.info.lock().unwrap().status != "connected" {
             return Ok(None);
         }
         let guard = self.frame.lock().unwrap();
         let f = guard.as_ref().ok_or("Aguardando imagem do Windows.")?;
-        if now().saturating_sub(f.captured_at) > 5000 {
+        if self.silence() > 5000 {
             return Err("A imagem está desatualizada.".into());
         }
         Ok((f.sequence != sequence).then(|| f.clone()))
@@ -429,7 +453,7 @@ impl Remote {
             .unwrap()
             .clone()
             .ok_or("Aguardando a primeira imagem do Windows.")?;
-        if now().saturating_sub(f.captured_at) > 5000 {
+        if self.silence() > 5000 {
             return Err("A imagem está desatualizada; verifique a conexão.".into());
         }
         Ok(f)
@@ -677,9 +701,32 @@ mod tests {
         assert_eq!(s, "key 29 1\nkey 31 1\nkey 31 0\nkey 29 0\n");
     }
     #[tokio::test]
+    async fn a_still_screen_stays_usable_while_the_machine_is_still_talking() {
+        // A delta-encoded transport sends nothing while nothing moves, so the
+        // last picture must remain valid as long as the machine is heard from.
+        let remote = Remote::new();
+        remote.info.lock().unwrap().status = "connected".into();
+        *remote.frame.lock().unwrap() = Some(Snapshot {
+            data_url: "test".into(),
+            width: 1280,
+            height: 800,
+            sequence: 1,
+            captured_at: now() - 60_000,
+        });
+        remote.contact.store(now(), Ordering::SeqCst);
+        assert!(remote.snapshot().is_ok());
+        assert!(remote.snapshot_if_new(0).unwrap().is_some());
+        // Silence, however, still expires the picture.
+        remote.contact.store(now() - 6000, Ordering::SeqCst);
+        assert!(remote.snapshot().is_err());
+        assert!(remote.snapshot_if_new(0).is_err());
+    }
+
+    #[tokio::test]
     async fn capture_cache_skips_duplicates_and_waits_for_fresh_frame() {
         let remote = Arc::new(Remote::new());
         remote.info.lock().unwrap().status = "connected".into();
+        remote.contact.store(now(), Ordering::SeqCst);
         *remote.frame.lock().unwrap() = Some(Snapshot {
             data_url: "test".into(),
             width: 1280,
@@ -696,7 +743,7 @@ mod tests {
         });
         remote.wait_for_new_frame(1).await.unwrap();
         assert_eq!(remote.snapshot().unwrap().sequence, 2);
-        remote.frame.lock().unwrap().as_mut().unwrap().captured_at = now() - 6000;
+        remote.contact.store(now() - 6000, Ordering::SeqCst);
         assert!(remote.snapshot_if_new(1).is_err());
     }
     #[test]
