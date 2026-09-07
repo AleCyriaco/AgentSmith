@@ -3,6 +3,7 @@ pub mod codec;
 pub mod crypto;
 pub mod decoder;
 pub mod input;
+mod live_test;
 pub mod manual;
 pub mod proto;
 pub mod session;
