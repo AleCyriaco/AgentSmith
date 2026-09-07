@@ -2346,5 +2346,17 @@
   "Excluindo…": {
     "en": "Deleting…",
     "es": "Eliminando…"
+  },
+  "Testar operador": {
+    "en": "Test operator",
+    "es": "Probar operador"
+  },
+  "Testando contrato do operador…": {
+    "en": "Testing the operator contract…",
+    "es": "Probando el contrato del operador…"
+  },
+  "Observando e decidindo em uma chamada": {
+    "en": "Observing and deciding in one call",
+    "es": "Observando y decidiendo en una llamada"
   }
 }

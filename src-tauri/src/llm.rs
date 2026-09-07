@@ -230,18 +230,6 @@ pub async fn call(
         .map_err(|_| fail("O provedor não retornou JSON válido.".into()))?;
     response_text(&p.protocol, &v).map_err(fail)
 }
-pub async fn routed(
-    s: &Settings,
-    role: &str,
-    system: &str,
-    prompt: &str,
-    image: Option<&str>,
-) -> Result<(String, String), String> {
-    routed_validated(s, role, system, prompt, image, |text, _| {
-        Ok(text.to_string())
-    })
-    .await
-}
 // Repair invalid model outputs before falling back. All attempts are read-only;
 // the caller receives only one validated result to execute after checking freshness.
 pub async fn routed_validated<T>(
@@ -287,7 +275,7 @@ pub async fn routed_validated<T>(
                     Err(error) => {
                         errors.push(format!("{}: {}", p.name, error));
                         if attempt == 0 {
-                            request = format!("{prompt}\nCORREÇÃO OBRIGATÓRIA: a resposta anterior foi rejeitada: {error} Nenhuma entrada foi enviada ao Windows. Observe novamente a mesma imagem e retorne UMA ação JSON válida. Não copie valores de exemplo. blocked exige explicar o que falta, com o nome do campo, recurso ou autorização. Se o impedimento for real, preserve-o e explique; não invente ação para contorná-lo.");
+                            request = format!("{prompt}\nCORREÇÃO OBRIGATÓRIA: resposta rejeitada: {error} Nenhuma entrada executada. Retorne apenas JSON conforme o contrato desta chamada, com valores reais; não copie exemplos nem contorne impedimentos reais.");
                         }
                     }
                 },

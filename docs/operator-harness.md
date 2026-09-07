@@ -1,0 +1,37 @@
+# Harness de operação — AgentSmith 0.12.0
+
+O contrato é comum aos adaptadores de API, clientes oficiais e modelos locais. Compatibilidade com o protocolo não garante competência visual ou latência: valide cada perfil com **Testar operador** e uma tarefa curta no Windows.
+
+## Ciclo
+
+1. Capturar uma imagem atual e reutilizar OCR somente se os pixels da região não mudaram.
+2. Fornecer roteiro autorizado, etapa e critério, etapas anteriores e até quatro entradas recentes com indicação de mudança da tela.
+3. Quando Operar e Verificar têm a mesma rota, uma chamada de texto propõe a próxima ação ou a conclusão. Rotas diferentes mantêm decisões separadas.
+4. Validar JSON, campos, IDs, coordenadas, tamanho do texto e atalhos. Uma resposta inválida recebe uma única correção por perfil; depois utiliza somente a alternativa já configurada.
+5. Enviar uma ação validada ao RDP após conferir se a observação ainda é atual. Nenhuma ferramenta local do provedor deve executar ações.
+6. Observar novamente. A tela pode demorar até 1,2 segundo adicional para responder. Após três entradas sem mudança, parar para revisão.
+
+Propostas de sucesso por texto continuam exigindo confirmação visual. Regras OCR explícitas são verificadas pelo motor. O harness não transforma ausência de evidência em sucesso nem remove condições de parada.
+
+## Semântica
+
+- `key`: um atalho simultâneo, por exemplo `{"kind":"key","keys":["ctrl","l"]}`. Ctrl+L pressupõe navegador ativo. Não agrupar atalhos sequenciais.
+- `type_text`: digita até 400 caracteres; não pressiona Enter. Não transmite a senha pela linha de comando.
+- Clique OCR: `{"kind":"click","target":0}` usa ID da observação atual com confiança suficiente.
+- Clique visual: `{"kind":"click","x":120,"y":80}` usa pixels da imagem recebida, mesmo quando reduzida ou recortada. O motor faz a conversão para o RDP.
+- `need_vision`: texto/OCR insuficiente. `inspect`: solicita recorte se habilitado. Nenhum dos dois envia entrada.
+- `wait`: espera de 1 a 10 segundos. `blocked`: motivo concreto e respeito às restrições do roteiro.
+
+## Custo e velocidade
+
+O OCR é enviado em linhas compactas com até 120 elementos e orçamento de 12 KB para as linhas serializadas. Textos longos são limitados a 200 caracteres e omissões são indicadas; falta de informação deve solicitar visão. O roteiro autorizado é preservado integralmente para não perder restrições. Diagnósticos de execução não substituem a memória das últimas entradas. Conteúdo digitado não é copiado para essa memória.
+
+Uma etapa incompleta na mesma rota passa de duas chamadas de texto para uma. A confirmação visual, correções de JSON e alternativas podem exigir chamadas adicionais. Limites de saída continuam limitados por adaptador; latência, raciocínio interno e cobrança dependem do modelo. Não há economia percentual medida ainda.
+
+## Testar operador
+
+Usa um botão fictício recebido por OCR e exige um clique com ID correto. Usa apenas o perfil selecionado, permite uma correção e mede o tempo total. Não abre a sessão Windows, não envia mouse/teclado e não valida capacidade de visão. É um teste mínimo de entendimento do contrato, não certificação de todas as tarefas.
+
+## Validação
+
+A suíte cobre JSON inválido, correção e alternativa, impedimentos reais preservados, clique fora da tela, IDs inventados, proposta textual falsa recusada pela visão, ausência de imagens no caminho de texto, atraso de atualização e liberação das teclas. O fluxo real precisa ser medido com a mesma tarefa e tela inicial para comparar provedores.

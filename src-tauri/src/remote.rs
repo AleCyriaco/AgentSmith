@@ -354,7 +354,7 @@ pub fn action_commands(a: &Action, w: u32, h: u32) -> Result<String, String> {
         Action::DoubleClick { x, y } => click(*x, *y, 0x1000, 2),
         Action::RightClick { x, y } => click(*x, *y, 0x2000, 1),
         Action::TypeText { text } => {
-            if text.chars().count() > 400 || text.contains('\0') {
+            if text.is_empty() || text.chars().count() > 400 || text.contains('\0') {
                 return Err("Digite no máximo 400 caracteres por ação.".into());
             }
             Ok(text
@@ -365,6 +365,15 @@ pub fn action_commands(a: &Action, w: u32, h: u32) -> Result<String, String> {
         Action::Key { keys } => {
             if keys.is_empty() || keys.len() > 5 {
                 return Err("Combinação de teclas inválida.".into());
+            }
+            let normalized: Vec<_> = keys.iter().map(|k| k.to_ascii_lowercase()).collect();
+            let primary = normalized
+                .iter()
+                .filter(|k| !matches!(k.as_str(), "ctrl" | "alt" | "shift" | "win" | "meta"))
+                .count();
+            let unique: std::collections::HashSet<_> = normalized.iter().collect();
+            if primary > 1 || unique.len() != keys.len() {
+                return Err("keys aceita um atalho por ação, não uma sequência. Envie cada atalho/Enter em uma ação separada.".into());
             }
             let codes: Vec<u32> = keys
                 .iter()

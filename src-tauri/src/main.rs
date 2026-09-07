@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 mod browser_auth;
 mod executor;
+mod harness;
 mod llm;
 mod local_engine;
 mod model;
@@ -269,6 +270,14 @@ fn save_credential(
 }
 fn machine_binding(m: &Machine) -> String {
     format!("rdp://{}:{}|{}|{}", m.host, m.port, m.domain, m.username)
+}
+#[tauri::command]
+async fn test_operator_profile(
+    state: tauri::State<'_, AppState>,
+    id: String,
+) -> Result<String, String> {
+    let _guard = reading_test::Guard::acquire(state.busy.clone())?;
+    executor::test_operator_profile(&state.store.settings()?, &id).await
 }
 #[tauri::command]
 async fn test_profile(state: tauri::State<'_, AppState>, id: String) -> Result<String, String> {
@@ -718,6 +727,7 @@ fn main() {
             snapshot_if_new,
             save_credential,
             test_profile,
+            test_operator_profile,
             list_models,
             connect_machine,
             connect_saved_machine,
