@@ -1091,7 +1091,7 @@ fn finish(
     run: &mut Run,
     control: &Mutex<Control>,
     busy: &AtomicBool,
-    simplex: &Arc<crate::simplex::Simplex>,
+    simplex: &Arc<crate::operator::Channels>,
 ) {
     let mut guard = control.lock().unwrap();
     if guard
@@ -1130,7 +1130,7 @@ pub async fn restart(
     remote: Arc<Remote>,
     busy: Arc<AtomicBool>,
     control: Arc<Mutex<Control>>,
-    simplex: Arc<crate::simplex::Simplex>,
+    simplex: Arc<crate::operator::Channels>,
     id: String,
 ) -> Result<Run, String> {
     launch_mode(store, remote, busy, control, simplex, id, true, None).await
@@ -1140,7 +1140,7 @@ pub async fn launch(
     remote: Arc<Remote>,
     busy: Arc<AtomicBool>,
     control: Arc<Mutex<Control>>,
-    simplex: Arc<crate::simplex::Simplex>,
+    simplex: Arc<crate::operator::Channels>,
     id: String,
 ) -> Result<(), String> {
     launch_mode(store, remote, busy, control, simplex, id, false, None)
@@ -1152,7 +1152,7 @@ pub async fn repeat(
     remote: Arc<Remote>,
     busy: Arc<AtomicBool>,
     control: Arc<Mutex<Control>>,
-    simplex: Arc<crate::simplex::Simplex>,
+    simplex: Arc<crate::operator::Channels>,
     id: String,
     options: crate::repetition::RepeatOptions,
 ) -> Result<Run, String> {
@@ -1168,7 +1168,7 @@ fn relaunch(
     remote: Arc<Remote>,
     busy: Arc<AtomicBool>,
     control: Arc<Mutex<Control>>,
-    simplex: Arc<crate::simplex::Simplex>,
+    simplex: Arc<crate::operator::Channels>,
     id: String,
 ) -> Launch {
     Box::pin(launch_mode(
@@ -1181,7 +1181,7 @@ async fn launch_mode(
     remote: Arc<Remote>,
     busy: Arc<AtomicBool>,
     control: Arc<Mutex<Control>>,
-    simplex: Arc<crate::simplex::Simplex>,
+    simplex: Arc<crate::operator::Channels>,
     id: String,
     restart: bool,
     repetition: Option<crate::repetition::RepeatState>,
@@ -1250,7 +1250,7 @@ async fn launch_mode(
         }
         let _ = remote.release().await;
         let blocked = run.status == "blocked";
-        let question = crate::simplex::Question {
+        let question = crate::operator::Question {
             run_id: run.id.clone(),
             title: run.title.clone(),
             detail: run
@@ -1265,7 +1265,7 @@ async fn launch_mode(
         // the task is settled, so a resume starts from a clean state.
         if blocked {
             tokio::spawn(async move {
-                if simplex.ask(&question).await == Some(crate::simplex::Answer::Continue) {
+                if simplex.ask(&question).await == Some(crate::operator::Answer::Continue) {
                     let _ = relaunch(store, remote, busy, control, simplex, question.run_id)
                         .await;
                 }
@@ -1621,7 +1621,7 @@ mod tests {
         assert!(result.is_err());
         assert!(run.repetition.as_ref().unwrap().starts_at > now());
         assert_eq!(run.repetition.as_ref().unwrap().cycle, 0);
-        finish(&store, &mut run, &control, &busy, &Arc::new(crate::simplex::Simplex::new()));
+        finish(&store, &mut run, &control, &busy, &Arc::new(crate::operator::Channels::new()));
         assert_eq!(store.run("weekly").unwrap().status, "cancelled");
         assert!(!busy.load(Ordering::SeqCst));
     }
@@ -1760,7 +1760,7 @@ mod tests {
             remote.clone(),
             busy.clone(),
             control.clone(),
-            Arc::new(crate::simplex::Simplex::new()),
+            Arc::new(crate::operator::Channels::new()),
             "original".into()
         )
         .await
@@ -1773,7 +1773,7 @@ mod tests {
             remote,
             busy.clone(),
             control,
-            Arc::new(crate::simplex::Simplex::new()),
+            Arc::new(crate::operator::Channels::new()),
             "original".into()
         )
         .await
@@ -1805,7 +1805,7 @@ mod tests {
         .unwrap();
         assert!(result.is_err());
         run.status = "completed".into(); // A last verification may have finished concurrently.
-        finish(&store, &mut run, &control, &busy, &Arc::new(crate::simplex::Simplex::new()));
+        finish(&store, &mut run, &control, &busy, &Arc::new(crate::operator::Channels::new()));
         let saved = store.run(&run.id).unwrap();
         assert_eq!(saved.status, "cancelled");
         assert_eq!(saved.action_count, 3);
@@ -1817,7 +1817,7 @@ mod tests {
             Arc::new(remote),
             Arc::new(busy),
             Arc::new(control),
-            Arc::new(crate::simplex::Simplex::new()),
+            Arc::new(crate::operator::Channels::new()),
             run.id
         )
         .await

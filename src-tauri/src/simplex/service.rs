@@ -1,8 +1,9 @@
 //! The operator channel: keeps the SimpleX client running, sends notices, and
 //! puts questions whose answers arrive from a phone.
+use crate::operator::{self as protocol, Answer, Question};
 use crate::simplex::{
     client::{self, Client, Incoming},
-    protocol::{self, Answer, Question},
+
 };
 use serde::Serialize;
 use std::{
