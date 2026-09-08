@@ -44,7 +44,7 @@ pub fn binary() -> Option<PathBuf> {
 type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
 
 pub struct Client {
-    child: Child,
+    child: Mutex<Child>,
     writer: Mutex<futures_util::stream::SplitSink<Socket, WsMessage>>,
     pending: Arc<Mutex<HashMap<String, oneshot::Sender<Value>>>>,
     next_id: AtomicU64,
@@ -61,6 +61,7 @@ impl Client {
         server: &str,
         port: u16,
         inbox: mpsc::Sender<Incoming>,
+        local: bool,
     ) -> Result<Self, String> {
         if let Some(parent) = data.parent() {
             std::fs::create_dir_all(parent)
@@ -77,15 +78,18 @@ impl Client {
             .args(["-y", "--mute", "--disable-backup"])
             .stdin(Stdio::null())
             .stdout(Stdio::null())
-            .stderr(Stdio::piped())
+            .stderr(Stdio::null())
             .kill_on_drop(true);
         if !server.trim().is_empty() {
             command.arg("-s").arg(server.trim());
         }
-        let child = command
+        if local {
+            command.args(["--smp-proxy", "never"]);
+        }
+        let mut child = command
             .spawn()
             .map_err(|_| "Não foi possível iniciar o cliente SimpleX.".to_string())?;
-        let socket = connect(port).await?;
+        let socket = connect(port, &mut child).await?;
         let (writer, mut reader) = socket.split();
         let pending: Arc<Mutex<HashMap<String, oneshot::Sender<Value>>>> = Default::default();
         let waiting = pending.clone();
@@ -113,7 +117,7 @@ impl Client {
             }
         });
         Ok(Self {
-            child,
+            child: Mutex::new(child),
             writer: Mutex::new(writer),
             pending,
             next_id: AtomicU64::new(0),
@@ -141,18 +145,31 @@ impl Client {
         }
     }
 
-    pub async fn stop(mut self) {
-        let _ = self.child.kill().await;
+    pub async fn is_running(&self) -> bool {
+        matches!(self.child.lock().await.try_wait(), Ok(None))
+    }
+    pub async fn stop(&self) {
+        let _ = self.child.lock().await.kill().await;
     }
 }
 
-async fn connect(port: u16) -> Result<Socket, String> {
+async fn connect(port: u16, child: &mut Child) -> Result<Socket, String> {
     let address = format!("ws://127.0.0.1:{port}");
     let deadline = std::time::Instant::now() + START_TIMEOUT;
     // The client opens its port a moment after starting; retry until it does.
     loop {
+        if !matches!(child.try_wait(), Ok(None)) {
+            return Err("O cliente SimpleX encerrou durante a inicialização. Verifique a versão do cliente e tente novamente.".into());
+        }
         match tokio_tungstenite::connect_async(&address).await {
-            Ok((socket, _)) => return Ok(socket),
+            Ok((socket, _)) => {
+                if !matches!(child.try_wait(), Ok(None)) {
+                    return Err(
+                        "O cliente SimpleX não conseguiu abrir sua própria conexão local.".into(),
+                    );
+                }
+                return Ok(socket);
+            }
             Err(_) if std::time::Instant::now() < deadline => {
                 tokio::time::sleep(Duration::from_millis(300)).await
             }
@@ -208,9 +225,7 @@ pub fn contacts(value: &Value) -> Vec<String> {
         .and_then(Value::as_array)
         .map(|list| {
             list.iter()
-                .filter_map(|contact| {
-                    Some(contact.get("localDisplayName")?.as_str()?.to_string())
-                })
+                .filter_map(|contact| Some(contact.get("localDisplayName")?.as_str()?.to_string()))
                 .filter(|name| !name.is_empty())
                 .collect()
         })
@@ -229,8 +244,7 @@ pub fn address(value: &Value) -> Option<String> {
     fn search(value: &Value) -> Option<String> {
         match value {
             Value::String(text)
-                if text.starts_with("https://simplex.chat/")
-                    || text.starts_with("simplex:/") =>
+                if text.starts_with("https://simplex.chat/") || text.starts_with("simplex:/") =>
             {
                 Some(text.clone())
             }
@@ -249,6 +263,15 @@ pub fn address(value: &Value) -> Option<String> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[tokio::test]
+    async fn an_exited_client_never_attaches_to_an_existing_api() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut child=Command::new("/usr/bin/true").spawn().unwrap();
+        child.wait().await.unwrap();
+        let result=connect(listener.local_addr().unwrap().port(), &mut child).await;
+        assert!(result.is_err());
+    }
 
     #[test]
     fn only_messages_received_from_a_contact_are_read() {
@@ -309,17 +332,21 @@ mod tests {
         );
         // A link already in the web form is passed through untouched.
         assert_eq!(
-            address(&json!({"type": "userContactLinkCreated", "contactLink": {"connLinkContact": {
-                "connFullLink": "https://simplex.chat/contact#/?v=2&smp=exemplo"}}}))
-                .unwrap(),
+            address(
+                &json!({"type": "userContactLinkCreated", "contactLink": {"connLinkContact": {
+                "connFullLink": "https://simplex.chat/contact#/?v=2&smp=exemplo"}}})
+            )
+            .unwrap(),
             "https://simplex.chat/contact#/?v=2&smp=exemplo"
         );
         // A refusal carries no address, and the profile in the answer must not
         // be mistaken for one.
         assert!(address(&json!({"type": "chatCmdError", "chatError": {
             "type": "errorStore", "storeError": {"type": "duplicateContactLink"}}}))
-            .is_none());
-        assert!(address(&json!({"type": "activeUser", "user": {"localDisplayName": "AgentSmith"}}))
-            .is_none());
+        .is_none());
+        assert!(address(
+            &json!({"type": "activeUser", "user": {"localDisplayName": "AgentSmith"}})
+        )
+        .is_none());
     }
 }

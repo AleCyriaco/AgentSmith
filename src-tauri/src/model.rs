@@ -83,10 +83,6 @@ pub struct Settings {
     /// configures them once for every destination. A machine may override both.
     #[serde(default)]
     pub rustdesk: RustdeskServer,
-    /// Where operator alerts are published. Holds no secret, so unlike the
-    /// SimpleX address it lives here rather than in the Keychain.
-    #[serde(default)]
-    pub ntfy: crate::ntfy::Config,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
@@ -126,7 +122,6 @@ impl Default for Settings {
             max_actions: 60,
             performance: PerformanceSettings::default(),
             rustdesk: RustdeskServer::default(),
-            ntfy: Default::default(),
         }
     }
 }
@@ -178,6 +173,8 @@ pub struct Step {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Run {
+    #[serde(default)]
+    pub require_approval: bool,
     #[serde(default)]
     pub repetition: Option<crate::repetition::RepeatState>,
     #[serde(default)]

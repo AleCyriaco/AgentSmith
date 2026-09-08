@@ -115,3 +115,11 @@ Next priorities: goal-level reconciliation, task-based model evaluation, end-to-
 ## Project and third-party rights
 
 AgentSmith is licensed under the [MIT License](LICENSE), permitting commercial use, modification, and redistribution with the copyright and license notice preserved. See [distribution notes](docs/distribution.md). Third-party engines, libraries, and model weights retain their own licenses and terms. AgentSmith is independent of the model providers and remote-access projects it integrates with.
+
+## AgentSmith Pocket
+
+Use your iPhone or Android to follow tasks, prepare requests, add guidance and approve individual actions over your private Tailscale network. Pocket is served by the Mac app; approvals appear directly in the panel, with optional SimpleX messaging. See [Pocket setup and limits](docs/pocket.md).
+
+### Private SimpleX messaging
+
+Host the messaging relay on your Mac and pair phones through a guided QR flow. See [SimpleX setup](docs/simplex.md) for prerequisites, pairing, privacy and external-server support.

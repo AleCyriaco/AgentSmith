@@ -8,6 +8,9 @@ impl Store {
     pub fn new(path: &Path) -> Result<Self, String> {
         let db = Connection::open(path).map_err(|e| e.to_string())?;
         db.execute_batch("PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS config(id INTEGER PRIMARY KEY, data TEXT NOT NULL); CREATE TABLE IF NOT EXISTS runs(id TEXT PRIMARY KEY, data TEXT NOT NULL, updated INTEGER NOT NULL);").map_err(|e|e.to_string())?;
+        // Remove retired channel settings before strict Settings deserialization.
+        // Idempotent; preserves all other configuration and task history.
+        db.execute("UPDATE config SET data=json_remove(data, '$.ntfy') WHERE json_type(data, '$.ntfy') IS NOT NULL", []).map_err(|e|e.to_string())?;
         let store = Self { db: Mutex::new(db) };
         for mut run in store.runs()? {
             if ["running", "verifying", "waiting"].contains(&run.status.as_str()) {
@@ -157,6 +160,7 @@ mod tests {
         {
             let store = Store::new(&path).unwrap();
             let run = Run {
+                require_approval: false,
                 repetition: Some(repetition),
                 progress: None,
                 id: "scheduled".into(),
@@ -186,6 +190,7 @@ mod tests {
         {
             let store = Store::new(&path).unwrap();
             let run = Run {
+                require_approval: false,
                 repetition: None,
                 progress: None,
                 id: "fixture".into(),
@@ -232,4 +237,47 @@ pub fn delete_secret(id: &str, binding: &str) -> Result<(), String> {
 #[cfg(not(target_os = "macos"))]
 pub fn delete_secret(_: &str, _: &str) -> Result<(), String> {
     Err("Chaves nativas disponíveis apenas no macOS.".into())
+}
+
+#[cfg(test)]
+mod retired_settings_tests {
+    use super::*;
+    #[test]
+    fn upgrade_purges_retired_configuration_and_preserves_current_settings() {
+        let path = std::env::temp_dir().join(format!(
+            "agentsmith-migration-{}.sqlite",
+            uuid::Uuid::new_v4()
+        ));
+        let mut expected = Settings::default();
+        expected.max_actions = 42;
+        let mut old = serde_json::to_value(&expected).unwrap();
+        old["ntfy"] = serde_json::json!({"server":"https://retired.example","topic":"old-topic"});
+        {
+            let db = Connection::open(&path).unwrap();
+            db.execute_batch("CREATE TABLE config(id INTEGER PRIMARY KEY, data TEXT NOT NULL)")
+                .unwrap();
+            db.execute(
+                "INSERT INTO config(id,data) VALUES(1,?1)",
+                [old.to_string()],
+            )
+            .unwrap();
+        }
+        for _ in 0..2 {
+            let store = Store::new(&path).unwrap();
+            assert_eq!(
+                serde_json::to_value(store.settings().unwrap()).unwrap(),
+                serde_json::to_value(&expected).unwrap()
+            );
+            let raw: String = store
+                .db
+                .lock()
+                .unwrap()
+                .query_row("SELECT data FROM config WHERE id=1", [], |r| r.get(0))
+                .unwrap();
+            assert!(!raw.contains("retired.example"));
+            assert!(!raw.contains("old-topic"));
+            assert!(!raw.contains("ntfy"));
+        }
+        std::fs::remove_file(path).unwrap();
+    }
 }

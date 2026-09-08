@@ -5,6 +5,8 @@
 //! WebSocket API, the same arrangement as the browser-login clients. No
 //! SimpleX source is copied or linked, so AgentSmith stays MIT.
 pub mod client;
+pub mod host;
+pub mod install;
 pub mod service;
 
 /// Keychain identity for the one secret this channel keeps, the server
@@ -13,6 +15,5 @@ pub mod service;
 /// so it carries a constant of the same shape.
 pub const SECRET_ID: &str = "5a1e9c3f-7b62-4d18-9e4a-2c8f6d0b1a73";
 pub const SECRET_BINDING: &str = "simplex://server";
-
 
 pub use service::{Simplex, Status};

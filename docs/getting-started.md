@@ -58,20 +58,15 @@ Reconnect manually, inspect the Windows state, and resume only when the task is 
 
 ## Alerts and decisions
 
-Unattended work has nobody at the screen, so AgentSmith can reach you on your phone instead. Open **Alerts and decisions** and configure either channel, or both — every one is told, and the first answer settles a question.
+Unattended work has nobody at the screen, so AgentSmith can reach you on your phone instead. Open **Alerts and decisions** to use [Pocket](pocket.md) for in-panel approvals or configure SimpleX for messages.
 
-**ntfy** is the simpler of the two. Point it at an ntfy server you run and choose a topic. Alerts are published there; a decision goes out carrying two addresses, one to continue and one to stop, so it works on a phone whose notifications cannot show buttons. Answers come back on a separate topic, so being able to read the alerts does not also grant the ability to answer them, and each question carries a one-time ticket its answer must repeat — an answer authorises a machine to resume acting on its own, so a stray or replayed message decides nothing.
 
-For instant notifications on iOS a self-hosted ntfy forwards a wake-up to ntfy.sh carrying only a message id and a hash of the topic; the content stays on your server and the phone fetches it from there.
+**SimpleX** provides the optional messaging channel. Choose **Set up and enable on this Mac** to prepare the private relay, then follow the server and contact QR steps in the [SimpleX setup guide](simplex.md). Existing external servers remain available under advanced settings.
 
-**SimpleX** is the other channel. Follow its three steps: paste the `smp://` address of a SimpleX server you run, pair your own SimpleX with the address AgentSmith shows, and send a test alert to prove the path. The address is handed over as an `https://simplex.chat/` link, which pastes into any SimpleX client; the app-scheme form the client answers with is not accepted pasted and macOS does not open it.
+The server QR belongs in the phone's **Your servers → Add server → Scan server QR code** screen. Test and save that server before scanning the separate contact QR in **New chat**. Keep Tailscale connected on both devices. Private routing must allow direct connections to the registered Mac; a public forwarding server cannot reach a private Tailscale address.
 
-Every task that ends produces a notice saying what happened and how far it got. A task that blocks is put as a question instead: answer **1** to resume it or **2** to stop it, from wherever you are. Only an unambiguous reply counts — anything else is left unanswered rather than guessed.
+AgentSmith uses the official SimpleX CLI as a separate process. If the CLI is absent, it downloads and verifies the supported official binary. Podman and Tailscale must already be installed on the Mac. The managed server stores its identity and queue data in private local volumes; external-server addresses are kept in macOS Keychain. Neither is part of the source repository.
 
-This needs the official `simplex-chat` client at `~/.local/bin/simplex-chat`; there is no Homebrew formula for it, and the desktop app exposes no API. The server address carries a password that allows creating queues on that relay, so it is kept in the Keychain and never written to settings.
+Task notices report what happened and how far work progressed. A blocked task can ask for a decision: answer **1** to resume or **2** to stop. Only an unambiguous reply counts. Use Pocket for new goals, live session views and individual-action approvals.
 
-Setting a server decides where the queues AgentSmith creates live. The reply queue is chosen by the client on the other side, so configure the same server in your own SimpleX — under its network and servers settings — to keep both directions on your relay, and test it there before leaving the screen. Changing a server later affects new contacts only; existing ones stay where they were.
-
-Reach depends on whatever network the server's certificate was issued for. If it names a private address, every device needs to be on that network, which is the most common reason an alert does not arrive.
-
-A server on a private network needs one more thing on the client side. SimpleX routes to servers it does not know through a public forwarding server, to keep your address from them, and a public forwarder has no route into a private network — pairing then fails with a private routing error naming a forwarding server. Add the server to the client's own list, which makes it known, and if it still fails, allow a direct connection to it in the same settings. Nothing is given away by connecting directly to a server you run yourself.
+Changing a messaging server affects new contacts. To keep both directions on your relay, configure it in the phone as well; existing contacts do not move automatically.

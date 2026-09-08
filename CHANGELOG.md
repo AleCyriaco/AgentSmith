@@ -1,8 +1,38 @@
 # Changelog
 
+## 0.16.1 — Clearer SimpleX pairing
+
+- Corrected the iPhone server scanner path and clearly labeled server versus contact QR codes.
+- Require confirmation that the phone server was tested and saved before opening the contact step for first-time pairing.
+- Added targeted guidance for private-routing errors without recommending that routing protection be disabled globally.
+
+
+## 0.16.0 — SimpleX on this Mac
+
+- Added managed private SimpleX server setup with a dedicated Podman environment and automatic Tailscale TCP forwarding.
+- Added a guided server QR and contact QR flow in Portuguese, English and Spanish, live pairing status, and a five-minute acceptance window.
+- Preserved external servers under advanced settings, existing Pocket HTTPS access, and separate messaging profiles.
+- Added verified official CLI download when missing and an opt-in integration check using two isolated official clients.
+- Prevented startup from attaching to an old SimpleX client by allocating a fresh local API port and checking process liveness.
+
+
+## 0.15.1 — Simplified mobile approvals
+
+- Remove the retired notification provider from the UI, runtime, translations and documentation.
+- Purge its saved configuration automatically on upgrade; preserve machines, model profiles and task history.
+- Keep Pocket approvals independent and retain optional SimpleX messaging.
+
+
+## 0.15.0 — AgentSmith Pocket
+
+- Add a lightweight mobile web app with Portuguese, English and Spanish labels.
+- Pair devices with a single-use QR; keep the listener on loopback for Tailscale Serve.
+- Review task progress, request screenshots, prepare plans, pause/resume/stop and add guidance to paused tasks.
+- Add optional per-input approvals with expiry, single-use decisions and a screen check before execution. Approval requirements persist with the task.
+
+
 ## 0.14.0 — RustDesk as a session transport
 
-- Add **Alerts and decisions**: alerts on the operator's own server, over ntfy or SimpleX, reporting how every task ended and asking what to do when one blocks, answered from a phone. A question carries a one-time ticket its answer must repeat, and answers arrive on a topic separate from the alerts.
 
 - Speak the RustDesk protocol directly, so a RustDesk destination carries plans like an RDP one: authenticated, encrypted, decoded to the same frames, and driven by the same actions.
 - Verify both signature layers before opening a session, and refuse a session that cannot be authenticated instead of falling back to plaintext as RustDesk does.

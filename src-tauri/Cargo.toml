@@ -1,6 +1,6 @@
 [package]
 name = "agentsmith"
-version = "0.14.0"
+version = "0.16.1"
 edition = "2021"
 license = "MIT"
 
@@ -11,6 +11,8 @@ cc = "1"
 protoc-bin-vendored = "3"
 
 [dependencies]
+axum = "0.8"
+qrcode = { version = "0.14", default-features = false, features = ["svg"] }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -41,3 +43,6 @@ opt-level = 3
 
 [target.'cfg(target_os = "macos")'.dependencies]
 security-framework = "3"
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

@@ -2671,52 +2671,260 @@
     "en": "Reports how each task ended and, when one stops, asks what to do — you answer from your phone. Configure one channel or both: every one is told, and the first answer settles it.",
     "es": "Informa cómo terminó cada tarea y, cuando una se detiene, pregunta qué hacer: usted responde desde el móvil. Configure un canal o ambos: todos reciben aviso, y la primera respuesta decide."
   },
-  "RECOMENDADO": {
-    "en": "RECOMMENDED",
-    "es": "RECOMENDADO"
-  },
   "ALTERNATIVA": {
     "en": "ALTERNATIVE",
     "es": "ALTERNATIVA"
   },
-  "Avisos por ntfy": {
-    "en": "Alerts over ntfy",
-    "es": "Avisos por ntfy"
+  "Seu operador no celular": {
+    "en": "Your operator on your phone",
+    "es": "Tu operador en el móvil"
   },
-  "Publica no servidor ntfy que você mantém. O aviso chega como notificação no celular, e uma decisão vira dois links: um para continuar, outro para parar.": {
-    "en": "Publishes to the ntfy server you run. The alert arrives as a notification on your phone, and a decision becomes two links: one to continue, one to stop.",
-    "es": "Publica en el servidor ntfy que usted mantiene. El aviso llega como notificación al móvil, y una decisión se convierte en dos enlaces: uno para continuar, otro para detener."
+  "Acompanhe tarefas, envie pedidos e aprove ações no iPhone ou Android pela sua rede Tailscale.": {
+    "en": "Follow tasks, send requests and approve actions on iPhone or Android over your Tailscale network.",
+    "es": "Sigue tareas, envía pedidos y aprueba acciones en iPhone o Android por tu red Tailscale."
   },
-  "Endereço do servidor ntfy": {
-    "en": "ntfy server address",
-    "es": "Dirección del servidor ntfy"
+  "Endereço HTTPS deste Mac no Tailscale": {
+    "en": "This Mac’s Tailscale HTTPS address",
+    "es": "Dirección HTTPS de este Mac en Tailscale"
   },
-  "Como https://ntfy.seudominio.com. O conteúdo fica nesse servidor.": {
-    "en": "Such as https://ntfy.yourdomain.com. The content stays on that server.",
-    "es": "Como https://ntfy.sudominio.com. El contenido permanece en ese servidor."
+  "Primeiro configure Tailscale Serve neste Mac para encaminhar HTTPS à porta local 17420. Depois ligue o Pocket e escaneie o QR. O app precisa permanecer aberto.": {
+    "en": "First configure Tailscale Serve on this Mac to forward HTTPS to local port 17420. Then turn Pocket on and scan the QR. Keep the app open.",
+    "es": "Primero configura Tailscale Serve en este Mac para dirigir HTTPS al puerto local 17420. Luego activa Pocket y escanea el QR. Mantén la app abierta."
   },
-  "Tópico": {
-    "en": "Topic",
-    "es": "Tema"
+  "Configurar acesso privado": {
+    "en": "Set up private access",
+    "es": "Configurar acceso privado"
   },
-  "As respostas chegam em {topic}, um tópico separado. Quem só lê os avisos não consegue decidir por você.": {
-    "en": "Answers arrive on {topic}, a separate topic. Reading the alerts does not let anyone decide for you.",
-    "es": "Las respuestas llegan a {topic}, un tema aparte. Leer los avisos no permite decidir por usted."
+  "No Terminal deste Mac, com o Tailscale conectado:": {
+    "en": "In this Mac’s Terminal, with Tailscale connected:",
+    "es": "En Terminal de este Mac, con Tailscale conectado:"
   },
-  "Um nome difícil de adivinhar, porque quem souber o tópico recebe os avisos.": {
-    "en": "A name that is hard to guess, since whoever knows the topic receives the alerts.",
-    "es": "Un nombre difícil de adivinar, ya que quien conozca el tema recibe los avisos."
+  "Copie o endereço HTTPS mostrado acima. Use Serve, que mantém o acesso dentro da sua rede Tailscale.": {
+    "en": "Copy the HTTPS address shown by the command. Use Serve to keep access within your Tailscale network.",
+    "es": "Copia la dirección HTTPS que muestra el comando. Usa Serve para mantener el acceso dentro de tu red Tailscale."
   },
-  "Ouvindo respostas": {
-    "en": "Listening for answers",
-    "es": "Escuchando respuestas"
+  "Ligar Pocket": {
+    "en": "Turn Pocket on",
+    "es": "Activar Pocket"
   },
-  "Sem escuta": {
-    "en": "Not listening",
-    "es": "Sin escucha"
+  "Parear outro aparelho": {
+    "en": "Pair another device",
+    "es": "Vincular otro dispositivo"
   },
-  "No Android os dois links viram botões na própria notificação. No iPhone eles aparecem no corpo da mensagem, porque o iOS não mostra botões de ação. Cada decisão vale uma vez só.": {
-    "en": "On Android the two links become buttons on the notification itself. On iPhone they appear in the message body, because iOS shows no action buttons. Each decision is good once only.",
-    "es": "En Android los dos enlaces se convierten en botones de la propia notificación. En iPhone aparecen en el cuerpo del mensaje, porque iOS no muestra botones de acción. Cada decisión vale una sola vez."
+  "Desligar e revogar acessos": {
+    "en": "Turn off and revoke access",
+    "es": "Desactivar y revocar accesos"
+  },
+  "QR de pareamento": {
+    "en": "Pairing QR code",
+    "es": "QR de vinculación"
+  },
+  "Escaneie com a câmera do celular": {
+    "en": "Scan with your phone’s camera",
+    "es": "Escanea con la cámara del móvil"
+  },
+  "Pareamento de uso único, válido por 5 minutos. O acesso dura 12 horas e é revogado ao desligar o Pocket ou fechar o app.": {
+    "en": "Single-use pairing, valid for 5 minutes. Access lasts 12 hours and is revoked when Pocket is turned off or the app closes.",
+    "es": "Vinculación de un solo uso, válida por 5 minutos. El acceso dura 12 horas y se revoca al desactivar Pocket o cerrar la app."
+  },
+  "Não foi possível copiar.": {
+    "en": "Could not copy.",
+    "es": "No se pudo copiar."
+  },
+  "Copiar link de pareamento": {
+    "en": "Copy pairing link",
+    "es": "Copiar enlace de vinculación"
+  },
+  "Pocket ligado · acesso privado pelo Tailscale": {
+    "en": "Pocket on · private access over Tailscale",
+    "es": "Pocket activo · acceso privado por Tailscale"
+  },
+  "Pocket desligado": {
+    "en": "Pocket off",
+    "es": "Pocket desactivado"
+  },
+  "Acompanhe e aprove ações pelo Pocket. Para avisos e respostas por mensagem, configure o SimpleX.": {
+    "en": "Follow tasks and approve actions in Pocket. For alerts and replies by message, configure SimpleX.",
+    "es": "Sigue tareas y aprueba acciones en Pocket. Para avisos y respuestas por mensaje, configura SimpleX."
+  },
+  "Seu Mac conecta os celulares": {
+    "en": "Your Mac connects your phones",
+    "es": "Tu Mac conecta los móviles"
+  },
+  "O AgentSmith prepara um servidor privado neste Mac. Conecte seu iPhone ou Android pelos QR codes para receber avisos e responder aos pedidos de decisão.": {
+    "en": "AgentSmith sets up a private server on this Mac. Connect your iPhone or Android using QR codes to receive notices and respond to decision requests.",
+    "es": "AgentSmith prepara un servidor privado en este Mac. Conecta tu iPhone o Android con códigos QR para recibir avisos y responder a solicitudes de decisión."
+  },
+  "Mantenha o Mac acordado e o Tailscale conectado nos aparelhos. No celular, instale o SimpleX Chat. O pareamento cria um contato; não copia sua conta ou histórico do SimpleX.": {
+    "en": "Keep the Mac awake and Tailscale connected on your devices. Install SimpleX Chat on your phone. Pairing creates a contact; it does not copy your SimpleX account or history.",
+    "es": "Mantén el Mac despierto y Tailscale conectado en tus dispositivos. Instala SimpleX Chat en el móvil. El emparejamiento crea un contacto; no copia tu cuenta ni tu historial de SimpleX."
+  },
+  "Preparando…": {
+    "en": "Setting up…",
+    "es": "Preparando…"
+  },
+  "Preparar e ativar neste Mac": {
+    "en": "Set up and enable on this Mac",
+    "es": "Preparar y activar en este Mac"
+  },
+  "Servidor neste Mac": {
+    "en": "Server on this Mac",
+    "es": "Servidor en este Mac"
+  },
+  "Servidor externo": {
+    "en": "External server",
+    "es": "Servidor externo"
+  },
+  "Aguardando celular": {
+    "en": "Waiting for phone",
+    "es": "Esperando al móvil"
+  },
+  "Desligar SimpleX": {
+    "en": "Turn off SimpleX",
+    "es": "Desactivar SimpleX"
+  },
+  "Conectar celular": {
+    "en": "Connect phone",
+    "es": "Conectar móvil"
+  },
+  "Servidor no celular": {
+    "en": "Server on phone",
+    "es": "Servidor en el móvil"
+  },
+  "Adicionar AgentSmith": {
+    "en": "Add AgentSmith",
+    "es": "Añadir AgentSmith"
+  },
+  "QR do servidor SimpleX": {
+    "en": "SimpleX server QR code",
+    "es": "QR del servidor SimpleX"
+  },
+  "Adicione este servidor no SimpleX": {
+    "en": "Add this server in SimpleX",
+    "es": "Añade este servidor en SimpleX"
+  },
+  "No celular: Configurações → Rede e servidores → Servidores de mensagens.": {
+    "en": "On your phone: Settings → Network & servers → Message servers.",
+    "es": "En el móvil: Ajustes → Red y servidores → Servidores de mensajes."
+  },
+  "Adicione um servidor pelo leitor de QR e escaneie este código. Teste e salve.": {
+    "en": "Add a server using the QR scanner and scan this code. Test and save.",
+    "es": "Añade un servidor con el lector QR y escanea este código. Prueba y guarda."
+  },
+  "Use este servidor para novas conexões e desative os servidores de mensagens padrão se quiser manter os dois sentidos neste Mac.": {
+    "en": "Use this server for new connections and disable the default message servers if you want both directions to use this Mac.",
+    "es": "Usa este servidor para nuevas conexiones y desactiva los servidores de mensajes predeterminados si quieres mantener ambos sentidos en este Mac."
+  },
+  "Se o teste não conectar, desative o proxy SMP para este servidor privado nas configurações de rede do SimpleX.": {
+    "en": "If the test cannot connect, disable the SMP proxy for this private server in SimpleX network settings.",
+    "es": "Si la prueba no conecta, desactiva el proxy SMP para este servidor privado en los ajustes de red de SimpleX."
+  },
+  "Copiar endereço do servidor": {
+    "en": "Copy server address",
+    "es": "Copiar dirección del servidor"
+  },
+  "Servidor adicionado": {
+    "en": "Server added",
+    "es": "Servidor añadido"
+  },
+  "Conecte o celular ao AgentSmith": {
+    "en": "Connect your phone to AgentSmith",
+    "es": "Conecta el móvil a AgentSmith"
+  },
+  "No SimpleX do celular, escolha adicionar contato e escanear QR. A pessoa que se conectar poderá receber avisos e responder às decisões do AgentSmith.": {
+    "en": "In SimpleX on your phone, choose to add a contact and scan a QR code. Anyone who connects can receive notices and respond to AgentSmith decisions.",
+    "es": "En SimpleX del móvil, elige añadir contacto y escanear QR. Quien se conecte podrá recibir avisos y responder a las decisiones de AgentSmith."
+  },
+  "QR para adicionar AgentSmith": {
+    "en": "QR code to add AgentSmith",
+    "es": "QR para añadir AgentSmith"
+  },
+  "QR válido por 5 minutos": {
+    "en": "QR code valid for 5 minutes",
+    "es": "QR válido durante 5 minutos"
+  },
+  "Envie uma mensagem ao AgentSmith para confirmar a conexão. Os contatos conectados permanecem salvos após fechar o app.": {
+    "en": "Send a message to AgentSmith to confirm the connection. Connected contacts stay saved after closing the app.",
+    "es": "Envía un mensaje a AgentSmith para confirmar la conexión. Los contactos conectados permanecen guardados al cerrar la aplicación."
+  },
+  "Mostrar QR para conectar celular": {
+    "en": "Show QR to connect phone",
+    "es": "Mostrar QR para conectar el móvil"
+  },
+  "Celular conectado": {
+    "en": "Phone connected",
+    "es": "Móvil conectado"
+  },
+  "Enviar aviso de teste": {
+    "en": "Send test notice",
+    "es": "Enviar aviso de prueba"
+  },
+  "Avançado: usar um servidor externo": {
+    "en": "Advanced: use an external server",
+    "es": "Avanzado: usar un servidor externo"
+  },
+  "Use esta opção se você já mantém um servidor SimpleX. O endereço é salvo no Chaves do macOS.": {
+    "en": "Use this option if you already run a SimpleX server. The address is saved in macOS Keychain.",
+    "es": "Usa esta opción si ya tienes un servidor SimpleX. La dirección se guarda en el Llavero de macOS."
+  },
+  "Salvar e ativar servidor externo": {
+    "en": "Save and enable external server",
+    "es": "Guardar y activar servidor externo"
+  },
+  "Usar servidor externo salvo": {
+    "en": "Use saved external server",
+    "es": "Usar servidor externo guardado"
+  },
+  "Verificando a rede privada…": {
+    "en": "Checking the private network…",
+    "es": "Comprobando la red privada…"
+  },
+  "Preparando o motor local…": {
+    "en": "Preparing the local engine…",
+    "es": "Preparando el motor local…"
+  },
+  "Preparando o servidor oficial SimpleX…": {
+    "en": "Preparing the official SimpleX server…",
+    "es": "Preparando el servidor oficial SimpleX…"
+  },
+  "Aguardando o servidor…": {
+    "en": "Waiting for the server…",
+    "es": "Esperando al servidor…"
+  },
+  "Conectando o AgentSmith ao servidor…": {
+    "en": "Connecting AgentSmith to the server…",
+    "es": "Conectando AgentSmith al servidor…"
+  },
+  "Servidor pronto neste Mac.": {
+    "en": "Server ready on this Mac.",
+    "es": "Servidor listo en este Mac."
+  },
+  "QR DE SERVIDOR": {
+    "en": "SERVER QR CODE",
+    "es": "QR DEL SERVIDOR"
+  },
+  "QR DE CONTATO · NEW CHAT": {
+    "en": "CONTACT QR CODE · NEW CHAT",
+    "es": "QR DE CONTACTO · NEW CHAT"
+  },
+  "Este QR deve ser lido na lista de servidores. O leitor de New chat aceita apenas o QR de contato da etapa 2.": {
+    "en": "Scan this QR in the server list. The New chat scanner accepts only the contact QR from step 2.",
+    "es": "Escanea este QR en la lista de servidores. El lector de New chat solo acepta el QR de contacto del paso 2."
+  },
+  "No iPhone: Settings → Network & servers → Your servers → Add server → Scan server QR code. No Android, abra a lista de servidores nas configurações de rede e escolha adicionar por QR.": {
+    "en": "On iPhone: Settings → Network & servers → Your servers → Add server → Scan server QR code. On Android, open the server list in network settings and choose to add using QR.",
+    "es": "En iPhone: Settings → Network & servers → Your servers → Add server → Scan server QR code. En Android, abre la lista de servidores en los ajustes de red y elige añadir por QR."
+  },
+  "Se aparecer Private routing error, confira se este servidor foi salvo. Em Network & servers → Advanced network settings → Private routing, use a opção para servidores desconhecidos em vez de Always. Assim, o Mac cadastrado recebe a conexão diretamente pelo Tailscale.": {
+    "en": "If Private routing error appears, check that this server was saved. Under Network & servers → Advanced network settings → Private routing, choose the option for unknown servers instead of Always. The registered Mac then receives the connection directly over Tailscale.",
+    "es": "Si aparece Private routing error, comprueba que guardaste este servidor. En Network & servers → Advanced network settings → Private routing, elige la opción para servidores desconocidos en lugar de Always. El Mac registrado recibirá la conexión directamente por Tailscale."
+  },
+  "Testei e salvei o servidor no celular": {
+    "en": "I tested and saved the server on my phone",
+    "es": "Probé y guardé el servidor en el móvil"
+  },
+  "Private routing error: o celular tentou usar um intermediário público. Volte à etapa 1, salve o servidor e confira Private routing. Depois gere o QR de contato e tente novamente com o Tailscale conectado.": {
+    "en": "Private routing error: your phone tried to use a public forwarding server. Return to step 1, save the server and check Private routing. Then generate the contact QR and try again with Tailscale connected.",
+    "es": "Private routing error: el móvil intentó usar un intermediario público. Vuelve al paso 1, guarda el servidor y revisa Private routing. Después genera el QR de contacto e inténtalo de nuevo con Tailscale conectado."
   }
 }

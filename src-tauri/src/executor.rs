@@ -105,6 +105,7 @@ pub async fn plan(store: &Store, machine_id: String, instructions: String) -> Re
         return Err("O modelo não gerou um roteiro verificável.".into());
     }
     let run = Run {
+        require_approval: false,
         repetition: None,
         progress: None,
         id: uuid::Uuid::new_v4().to_string(),
@@ -808,6 +809,16 @@ async fn execute_with_observations(
                     if run.repetition.as_ref().is_some_and(|r| now() >= r.ends_at) {
                         return Err("Período de repetição encerrado.".into());
                     }
+                    if run.require_approval {
+                        report(store, run, "Aguardando aprovação da próxima ação no Pocket")?;
+                        checked(remote, epoch, remote.pocket.before_input(run, index, input))
+                            .await?;
+                        if remote.snapshot()?.data_url != current.data_url {
+                            return Err("A tela mudou durante a aprovação. Retome para preparar uma nova ação.".into());
+                        }
+                        run.log
+                            .push("Próxima ação aprovada uma vez pelo Pocket.".into());
+                    }
                     remote.act(input, epoch).await?;
                     input_progress.sent(current.clone());
                     recent_inputs.push(serde_json::json!({"action":crate::harness::input_summary(input),"screen_changed":null}));
@@ -1014,6 +1025,13 @@ async fn execute_repeated(
 pub struct Control {
     active: Option<(String, bool)>,
 }
+impl Control {
+    pub fn is_active(&self, id: &str) -> bool {
+        self.active
+            .as_ref()
+            .is_some_and(|(active, stopped)| active == id && !stopped)
+    }
+}
 const STOPPED: &str = "Tarefa parada pelo operador. Histórico preservado. Use Reiniciar para executar este roteiro desde a primeira etapa.";
 fn mark_stopped(run: &mut Run) {
     run.status = "cancelled".into();
@@ -1133,7 +1151,7 @@ pub async fn restart(
     simplex: Arc<crate::operator::Channels>,
     id: String,
 ) -> Result<Run, String> {
-    launch_mode(store, remote, busy, control, simplex, id, true, None).await
+    launch_mode(store, remote, busy, control, simplex, id, true, None, None).await
 }
 pub async fn launch(
     store: Arc<Store>,
@@ -1143,9 +1161,29 @@ pub async fn launch(
     simplex: Arc<crate::operator::Channels>,
     id: String,
 ) -> Result<(), String> {
-    launch_mode(store, remote, busy, control, simplex, id, false, None)
+    launch_mode(store, remote, busy, control, simplex, id, false, None, None)
         .await
         .map(|_| ())
+}
+pub async fn launch_reviewed(
+    c: &crate::pocket::Context,
+    id: String,
+    revision: u64,
+    approvals: bool,
+) -> Result<(), String> {
+    launch_mode(
+        c.store.clone(),
+        c.remote.clone(),
+        c.busy.clone(),
+        c.control.clone(),
+        c.channels.clone(),
+        id,
+        false,
+        None,
+        Some((revision, approvals)),
+    )
+    .await
+    .map(|_| ())
 }
 pub async fn repeat(
     store: Arc<Store>,
@@ -1157,7 +1195,18 @@ pub async fn repeat(
     options: crate::repetition::RepeatOptions,
 ) -> Result<Run, String> {
     let repetition = options.resolve(now())?;
-    launch_mode(store, remote, busy, control, simplex, id, true, Some(repetition)).await
+    launch_mode(
+        store,
+        remote,
+        busy,
+        control,
+        simplex,
+        id,
+        true,
+        Some(repetition),
+        None,
+    )
+    .await
 }
 /// Breaks the type recursion: a resume re-enters the same launch, and an
 /// `async fn` that awaits itself cannot be proven to be `Send`.
@@ -1170,9 +1219,19 @@ fn relaunch(
     control: Arc<Mutex<Control>>,
     simplex: Arc<crate::operator::Channels>,
     id: String,
+    revision: u64,
+    approvals: bool,
 ) -> Launch {
     Box::pin(launch_mode(
-        store, remote, busy, control, simplex, id, false, None,
+        store,
+        remote,
+        busy,
+        control,
+        simplex,
+        id,
+        false,
+        None,
+        Some((revision, approvals)),
     ))
 }
 
@@ -1185,6 +1244,7 @@ async fn launch_mode(
     id: String,
     restart: bool,
     repetition: Option<crate::repetition::RepeatState>,
+    review: Option<(u64, bool)>,
 ) -> Result<Run, String> {
     let mut guard = control.lock().unwrap();
     if busy
@@ -1194,7 +1254,11 @@ async fn launch_mode(
         return Err("Já existe uma tarefa em execução.".into());
     }
     let prepared = (|| {
-        let run = store.run(&id)?;
+        let mut run = store.run(&id)?;
+        if let Some((updated_at, approvals)) = review {
+            crate::plan_edit::editable(&run, updated_at)?;
+            run.require_approval = approvals;
+        }
         if !restart && ["completed", "cancelled", "expired"].contains(&run.status.as_str()) {
             return Err("Esta tarefa já foi encerrada.".into());
         }
@@ -1264,10 +1328,22 @@ async fn launch_mode(
         // put to the operator instead of only announced. Asking happens after
         // the task is settled, so a resume starts from a clean state.
         if blocked {
+            let revision = run.updated_at;
+            let approvals = run.require_approval;
             tokio::spawn(async move {
                 if simplex.ask(&question).await == Some(crate::operator::Answer::Continue) {
-                    let _ = relaunch(store, remote, busy, control, simplex, question.run_id)
-                        .await;
+                    // An old phone reply cannot resume a task edited or stopped since the question.
+                    let _ = relaunch(
+                        store,
+                        remote,
+                        busy,
+                        control,
+                        simplex,
+                        question.run_id,
+                        revision,
+                        approvals,
+                    )
+                    .await;
                 }
             });
         }
@@ -1280,6 +1356,7 @@ mod tests {
     use super::*;
     fn test_run(id: &str, status: &str) -> Run {
         Run {
+            require_approval: false,
             repetition: None,
             id: id.into(),
             title: "Teste".into(),
@@ -1621,7 +1698,13 @@ mod tests {
         assert!(result.is_err());
         assert!(run.repetition.as_ref().unwrap().starts_at > now());
         assert_eq!(run.repetition.as_ref().unwrap().cycle, 0);
-        finish(&store, &mut run, &control, &busy, &Arc::new(crate::operator::Channels::new()));
+        finish(
+            &store,
+            &mut run,
+            &control,
+            &busy,
+            &Arc::new(crate::operator::Channels::new()),
+        );
         assert_eq!(store.run("weekly").unwrap().status, "cancelled");
         assert!(!busy.load(Ordering::SeqCst));
     }
@@ -1805,7 +1888,13 @@ mod tests {
         .unwrap();
         assert!(result.is_err());
         run.status = "completed".into(); // A last verification may have finished concurrently.
-        finish(&store, &mut run, &control, &busy, &Arc::new(crate::operator::Channels::new()));
+        finish(
+            &store,
+            &mut run,
+            &control,
+            &busy,
+            &Arc::new(crate::operator::Channels::new()),
+        );
         let saved = store.run(&run.id).unwrap();
         assert_eq!(saved.status, "cancelled");
         assert_eq!(saved.action_count, 3);
@@ -1877,7 +1966,10 @@ mod tests {
         assert!(detail.contains("5 ações"));
         // A blocked task says why, since that is what a decision rests on.
         run.status = "blocked".into();
-        run.progress = Some(RunProgress { message: "A etapa 2 não encontrou a caixa.".into(), started_at: 0 });
+        run.progress = Some(RunProgress {
+            message: "A etapa 2 não encontrou a caixa.".into(),
+            started_at: 0,
+        });
         let (title, detail) = outcome(&run);
         assert!(title.contains("precisa de atenção"));
         assert!(detail.contains("não encontrou a caixa"));

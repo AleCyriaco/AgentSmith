@@ -34,6 +34,7 @@ enum Transport {
     RustDesk(tokio::sync::mpsc::Sender<Vec<Input>>),
 }
 pub struct Remote {
+    pub pocket: Arc<crate::pocket::Pocket>,
     connection: tokio::sync::Mutex<Option<Transport>>,
     pub info: Arc<Mutex<SessionInfo>>,
     frame: Arc<Mutex<Option<Snapshot>>>,
@@ -98,6 +99,7 @@ impl Remote {
     }
     pub fn new() -> Self {
         Self {
+            pocket: Arc::new(crate::pocket::Pocket::default()),
             connection: tokio::sync::Mutex::new(None),
             info: Arc::new(Mutex::new(SessionInfo::default())),
             frame: Arc::new(Mutex::new(None)),
@@ -503,11 +505,17 @@ impl Remote {
         };
         let silence = self.silence();
         if silence > 5000 {
-            crate::diag!("interface pediu quadro: DESCARTADO por silêncio de {silence} ms (quadro #{})", f.sequence);
+            crate::diag!(
+                "interface pediu quadro: DESCARTADO por silêncio de {silence} ms (quadro #{})",
+                f.sequence
+            );
             return Err("A imagem está desatualizada.".into());
         }
         if f.sequence != sequence {
-            crate::diag!("interface recebeu quadro #{} (tinha #{sequence}, silêncio {silence} ms)", f.sequence);
+            crate::diag!(
+                "interface recebeu quadro #{} (tinha #{sequence}, silêncio {silence} ms)",
+                f.sequence
+            );
         }
         Ok((f.sequence != sequence).then(|| f.clone()))
     }
@@ -611,7 +619,10 @@ fn encode_frame(rgba: Vec<u8>, width: u32, height: u32, sequence: u64) -> Option
         .write_to(&mut png, image::ImageFormat::Png)
         .ok()?;
     Some(Snapshot {
-        data_url: format!("data:image/png;base64,{}", STANDARD.encode(png.into_inner())),
+        data_url: format!(
+            "data:image/png;base64,{}",
+            STANDARD.encode(png.into_inner())
+        ),
         width,
         height,
         sequence,
@@ -834,7 +845,10 @@ mod tests {
             server: "rs.equipe.example".into(),
             key: "CHAVE_DA_EQUIPE".into(),
         };
-        assert_eq!(pick(" rs.propria.example ", &shared.server), "rs.propria.example");
+        assert_eq!(
+            pick(" rs.propria.example ", &shared.server),
+            "rs.propria.example"
+        );
         assert_eq!(pick("", &shared.server), "rs.equipe.example");
         assert_eq!(pick("   ", &shared.key), "CHAVE_DA_EQUIPE");
         // Neither level set: the session layer then uses RustDesk's public server.

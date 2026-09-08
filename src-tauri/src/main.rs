@@ -8,14 +8,14 @@ mod local_engine;
 mod model;
 mod observation;
 mod ocr;
-mod plan_edit;
-mod reading_test;
-mod ntfy;
 mod operator;
+mod plan_edit;
+mod pocket;
+mod reading_test;
 mod remote;
-mod simplex;
 mod repetition;
 mod rustdesk;
+mod simplex;
 mod store;
 mod vision;
 use model::*;
@@ -146,6 +146,30 @@ struct AppState {
     execution: Arc<Mutex<executor::Control>>,
     auth: browser_auth::AuthManager,
     simplex: Arc<operator::Channels>,
+}
+#[tauri::command]
+async fn pocket_status(state: tauri::State<'_, AppState>) -> Result<pocket::Status, String> {
+    Ok(state.remote.pocket.status().await)
+}
+#[tauri::command]
+async fn pocket_start(
+    state: tauri::State<'_, AppState>,
+    base_url: String,
+) -> Result<pocket::Status, String> {
+    state
+        .remote
+        .pocket
+        .start(pocket::Context::from_app(&state), base_url)
+        .await
+}
+#[tauri::command]
+async fn pocket_pair(state: tauri::State<'_, AppState>) -> Result<pocket::Pairing, String> {
+    state.remote.pocket.pair()
+}
+#[tauri::command]
+async fn pocket_stop(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    state.remote.pocket.stop().await;
+    Ok(())
 }
 #[tauri::command]
 fn browser_auth_status(
@@ -563,12 +587,24 @@ async fn simplex_start(state: tauri::State<'_, AppState>) -> Result<simplex::Sta
     .await
     .map_err(|_| "Não foi possível acessar o Chaves.")??
     .unwrap_or_default();
-    state.simplex.simplex.start(&server).await
+    let _lock = state.simplex.simplex.lifecycle.lock().await;
+    state.simplex.simplex.start(&server, false).await
 }
 #[tauri::command]
 async fn simplex_stop(state: tauri::State<'_, AppState>) -> Result<simplex::Status, String> {
-    state.simplex.simplex.stop().await;
+    let _lock = state.simplex.simplex.lifecycle.lock().await;
+    state.simplex.simplex.stop().await?;
     Ok(state.simplex.simplex.status().await)
+}
+#[tauri::command]
+async fn simplex_start_local(state: tauri::State<'_, AppState>) -> Result<simplex::Status, String> {
+    let _lock=state.simplex.simplex.lifecycle.lock().await;
+    state.simplex.simplex.start_local().await
+}
+#[tauri::command]
+async fn simplex_pair(state: tauri::State<'_, AppState>) -> Result<simplex::Status, String> {
+    let _lock=state.simplex.simplex.lifecycle.lock().await;
+    state.simplex.simplex.pair().await
 }
 #[tauri::command]
 async fn simplex_status(state: tauri::State<'_, AppState>) -> Result<simplex::Status, String> {
@@ -581,7 +617,7 @@ async fn simplex_save_server(
     server: String,
 ) -> Result<simplex::Status, String> {
     let server = server.trim().to_string();
-    if !server.is_empty() && !server.starts_with("smp://") {
+    if !server.starts_with("smp://") || !server.contains('@') || server.chars().any(char::is_whitespace) {
         return Err("Informe o endereço smp:// do seu servidor SimpleX.".into());
     }
     let saved = server.clone();
@@ -590,68 +626,14 @@ async fn simplex_save_server(
     })
     .await
     .map_err(|_| "Não foi possível acessar o Chaves.")??;
-    state.simplex.simplex.start(&server).await
+    let _lock = state.simplex.simplex.lifecycle.lock().await;
+    state.simplex.simplex.start(&server, false).await
 }
 /// Sends a test notice, so pairing can be proven from the phone that will
 /// receive the real ones.
 #[tauri::command]
 async fn simplex_test_notice(state: tauri::State<'_, AppState>) -> Result<(), String> {
-    let status = state.simplex.simplex.status().await;
-    if !status.active {
-        return Err("Ligue o canal antes de enviar um aviso.".into());
-    }
-    if status.contacts == 0 {
-        return Err("Nenhum contato pareado ainda. Adicione o endereço no seu SimpleX e envie uma mensagem qualquer.".into());
-    }
-    state
-        .simplex
-        .simplex
-        .notify(
-            "Aviso de teste",
-            "Se você recebeu isto, o canal está funcionando. É por aqui que chegam os avisos e os pedidos de decisão.",
-        )
-        .await;
-    Ok(())
-}
-/// Points the ntfy channel at the operator's server and starts listening.
-#[tauri::command]
-async fn ntfy_save(
-    state: tauri::State<'_, AppState>,
-    config: ntfy::Config,
-) -> Result<ntfy::Config, String> {
-    state.simplex.ntfy.start(config.clone()).await?;
-    let mut settings = state.store.settings()?;
-    settings.ntfy = config.clone();
-    state.store.save_settings(&settings)?;
-    Ok(config)
-}
-#[tauri::command]
-async fn ntfy_stop(state: tauri::State<'_, AppState>) -> Result<(), String> {
-    state.simplex.ntfy.stop().await;
-    Ok(())
-}
-#[tauri::command]
-async fn ntfy_status(state: tauri::State<'_, AppState>) -> Result<serde_json::Value, String> {
-    Ok(serde_json::json!({
-        "active": state.simplex.ntfy.active().await,
-        "config": state.simplex.ntfy.config().await,
-    }))
-}
-/// Sends a test notice, so the path to the phone can be proven.
-#[tauri::command]
-async fn ntfy_test(state: tauri::State<'_, AppState>) -> Result<(), String> {
-    if !state.simplex.ntfy.active().await {
-        return Err("Ligue o canal antes de enviar um aviso.".into());
-    }
-    state
-        .simplex
-        .ntfy
-        .notify(
-            "Aviso de teste",
-            "Se você recebeu isto, o canal está funcionando. É por aqui que chegam os avisos e os pedidos de decisão.",
-        )
-        .await;
-    Ok(())
+    state.simplex.simplex.test_notice().await
 }
 #[tauri::command]
 async fn disconnect_machine(state: tauri::State<'_, AppState>) -> Result<(), String> {
@@ -899,31 +881,22 @@ fn main() {
                 auth: browser_auth::AuthManager::default(),
                 simplex: Arc::new(operator::Channels::new()),
             });
-            // A channel already configured starts with the app, so alerts do
-            // not wait for someone to open a settings page first.
-            let state = app.state::<AppState>();
-            if let Ok(settings) = state.store.settings() {
-                if settings.ntfy.ready() {
-                    let channels = state.simplex.clone();
-                    tauri::async_runtime::spawn(async move {
-                        let _ = channels.ntfy.start(settings.ntfy).await;
-                    });
-                }
-            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            pocket_status,
+            pocket_start,
+            pocket_pair,
+            pocket_stop,
             open_prodigy_site,
             open_rustdesk_client,
             simplex_start,
+            simplex_start_local,
+            simplex_pair,
             simplex_stop,
             simplex_status,
             simplex_save_server,
             simplex_test_notice,
-            ntfy_save,
-            ntfy_stop,
-            ntfy_status,
-            ntfy_test,
             load_settings,
             local_engine_status,
             local_model_download,

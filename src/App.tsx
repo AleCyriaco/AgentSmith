@@ -1,10 +1,12 @@
 import {t,systemText,useLanguage} from './i18n';
 import LanguagePicker from './LanguagePicker';
+import PocketChannel from './PocketChannel';
+import SimplexChannel from './SimplexChannel';
 import { useEffect, useRef, useState } from 'react';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { Activity, ArrowDown, BellRing, Smartphone, ArrowRight, BookOpen, Check, CheckCircle2, ChevronDown, Command, Computer, Copy, Cpu, ExternalLink, Globe, KeyRound, Layers3, Loader2, LockKeyhole, Monitor, MousePointer2, Network, PanelLeftClose, PanelLeftOpen, Pause, Play, Plus, Power, Route, Repeat, RotateCcw, Settings2, ShieldCheck, Sparkles, Square, Terminal, Trash2, X } from 'lucide-react';
 import { vendors } from './catalog';
-import { emptySettings, defaultDisplay, defaultPerformance, type PerformanceSettings, type DisplaySettings, type NtfyConfig, type NtfyStatus, type SimplexStatus, type Settings, type Machine, type Profile, type Run, type Snapshot, type SessionInfo, type Vendor } from './types';
+import { emptySettings, defaultDisplay, defaultPerformance, type PerformanceSettings, type DisplaySettings, type Settings, type Machine, type Profile, type Run, type Snapshot, type SessionInfo, type Vendor } from './types';
 import SessionPanel from './SessionPanel';
 import LoginConnection from './LoginConnection';
 import LocalVision from './LocalVision';
@@ -29,82 +31,13 @@ function SecondFactorForm({ machine, canTrust, close, connect }: {
  <label className="checkbox-row"><input type="checkbox" disabled={!canTrust} checked={canTrust && trust} onChange={e => setTrust(e.target.checked)}/><span><strong>{t("Confiar neste Mac")}</strong><small>{canTrust ? t("A máquina deixa de pedir código a este computador nas próximas conexões. É o que permite execuções desassistidas, e enfraquece a proteção dela: qualquer pessoa com a senha, a partir deste Mac, entra sem segundo fator.") : t("Esta máquina não guarda dispositivos confiáveis, então pedirá um código toda vez. Para mudar isso, ative os dispositivos confiáveis no RustDesk da própria máquina.")}</small></span></label>
  {error && <div className="login-error" role="alert">{systemText(error)}</div>}<div className="modal-actions"><button type="button" className="button secondary" onClick={close}>{t("Cancelar")}</button><button disabled={busy || code.length !== 6} className="button primary"><Power size={15}/> {busy ? t("Conectando…") : t("Conectar")}</button></div></form></Modal>;
 }
-function NtfyChannel({ call }: {
-    call: <T,>(name: string, args?: Record<string, unknown>) => Promise<T>;
-}) {
-    const [status, setStatus] = useState<NtfyStatus | null>(null);
-    const [config, setConfig] = useState<NtfyConfig>({ server: '', topic: 'agentsmith' });
-    const [busy, setBusy] = useState('');
-    const [error, setError] = useState('');
-    const [sent, setSent] = useState(false);
-    useEffect(() => { void call<NtfyStatus>('ntfy_status').then(s => { setStatus(s); if (s.config.server) setConfig(s.config); }).catch(() => {}); }, []);
-    async function run(label: string, fn: () => Promise<unknown>) {
-        setBusy(label); setError(''); setSent(false);
-        try { await fn(); setStatus(await call<NtfyStatus>('ntfy_status')); }
-        catch (e) { setError(String(e)); }
-        finally { setBusy(''); }
-    }
-    const active = status?.active ?? false;
-    const replyTopic = config.topic.trim() ? `${config.topic.trim()}-respostas` : '';
-    return <div className="panel"><div className="panel-head"><div><span className="tiny-label">{t("RECOMENDADO")}</span><h3>{t("Avisos por ntfy")}</h3></div><BellRing size={19}/></div>
- <p>{t("Publica no servidor ntfy que você mantém. O aviso chega como notificação no celular, e uma decisão vira dois links: um para continuar, outro para parar.")}</p>
- <div className="form-grid wide">
-  <Label title={t("Endereço do servidor ntfy")} hint={t("Como https://ntfy.seudominio.com. O conteúdo fica nesse servidor.")}><input value={config.server} onChange={e => { setConfig({ ...config, server: e.target.value }); setSent(false); }} placeholder="https://ntfy.exemplo.com" autoComplete="off" spellCheck={false}/></Label>
-  <Label title={t("Tópico")} hint={replyTopic ? t("As respostas chegam em {topic}, um tópico separado. Quem só lê os avisos não consegue decidir por você.", { topic: replyTopic }) : t("Um nome difícil de adivinhar, porque quem souber o tópico recebe os avisos.")}><input value={config.topic} onChange={e => { setConfig({ ...config, topic: e.target.value }); setSent(false); }} placeholder="agentsmith" autoComplete="off" spellCheck={false}/></Label>
- </div>
- {error && <div className="login-error" role="alert">{systemText(error)}</div>}
- <div className="machine-meta"><span>{active ? t("Canal ligado") : t("Canal desligado")}</span><span>{active ? t("Ouvindo respostas") : t("Sem escuta")}</span></div>
- <div className="button-row">
-  <button className="button primary" disabled={!!busy || !config.server.trim() || !config.topic.trim()} onClick={() => void run('save', () => call('ntfy_save', { config }))}><Check size={15}/>{busy === 'save' ? t("Ligando…") : t(" Salvar e ligar")}</button>
-  <button className="button secondary" disabled={!!busy || !active} onClick={() => void run('test', async () => { await call('ntfy_test'); setSent(true); })}>{busy === 'test' ? t("Enviando…") : sent ? t("Aviso enviado") : t(" Enviar aviso de teste")}</button>
-  {active && <button className="button secondary" disabled={!!busy} onClick={() => void run('stop', () => call('ntfy_stop'))}>{t("Desligar canal")}</button>}
- </div>
- <div className="info-strip">{t("No Android os dois links viram botões na própria notificação. No iPhone eles aparecem no corpo da mensagem, porque o iOS não mostra botões de ação. Cada decisão vale uma vez só.")}</div>
-</div>;
-}
 function OperatorChannel({ call, attempt }: {
     call: <T,>(name: string, args?: Record<string, unknown>) => Promise<T>;
     attempt: (fn: () => Promise<unknown>) => Promise<void>;
 }) {
-    const [status, setStatus] = useState<SimplexStatus | null>(null);
-    const [server, setServer] = useState('');
-    const [busy, setBusy] = useState('');
-    const [error, setError] = useState('');
-    const [copied, setCopied] = useState(false);
-    const [sent, setSent] = useState(false);
-    async function run(label: string, fn: () => Promise<SimplexStatus | void>) {
-        setBusy(label); setError(''); setSent(false);
-        try { const next = await fn(); if (next) setStatus(next); }
-        catch (e) { setError(String(e)); }
-        finally { setBusy(''); }
-    }
-    useEffect(() => { void call<SimplexStatus>('simplex_status').then(setStatus).catch(() => {}); }, []);
-    const active = status?.active ?? false;
-    const paired = (status?.contacts ?? 0) > 0;
-    return <><div className="page-heading"><div><div className="eyebrow">{t("AVISOS E DECISÕES")}</div><h1>{t("Smith fala com você quando precisa.")}</h1><p>{t("Recebe o desfecho de cada tarefa e, quando uma para, pergunta o que fazer — você responde do celular.Configure um canal ou os dois: todos são avisados, e a primeira resposta decide.")}</p></div></div>
- <NtfyChannel call={call}/>
- <div className="panel"><div className="panel-head"><div><span className="tiny-label">{t("ALTERNATIVA")}</span><h3>{t("Seu servidor SimpleX")}</h3></div><ShieldCheck size={19}/></div>
-  <p>{t("Cole o endereço smp:// do servidor que você mantém. Ele contém uma senha que permite criar filas no seu relay, então é guardado no Chaves do macOS e nunca aparece nas configurações.")}</p>
-  <Label title={t("Endereço do servidor")} hint={t("Define onde ficam as filas que o AgentSmith cria. A fila de resposta é escolhida pelo cliente do outro lado, então configure o mesmo servidor no seu SimpleX para que os dois sentidos fiquem no seu relay.")}><input value={server} onChange={e => { setServer(e.target.value); setSent(false); }} placeholder="smp://…@100.x.y.z" autoComplete="off" spellCheck={false}/></Label>
-  {error && <div className="login-error" role="alert">{systemText(error)}</div>}
-  <div className="button-row"><button className="button primary" disabled={!!busy || !server.trim()} onClick={() => void run('save', () => call<SimplexStatus>('simplex_save_server', { server }))}><Check size={15}/>{busy === 'save' ? t("Ligando…") : t(" Salvar e ligar")}</button>
-   {active ? <button className="button secondary" disabled={!!busy} onClick={() => void run('stop', () => call<SimplexStatus>('simplex_stop'))}>{t("Desligar canal")}</button>
-    : <button className="button secondary" disabled={!!busy} onClick={() => void run('start', () => call<SimplexStatus>('simplex_start'))}>{busy === 'start' ? t("Ligando…") : t("Ligar com o endereço salvo")}</button>}</div>
- </div>
- <div className="panel"><div className="panel-head"><div><span className="tiny-label">{t("PASSO 2")}</span><h3>{t("Parear seu SimpleX")}</h3></div><Smartphone size={19}/></div>
-  {!active ? <p>{t("Ligue o canal primeiro. O endereço de pareamento aparece aqui assim que o cliente subir.")}</p>
-   : !status?.address ? <p>{t("O cliente subiu, mas ainda não informou um endereço. Desligue e ligue o canal novamente.")}</p>
-   : <><p>{t("Abra este endereço no seu SimpleX, no celular ou no Mac, e envie uma mensagem qualquer para confirmar. Quem tiver este endereço recebe os avisos e pode decidir por você.")}</p>
-    <label className="field"><span>{t("Endereço de pareamento")}</span><input readOnly value={status.address} onFocus={e => e.target.select()}/></label>
-    <div className="button-row"><button className="button secondary" onClick={() => { void navigator.clipboard.writeText(status.address).then(() => setCopied(true), () => setCopied(false)); }}><Copy size={15}/>{copied ? t("Copiado") : t(" Copiar endereço")}</button></div></>}
- </div>
- <div className="panel"><div className="panel-head"><div><span className="tiny-label">{t("PASSO 3")}</span><h3>{t("Confirmar")}</h3></div><Activity size={19}/></div>
-  <div className="machine-meta"><span>{active ? t("Canal ligado") : t("Canal desligado")}</span><span>{paired ? t("{count} contato(s) pareado(s)", { count: String(status?.contacts ?? 0) }) : t("Nenhum contato pareado")}</span></div>
-  <p>{t("O aviso de teste é enviado a todos os contatos pareados. Ele prova o caminho inteiro, do Mac até o seu aparelho.")}</p>
-  <div className="button-row"><button className="button primary" disabled={!!busy || !active || !paired} onClick={() => void run('test', async () => { await call('simplex_test_notice'); setSent(true); })}>{busy === 'test' ? t("Enviando…") : sent ? t("Aviso enviado") : t(" Enviar aviso de teste")}</button></div>
-  <div className="info-strip">{t("O alcance depende da Tailscale ativa no aparelho, porque o certificado do servidor foi emitido para o endereço dela. Fora da Tailscale, o aviso fica na fila do servidor até o aparelho voltar.")}</div>
- </div></>;
+    return <><div className="page-heading"><div><div className="eyebrow">{t("AVISOS E DECISÕES")}</div><h1>{t("Smith fala com você quando precisa.")}</h1><p>{t("Acompanhe e aprove ações pelo Pocket. Para avisos e respostas por mensagem, configure o SimpleX.")}</p></div></div><PocketChannel call={call}/><SimplexChannel call={call}/></>;
 }
+
 function RustdeskDefaults({ settings, persist }: {
     settings: Settings;
     persist: (next: Settings) => Promise<void>;

@@ -57,53 +57,23 @@ impl Question {
             self.title, self.detail
         )
     }
-
-    /// The message sent to a channel that answers by opening a link, where
-    /// the two choices are spelled out as addresses.
-    ///
-    /// Both are given as links because an action button reaches only some
-    /// phones, while a link in the body is readable on all of them.
-    pub fn message_with_links(&self, resume: &str, stop: &str) -> String {
-        format!(
-            "{}\n\n{}\n\nContinuar: {resume}\nParar: {stop}",
-            self.title, self.detail
-        )
-    }
 }
 
-/// Every way AgentSmith can reach the operator. Whichever are configured are
-/// all told; a question is put to each, and the first answer settles it.
+/// The optional messaging channel. Pocket approvals use their own scoped decisions.
 pub struct Channels {
     pub simplex: std::sync::Arc<crate::simplex::Simplex>,
-    pub ntfy: std::sync::Arc<crate::ntfy::Ntfy>,
 }
-
 impl Channels {
     pub fn new() -> Self {
         Self {
             simplex: std::sync::Arc::new(crate::simplex::Simplex::new()),
-            ntfy: std::sync::Arc::new(crate::ntfy::Ntfy::new()),
         }
     }
-
     pub async fn notify(&self, title: &str, detail: &str) {
-        // Both are told, so a channel being down does not silence the other.
-        tokio::join!(
-            self.simplex.notify(title, detail),
-            self.ntfy.notify(title, detail)
-        );
+        self.simplex.notify(title, detail).await;
     }
-
-    /// Puts the question to every channel and takes the first answer. A person
-    /// answers once, from whichever device is at hand.
     pub async fn ask(&self, question: &Question) -> Option<Answer> {
-        let simplex = self.simplex.clone();
-        let ntfy = self.ntfy.clone();
-        let (a, b) = (question.clone(), question.clone());
-        tokio::select! {
-            answer = async move { simplex.ask(&a).await } => answer,
-            answer = async move { ntfy.ask(&b).await } => answer,
-        }
+        self.simplex.ask(question).await
     }
 }
 
@@ -122,10 +92,23 @@ mod tests {
 
     #[test]
     fn a_clear_reply_is_read_and_anything_else_is_left_unanswered() {
-        for yes in ["1", "sim", "Sim", " SIM ", "s", "yes", "ok", "continuar", "pode", "1."] {
+        for yes in [
+            "1",
+            "sim",
+            "Sim",
+            " SIM ",
+            "s",
+            "yes",
+            "ok",
+            "continuar",
+            "pode",
+            "1.",
+        ] {
             assert_eq!(read_answer(yes), Some(Answer::Continue), "{yes}");
         }
-        for no in ["2", "não", "nao", "NÃO", "n", "no", "parar", "cancelar", "2!"] {
+        for no in [
+            "2", "não", "nao", "NÃO", "n", "no", "parar", "cancelar", "2!",
+        ] {
             assert_eq!(read_answer(no), Some(Answer::Stop), "{no}");
         }
         // Ambiguous or unrelated: never guessed in either direction.
@@ -171,25 +154,19 @@ mod tests {
         assert_eq!(first.len(), 24);
         assert!(first.chars().all(|c| c.is_ascii_hexdigit()));
         let many: std::collections::HashSet<String> = (0..200).map(|_| ticket()).collect();
-        assert_eq!(many.len(), 200, "um bilhete repetido autorizaria duas vezes");
-    }
-
-    #[test]
-    fn a_question_sent_as_links_offers_both_choices() {
-        let question = Question {
-            run_id: "r1".into(),
-            title: "Abrir Calculadora".into(),
-            detail: "A etapa 2 não encontrou a caixa.".into(),
-        };
-        let text = question.message_with_links("https://exemplo/sim", "https://exemplo/nao");
-        assert!(text.contains("Abrir Calculadora") && text.contains("não encontrou"));
-        assert!(text.contains("Continuar: https://exemplo/sim"));
-        assert!(text.contains("Parar: https://exemplo/nao"));
+        assert_eq!(
+            many.len(),
+            200,
+            "um bilhete repetido autorizaria duas vezes"
+        );
     }
 
     #[test]
     fn a_notice_without_detail_stays_one_line() {
-        assert_eq!(notice("Tarefa concluída", ""), "AgentSmith · Tarefa concluída");
+        assert_eq!(
+            notice("Tarefa concluída", ""),
+            "AgentSmith · Tarefa concluída"
+        );
         assert!(notice("Conexão perdida", "O par encerrou.").contains("O par encerrou."));
     }
 }

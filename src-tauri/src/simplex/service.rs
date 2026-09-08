@@ -1,22 +1,11 @@
 //! The operator channel: keeps the SimpleX client running, sends notices, and
 //! puts questions whose answers arrive from a phone.
 use crate::operator::{self as protocol, Answer, Question};
-use crate::simplex::{
-    client::{self, Client, Incoming},
-
-};
+use crate::simplex::client::{self, Client, Incoming};
 use serde::Serialize;
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 use tokio::sync::{mpsc, oneshot, Mutex};
 
-/// Loopback port for the client's API. Bound to 127.0.0.1 by the client
-/// itself, so it is never reachable from the network.
-const PORT: u16 = 5225;
 /// How long a question waits before the run is left blocked for the interface.
 /// A phone may be asleep, so this is generous; the run stays paused meanwhile.
 pub const ANSWER_TIMEOUT: Duration = Duration::from_secs(30 * 60);
@@ -32,14 +21,22 @@ pub struct Status {
     /// How many contacts can receive notices. Zero means nobody is paired yet.
     pub contacts: usize,
     pub message: String,
+    pub local: bool,
+    pub host: super::host::HostStatus,
+    pub pairing_until: i64,
+    pub qr: String,
 }
 
 struct Live {
-    client: Client,
+    client: Arc<Client>,
+    local: bool,
+    pairing_until: i64,
     address: String,
 }
 
 pub struct Simplex {
+    pub lifecycle: Mutex<()>,
+    pub host: super::host::Host,
     live: Mutex<Option<Live>>,
     /// Questions waiting on a reply, by run.
     waiting: Arc<Mutex<HashMap<String, oneshot::Sender<Answer>>>>,
@@ -50,6 +47,8 @@ impl Simplex {
     pub fn new() -> Self {
         Self {
             live: Mutex::new(None),
+            lifecycle: Mutex::new(()),
+            host: Default::default(),
             waiting: Default::default(),
             contacts: Default::default(),
         }
@@ -79,22 +78,35 @@ impl Simplex {
     }
 
     /// Starts the channel against `server`, or reports why it cannot.
-    pub async fn start(&self, server: &str) -> Result<Status, String> {
-        let binary = client::binary().ok_or(
-            "Cliente SimpleX não encontrado em ~/.local/bin/simplex-chat. Instale-o para usar avisos.",
-        )?;
-        self.stop().await;
+    pub async fn start(&self, server: &str, local: bool) -> Result<Status, String> {
+        self.stop_client().await;
+        let binary = super::install::client().await?;
         let (sender, receiver) = mpsc::channel(64);
-        let client = Client::start(&binary, &Self::data_dir()?, server, PORT, sender).await?;
+        let data = if local {
+            super::host::data_dir()?.join("local/agentsmith")
+        } else {
+            Self::data_dir()?
+        };
+        // A previous app version may have left a CLI on its fixed API port.
+        // Allocate a fresh loopback port instead of attaching to another profile.
+        let listener = std::net::TcpListener::bind(("127.0.0.1", 0))
+            .map_err(|_| "Não foi possível reservar uma conexão local para o SimpleX.")?;
+        let port = listener
+            .local_addr()
+            .map_err(|_| "Porta local indisponível.")?
+            .port();
+        drop(listener);
+        let client = Arc::new(Client::start(&binary, &data, server, port, sender, local).await?);
         // The client accepts the connection before it has finished creating
         // its profile, so asking straight away fails and the channel would be
         // left without an address for good.
         for _ in 0..20 {
-            let ready = client
-                .command("/u")
-                .await
-                .ok()
-                .and_then(|value| value.get("type").and_then(|t| t.as_str()).map(str::to_string));
+            let ready = client.command("/u").await.ok().and_then(|value| {
+                value
+                    .get("type")
+                    .and_then(|t| t.as_str())
+                    .map(str::to_string)
+            });
             if ready.as_deref() == Some("activeUser") {
                 break;
             }
@@ -109,20 +121,52 @@ impl Simplex {
                 *self.contacts.lock().await = known;
             }
         }
-        // Anyone holding the address is the operator; without this a pairing
-        // request would wait for a click in an app that has no interface here.
-        let _ = client.command("/auto_accept on").await;
+        // Pairing is an explicit five-minute window, never enabled by startup.
+        let _ = client.command("/auto_accept off").await;
+        if address.is_empty() {
+            client.stop().await;
+            return Err("O cliente abriu, mas não conseguiu criar o contato no servidor. Verifique o Tailscale e tente novamente.".into());
+        }
         self.listen(receiver);
         *self.live.lock().await = Some(Live {
             client,
+            local,
+            pairing_until: 0,
             address: address.clone(),
         });
-        Ok(Status {
-            active: true,
-            address,
-            contacts: self.contacts.lock().await.len(),
-            message: "Canal ativo.".into(),
-        })
+        if local {
+            self.host.phase("ready", "Servidor pronto neste Mac.").await;
+        }
+        Ok(self.status().await)
+    }
+
+    pub async fn start_local(&self) -> Result<Status, String> {
+        let server = self.host.prepare().await?;
+        let result = self.start(&server, true).await;
+        if let Err(error) = &result {
+            self.host.phase("error", error).await;
+        }
+        result
+    }
+
+    pub async fn pair(&self) -> Result<Status, String> {
+        let mut guard = self.live.lock().await;
+        let live = guard.as_mut().ok_or("Ligue o SimpleX primeiro.")?;
+        if live.pairing_until > chrono::Utc::now().timestamp_millis() {
+            return Err("O QR atual ainda está válido. Use-o ou aguarde sua expiração.".into());
+        }
+        let result = live.client.command("/auto_accept on").await?;
+        if result["type"] == "chatCmdError" {
+            return Err("O cliente recusou o pareamento.".into());
+        }
+        live.pairing_until = chrono::Utc::now().timestamp_millis() + 300_000;
+        let client = live.client.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_secs(300)).await;
+            let _ = client.command("/auto_accept off").await;
+        });
+        drop(guard);
+        Ok(self.status().await)
     }
 
     fn listen(&self, mut receiver: mpsc::Receiver<Incoming>) {
@@ -151,32 +195,59 @@ impl Simplex {
         });
     }
 
-    pub async fn stop(&self) {
+    async fn stop_client(&self) {
         if let Some(live) = self.live.lock().await.take() {
             live.client.stop().await;
         }
         self.waiting.lock().await.clear();
+        self.contacts.lock().await.clear();
     }
 
+    pub async fn stop(&self) -> Result<(), String> {
+        self.stop_client().await;
+        self.host.stop().await
+    }
     pub async fn status(&self) -> Status {
-        // An address that could not be read at startup is retried here, so a
-        // slow start costs a refresh rather than the whole channel.
-        {
-            let mut guard = self.live.lock().await;
-            if let Some(live) = guard.as_mut() {
-                if live.address.is_empty() {
-                    live.address = Self::address(&live.client).await;
-                }
+        let mut guard = self.live.lock().await;
+        let host = self.host.status().await;
+        let Some(live) = guard.as_mut() else {
+            return Status {
+                host,
+                ..Default::default()
+            };
+        };
+        if !live.client.is_running().await {
+            self.waiting.lock().await.clear();
+            self.contacts.lock().await.clear();
+            return Status {
+                host,
+                message: "O cliente SimpleX encerrou. Ative novamente.".into(),
+                ..Default::default()
+            };
+        }
+        if let Ok(value) = live.client.command("/contacts").await {
+            if value["type"] == "contactsList" {
+                *self.contacts.lock().await = client::contacts(&value);
             }
         }
-        match self.live.lock().await.as_ref() {
-            Some(live) => Status {
-                active: true,
-                address: live.address.clone(),
-                contacts: self.contacts.lock().await.len(),
-                message: "Canal ativo.".into(),
+        let pairing = live.pairing_until > chrono::Utc::now().timestamp_millis();
+        Status {
+            active: true,
+            local: live.local,
+            host,
+            address: if pairing {
+                live.address.clone()
+            } else {
+                String::new()
             },
-            None => Status::default(),
+            qr: if pairing {
+                super::host::qr(&live.address).unwrap_or_default()
+            } else {
+                String::new()
+            },
+            pairing_until: if pairing { live.pairing_until } else { 0 },
+            contacts: self.contacts.lock().await.len(),
+            message: "Canal ativo.".into(),
         }
     }
 
@@ -190,6 +261,25 @@ impl Simplex {
         for contact in self.contacts.lock().await.iter() {
             let _ = live.client.command(&format!("@{contact} {text}")).await;
         }
+    }
+
+    pub async fn test_notice(&self) -> Result<(), String> {
+        let guard = self.live.lock().await;
+        let live = guard.as_ref().ok_or("Ligue o SimpleX primeiro.")?;
+        let contacts = self.contacts.lock().await.clone();
+        if contacts.is_empty() {
+            return Err("Nenhum contato pareado ainda. Conecte o celular e envie uma mensagem ao AgentSmith.".into());
+        }
+        let text=protocol::notice("Aviso de teste","Se você recebeu isto, o canal está funcionando. É por aqui que chegam os avisos e os pedidos de decisão.");
+        for contact in contacts {
+            let result = live.client.command(&format!("@{contact} {text}")).await?;
+            if result["type"] == "chatCmdError" {
+                return Err(
+                    "O SimpleX não aceitou o aviso de teste. Confira a conexão do servidor.".into(),
+                );
+            }
+        }
+        Ok(())
     }
 
     /// Puts a question and waits for the operator. `None` means nobody
@@ -215,5 +305,70 @@ impl Simplex {
         let answer = tokio::time::timeout(ANSWER_TIMEOUT, receiver).await;
         self.waiting.lock().await.remove(&question.run_id);
         answer.ok().and_then(Result::ok)
+    }
+}
+
+#[cfg(test)]
+mod integration_tests {
+    use super::*;
+    /// Opt-in: creates the managed relay, changes its private Tailscale forwarding,
+    /// and pairs two isolated official clients. Never uses the operator's contacts.
+    #[tokio::test]
+    #[ignore = "requires Podman, Tailscale and network access"]
+    async fn local_relay_exchanges_a_message_between_official_clients() {
+        let host = super::super::host::Host::default();
+        let server = host.prepare().await.expect("prepare managed relay");
+        let root =
+            std::env::temp_dir().join(format!("agentsmith-simplex-test-{}", uuid::Uuid::new_v4()));
+        let binary = super::super::install::client().await.unwrap();
+        let (a_tx, mut a_rx) = mpsc::channel(64);
+        let (b_tx, _b_rx) = mpsc::channel(64);
+        let a = Client::start(&binary, &root.join("a"), &server, 15225, a_tx, true)
+            .await
+            .unwrap();
+        let b = Client::start(&binary, &root.join("b"), &server, 15226, b_tx, true)
+            .await
+            .unwrap();
+        for c in [&a, &b] {
+            for _ in 0..30 {
+                if c.command("/u").await.unwrap()["type"] == "activeUser" {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(500)).await;
+            }
+        }
+        let address = Simplex::address(&a).await;
+        assert!(
+            !address.is_empty(),
+            "contact address must exist on private relay"
+        );
+        a.command("/auto_accept on").await.unwrap();
+        let result = b.command(&format!("/c {address}")).await.unwrap();
+        assert_ne!(result["type"], "chatCmdError", "contact request failed");
+        let mut contact = None;
+        for _ in 0..60 {
+            contact = client::contacts(&b.command("/contacts").await.unwrap())
+                .first()
+                .cloned();
+            if contact.is_some() {
+                break;
+            }
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
+        let contact = contact.expect("contact pairing must complete");
+        let result = b
+            .command(&format!("@{contact} AgentSmith isolated relay test"))
+            .await
+            .unwrap();
+        assert_ne!(result["type"], "chatCmdError", "message send failed");
+        let received = tokio::time::timeout(Duration::from_secs(45), a_rx.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(received.text, "AgentSmith isolated relay test");
+        a.stop().await;
+        b.stop().await;
+        host.stop().await.unwrap();
+        let _ = std::fs::remove_dir_all(root);
     }
 }

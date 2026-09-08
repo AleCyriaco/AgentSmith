@@ -5,3 +5,15 @@
 .auth-selector{display:flex;gap:6px;background:#efeaf4;padding:5px;border-radius:12px;margin:20px 0}.auth-selector button{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:9px;background:transparent;padding:12px;color:#5c4e6b;font:inherit;cursor:pointer}.auth-selector button.selected{background:white;color:#371857;box-shadow:0 2px 7px #0000000c;font-weight:650}.login-connection{padding:20px;border:1px solid #dfd8e6;border-radius:14px;background:#f6f4f9;margin:8px 0 20px}.login-title{display:flex;gap:12px;align-items:center}.login-title strong,.login-title small{display:block}.login-title small{font-size:12px;margin-top:5px;color:#685879}.login-connection p{font-size:13px;line-height:1.6;color:#4d4159;margin:14px 0}.login-connection p.login-note{font-size:12px;color:#79668d}.login-status{display:flex;gap:8px;align-items:center;font-size:12px;color:#5b4c6a;margin:14px 0}.login-status.success{color:#461e6e}.login-error{padding:12px;background:#fff0ee;border:1px solid #eccac5;border-radius:8px;color:#943b31;font-size:13px;margin:12px 0;line-height:1.5}.login-success{display:flex;gap:8px;padding:12px;background:#ebe3f3;color:#442761;border-radius:8px;font-size:13px;margin:12px 0;line-height:1.5}.login-connection>.muted{display:block;font-size:11px;margin-top:14px;line-height:1.5}
 
 .run-list .run-date{display:block;margin-top:4px;font-size:10px;color:var(--muted);white-space:normal}
+
+.pocket-pair{display:flex;align-items:center;gap:24px;margin-top:24px}.pocket-pair img{background:white;border-radius:12px;flex-shrink:0}.pocket-channel details{margin:16px 0}.pocket-channel code{display:block;padding:14px;background:#f0e8f8;border-radius:8px;overflow:auto}@media(max-width:700px){.pocket-pair{flex-direction:column;align-items:flex-start}}
+
+.simplex-channel { margin-top: 24px; }
+.simplex-state { display:flex; align-items:center; gap:8px; color:var(--purple, #654789); flex-wrap:wrap; }
+.simplex-setup { border-top:1px solid #e6ddec; margin-top:24px; padding-top:24px; }
+.simplex-steps { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px; }
+.simplex-qr { background:#fff; padding:12px; height:auto; max-width:100%; flex-shrink:0; }
+.simplex-channel ol { padding-left:22px; line-height:1.7; }
+.simplex-channel li { margin-bottom:8px; }
+.simplex-advanced { border-top:1px solid #e6ddec; margin-top:24px; padding-top:20px; }
+.simplex-advanced summary { cursor:pointer; }
