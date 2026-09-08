@@ -100,6 +100,14 @@ impl Simplex {
             tokio::time::sleep(Duration::from_millis(500)).await;
         }
         let address = Self::address(&client).await;
+        // Pairing survives in the client's own database, so the contacts are
+        // read back rather than waited for.
+        if let Ok(value) = client.command("/contacts").await {
+            let known = client::contacts(&value);
+            if !known.is_empty() {
+                *self.contacts.lock().await = known;
+            }
+        }
         // Anyone holding the address is the operator; without this a pairing
         // request would wait for a click in an app that has no interface here.
         let _ = client.command("/auto_accept on").await;

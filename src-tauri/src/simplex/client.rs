@@ -193,6 +193,30 @@ pub fn messages(event: &Value) -> Vec<Incoming> {
         .unwrap_or_default()
 }
 
+/// Everyone already connected, from a `/contacts` answer.
+///
+/// Pairing is kept by the client across restarts, but AgentSmith otherwise
+/// only learns a contact when one writes, so without this a restart would
+/// leave the channel with nobody to reach until someone happened to send a
+/// message.
+pub fn contacts(value: &Value) -> Vec<String> {
+    if value.get("type").and_then(Value::as_str) != Some("contactsList") {
+        return vec![];
+    }
+    value
+        .get("contacts")
+        .and_then(Value::as_array)
+        .map(|list| {
+            list.iter()
+                .filter_map(|contact| {
+                    Some(contact.get("localDisplayName")?.as_str()?.to_string())
+                })
+                .filter(|name| !name.is_empty())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
 /// The contact address out of a `/show_address` or `/address` answer, in the
 /// form that can be pasted anywhere.
 ///
@@ -249,6 +273,23 @@ mod tests {
         assert!(messages(&json!({"type": "hostConnected"})).is_empty());
         assert!(messages(&json!({"type": "newChatItems"})).is_empty());
         assert!(messages(&Value::Null).is_empty());
+    }
+
+    #[test]
+    fn everyone_already_paired_is_read_back_after_a_restart() {
+        let answer = json!({
+            "type": "contactsList",
+            "user": {"localDisplayName": "AgentSmith"},
+            "contacts": [
+                {"contactId": 2, "localDisplayName": "Ale"},
+                {"contactId": 3, "localDisplayName": "Celular"},
+                {"contactId": 4},
+            ]
+        });
+        assert_eq!(contacts(&answer), vec!["Ale", "Celular"]);
+        // The profile in the answer is not a contact, and a refusal has none.
+        assert!(contacts(&json!({"type": "chatCmdError"})).is_empty());
+        assert!(contacts(&json!({"type": "contactsList"})).is_empty());
     }
 
     #[test]
