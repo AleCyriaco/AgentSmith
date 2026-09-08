@@ -2715,8 +2715,24 @@
     "en": "Not listening",
     "es": "Sin escucha"
   },
-  "No Android os dois links viram botões na própria notificação. No iPhone eles aparecem no corpo da mensagem, porque o iOS não mostra botões de ação. Cada decisão vale uma vez só.": {
-    "en": "On Android the two links become buttons on the notification itself. On iPhone they appear in the message body, because iOS shows no action buttons. Each decision is good once only.",
-    "es": "En Android los dos enlaces se convierten en botones de la propia notificación. En iPhone aparecen en el cuerpo del mensaje, porque iOS no muestra botones de acción. Cada decisión vale una sola vez."
+  "Usuário": {
+    "en": "Username",
+    "es": "Usuario"
+  },
+  "Deixe em branco se o servidor aceita publicação sem conta.": {
+    "en": "Leave empty if the server accepts publishing without an account.",
+    "es": "Déjelo vacío si el servidor acepta publicar sin cuenta."
+  },
+  "Senha": {
+    "en": "Password",
+    "es": "Contraseña"
+  },
+  "Guardada no Chaves do macOS. Deixe em branco para manter a que já está salva.": {
+    "en": "Kept in the macOS Keychain. Leave empty to keep the one already saved.",
+    "es": "Se guarda en el Llavero de macOS. Déjelo vacío para conservar la ya guardada."
+  },
+  "No Android os dois links viram botões na própria notificação. No iPhone eles aparecem no corpo da mensagem, porque o iOS não mostra botões de ação. Cada decisão vale uma vez só, e o link de resposta carrega a credencial — use uma conta que só possa escrever no tópico de respostas.": {
+    "en": "On Android the two links become buttons on the notification itself. On iPhone they appear in the message body, because iOS shows no action buttons. Each decision is good once only, and the answer link carries the credential — use an account that can do nothing but write to the answer topic.",
+    "es": "En Android los dos enlaces se convierten en botones de la propia notificación. En iPhone aparecen en el cuerpo del mensaje, porque iOS no muestra botones de acción. Cada decisión vale una sola vez, y el enlace de respuesta lleva la credencial: use una cuenta que solo pueda escribir en el tema de respuestas."
   }
 }

@@ -5,6 +5,7 @@
 //! nothing has to listen for connections on this Mac, and it works on phones
 //! where a notification cannot carry buttons at all.
 use crate::operator::{self, Answer, Question};
+use base64::{engine::general_purpose::STANDARD, engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::sync::{oneshot, Mutex};
@@ -13,6 +14,10 @@ use tokio::sync::{oneshot, Mutex};
 /// A phone may be asleep, so this is generous; the run stays stopped meanwhile.
 pub const ANSWER_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 const TOPIC_SUFFIX: &str = "-respostas";
+/// Keychain identity for the server password. Secret ids are UUIDs, and this
+/// channel is a single fixed entity rather than one per machine.
+pub const SECRET_ID: &str = "b7c04e21-3f9a-4d75-8c16-9ae2f0d5b34c";
+pub const SECRET_BINDING: &str = "ntfy://password";
 
 /// Where notices go and where answers come back.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
@@ -22,11 +27,43 @@ pub struct Config {
     pub server: String,
     /// Topic that receives the notices.
     pub topic: String,
+    /// Account on that server, when it requires one. A server that refuses
+    /// anonymous writes is the sane way to run this, so it is expected.
+    #[serde(default)]
+    pub user: String,
+    /// Access token, used instead of a password when present.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub token: String,
 }
 
 impl Config {
     pub fn ready(&self) -> bool {
         !self.server.trim().is_empty() && !self.topic.trim().is_empty()
+    }
+
+    /// The `Authorization` header value, when the server wants one.
+    ///
+    /// A token stands for the whole account, so it is the credential to hand
+    /// out sparingly; a password is accepted for a server that has no tokens.
+    pub fn authorization(&self, password: &str) -> Option<String> {
+        let token = self.token.trim();
+        if !token.is_empty() {
+            return Some(format!("Bearer {token}"));
+        }
+        let user = self.user.trim();
+        (!user.is_empty() && !password.is_empty())
+            .then(|| format!("Basic {}", STANDARD.encode(format!("{user}:{password}"))))
+    }
+
+    /// The same credential as a query parameter, for a link a phone opens.
+    ///
+    /// The server reads `?auth=` as base64url without padding of the whole
+    /// `Authorization` header value.
+    pub fn auth_param(&self, password: &str) -> String {
+        match self.authorization(password) {
+            Some(header) => format!("&auth={}", URL_SAFE_NO_PAD.encode(header)),
+            None => String::new(),
+        }
     }
 
     fn base(&self) -> String {
@@ -47,16 +84,18 @@ impl Config {
         format!("{}/{}", self.base(), self.topic())
     }
 
-    /// The address that answers a question, carrying its one-time ticket.
-    pub fn answer_url(&self, ticket: &str, answer: Answer) -> String {
+    /// The address that answers a question, carrying its one-time ticket and
+    /// whatever credential the server needs to accept the write.
+    pub fn answer_url(&self, ticket: &str, answer: Answer, password: &str) -> String {
         let word = match answer {
             Answer::Continue => "continuar",
             Answer::Stop => "parar",
         };
         format!(
-            "{}/{}/trigger?message={ticket}%20{word}",
+            "{}/{}/trigger?message={ticket}%20{word}{}",
             self.base(),
-            self.reply_topic()
+            self.reply_topic(),
+            self.auth_param(password)
         )
     }
 
@@ -85,6 +124,9 @@ struct Waiting {
 
 pub struct Ntfy {
     config: Mutex<Config>,
+    /// Held only in memory. The password is a secret and belongs in the
+    /// Keychain, not in the settings file the configuration lives in.
+    password: Mutex<String>,
     waiting: Arc<Mutex<HashMap<String, Waiting>>>,
     listening: Mutex<Option<tokio::task::JoinHandle<()>>>,
     http: reqwest::Client,
@@ -94,6 +136,7 @@ impl Ntfy {
     pub fn new() -> Self {
         Self {
             config: Mutex::new(Config::default()),
+            password: Mutex::new(String::new()),
             waiting: Default::default(),
             listening: Mutex::new(None),
             http: reqwest::Client::new(),
@@ -105,7 +148,7 @@ impl Ntfy {
     }
 
     /// Points the channel at a server and starts listening for answers.
-    pub async fn start(&self, config: Config) -> Result<(), String> {
+    pub async fn start(&self, config: Config, password: String) -> Result<(), String> {
         if !config.ready() {
             return Err("Informe o endereço do servidor ntfy e o tópico.".into());
         }
@@ -114,11 +157,13 @@ impl Ntfy {
         }
         self.stop().await;
         *self.config.lock().await = config.clone();
+        *self.password.lock().await = password.clone();
         let waiting = self.waiting.clone();
         let http = self.http.clone();
         let url = config.listen_url();
+        let authorization = config.authorization(&password);
         *self.listening.lock().await = Some(tokio::spawn(async move {
-            listen(http, url, waiting).await;
+            listen(http, url, authorization, waiting).await;
         }));
         Ok(())
     }
@@ -141,12 +186,17 @@ impl Ntfy {
         if !config.ready() {
             return;
         }
-        let _ = self
+        let password = self.password.lock().await.clone();
+        let mut request = self
             .http
             .post(config.notice_url())
             .header("Title", header(title))
             .header("Tags", "robot")
-            .body(detail.to_string())
+            .body(detail.to_string());
+        if let Some(authorization) = config.authorization(&password) {
+            request = request.header("Authorization", authorization);
+        }
+        let _ = request
             .timeout(Duration::from_secs(15))
             .send()
             .await;
@@ -159,9 +209,10 @@ impl Ntfy {
         if !config.ready() || !self.active().await {
             return None;
         }
+        let password = self.password.lock().await.clone();
         let ticket = operator::ticket();
-        let resume = config.answer_url(&ticket, Answer::Continue);
-        let stop = config.answer_url(&ticket, Answer::Stop);
+        let resume = config.answer_url(&ticket, Answer::Continue, &password);
+        let stop = config.answer_url(&ticket, Answer::Stop, &password);
         let (sender, receiver) = oneshot::channel();
         self.waiting.lock().await.insert(
             question.run_id.clone(),
@@ -170,7 +221,7 @@ impl Ntfy {
                 sender,
             },
         );
-        let sent = self
+        let mut request = self
             .http
             .post(config.notice_url())
             .header("Title", header(&format!("Decisão: {}", question.title)))
@@ -183,9 +234,11 @@ impl Ntfy {
                 ),
             )
             .body(question.message_with_links(&resume, &stop))
-            .timeout(Duration::from_secs(15))
-            .send()
-            .await;
+            .timeout(Duration::from_secs(15));
+        if let Some(authorization) = config.authorization(&password) {
+            request = request.header("Authorization", authorization);
+        }
+        let sent = request.send().await;
         if sent.is_err() {
             self.waiting.lock().await.remove(&question.run_id);
             return None;
@@ -205,10 +258,15 @@ fn header(text: &str) -> String {
 async fn listen(
     http: reqwest::Client,
     url: String,
+    authorization: Option<String>,
     waiting: Arc<Mutex<HashMap<String, Waiting>>>,
 ) {
     loop {
-        if let Ok(response) = http.get(&url).send().await {
+        let mut request = http.get(&url);
+        if let Some(value) = authorization.as_ref() {
+            request = request.header("Authorization", value);
+        }
+        if let Ok(response) = request.send().await {
             let mut stream = response.bytes_stream();
             let mut buffer = String::new();
             use futures_util::StreamExt;
@@ -265,6 +323,8 @@ mod tests {
         Config {
             server: "https://ntfy.exemplo.com/".into(),
             topic: "agentsmith".into(),
+            user: String::new(),
+            token: String::new(),
         }
     }
 
@@ -277,12 +337,31 @@ mod tests {
         assert_eq!(c.reply_topic(), "agentsmith-respostas");
         assert!(c.listen_url().ends_with("/agentsmith-respostas/json?since=now"));
         assert_eq!(
-            c.answer_url("abc123", Answer::Continue),
+            c.answer_url("abc123", Answer::Continue, ""),
             "https://ntfy.exemplo.com/agentsmith-respostas/trigger?message=abc123%20continuar"
         );
-        assert!(c.answer_url("abc123", Answer::Stop).ends_with("parar"));
+        assert!(c.answer_url("abc123", Answer::Stop, "").ends_with("parar"));
         assert!(!Config::default().ready());
-        assert!(!Config { server: "https://x".into(), topic: " ".into() }.ready());
+        assert!(!Config { server: "https://x".into(), topic: " ".into(), ..config() }.ready());
+    }
+
+    #[test]
+    fn a_server_that_refuses_anonymous_writes_is_answered_with_a_credential() {
+        let mut c = config();
+        // No account: nothing is sent, rather than an empty header.
+        assert_eq!(c.authorization(""), None);
+        assert_eq!(c.auth_param("segredo"), "");
+        c.user = "ale".into();
+        // Basic, exactly as the server reads it from the header.
+        assert_eq!(c.authorization("segredo").unwrap(), "Basic YWxlOnNlZ3JlZG8=");
+        // And in a link, base64url without padding of that whole value, which
+        // is what the server decodes the auth parameter as.
+        let link = c.answer_url("abc123", Answer::Continue, "segredo");
+        assert!(link.contains("&auth=QmFzaWMgWVd4bE9uTmxaM0psWkc4PQ"));
+        assert!(!link.contains('='.to_string().as_str().repeat(2).as_str()));
+        // A token stands for the account and wins over a password.
+        c.token = "tk_exemplo".into();
+        assert_eq!(c.authorization("segredo").unwrap(), "Bearer tk_exemplo");
     }
 
     #[test]

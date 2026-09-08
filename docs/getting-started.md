@@ -60,7 +60,9 @@ Reconnect manually, inspect the Windows state, and resume only when the task is 
 
 Unattended work has nobody at the screen, so AgentSmith can reach you on your phone instead. Open **Alerts and decisions** and configure either channel, or both — every one is told, and the first answer settles a question.
 
-**ntfy** is the simpler of the two. Point it at an ntfy server you run and choose a topic. Alerts are published there; a decision goes out carrying two addresses, one to continue and one to stop, so it works on a phone whose notifications cannot show buttons. Answers come back on a separate topic, so being able to read the alerts does not also grant the ability to answer them, and each question carries a one-time ticket its answer must repeat — an answer authorises a machine to resume acting on its own, so a stray or replayed message decides nothing.
+**ntfy** is the simpler of the two. Point it at an ntfy server you run, choose a topic, and give the account it needs — a server worth running refuses anonymous writes, and the password is kept in the Keychain rather than in settings. Alerts are published there; a decision goes out carrying two addresses, one to continue and one to stop, so it works on a phone whose notifications cannot show buttons. Answers come back on a separate topic, so being able to read the alerts does not also grant the ability to answer them, and each question carries a one-time ticket its answer must repeat — an answer authorises a machine to resume acting on its own, so a stray or replayed message decides nothing.
+
+The answer link has to carry the credential, since the phone opens it without AgentSmith in the middle. Give this channel an account that can do nothing but write to the answer topic, so a link read off a notification grants no more than publishing an answer that a ticket still has to match.
 
 For instant notifications on iOS a self-hosted ntfy forwards a wake-up to ntfy.sh carrying only a message id and a hash of the topic; the content stays on your server and the phone fetches it from there.
 

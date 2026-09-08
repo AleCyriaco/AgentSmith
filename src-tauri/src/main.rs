@@ -618,12 +618,36 @@ async fn simplex_test_notice(state: tauri::State<'_, AppState>) -> Result<(), St
 async fn ntfy_save(
     state: tauri::State<'_, AppState>,
     config: ntfy::Config,
+    password: Option<String>,
 ) -> Result<ntfy::Config, String> {
-    state.simplex.ntfy.start(config.clone()).await?;
+    // The password is a secret; only the address and topic go to settings.
+    let password = match password.filter(|p| !p.is_empty()) {
+        Some(fresh) => {
+            let keep = fresh.clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                store::save_secret(ntfy::SECRET_ID, ntfy::SECRET_BINDING, &keep)
+            })
+            .await
+            .map_err(|_| "Não foi possível acessar o Chaves.")??;
+            fresh
+        }
+        None => ntfy_password().await?,
+    };
+    state.simplex.ntfy.start(config.clone(), password).await?;
     let mut settings = state.store.settings()?;
     settings.ntfy = config.clone();
     state.store.save_settings(&settings)?;
     Ok(config)
+}
+async fn ntfy_password() -> Result<String, String> {
+    Ok(
+        tauri::async_runtime::spawn_blocking(|| {
+            store::optional_secret(ntfy::SECRET_ID, ntfy::SECRET_BINDING)
+        })
+        .await
+        .map_err(|_| "Não foi possível acessar o Chaves.")??
+        .unwrap_or_default(),
+    )
 }
 #[tauri::command]
 async fn ntfy_stop(state: tauri::State<'_, AppState>) -> Result<(), String> {
@@ -906,7 +930,9 @@ fn main() {
                 if settings.ntfy.ready() {
                     let channels = state.simplex.clone();
                     tauri::async_runtime::spawn(async move {
-                        let _ = channels.ntfy.start(settings.ntfy).await;
+                        if let Ok(password) = ntfy_password().await {
+                            let _ = channels.ntfy.start(settings.ntfy, password).await;
+                        }
                     });
                 }
             }

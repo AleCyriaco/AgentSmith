@@ -33,7 +33,8 @@ function NtfyChannel({ call }: {
     call: <T,>(name: string, args?: Record<string, unknown>) => Promise<T>;
 }) {
     const [status, setStatus] = useState<NtfyStatus | null>(null);
-    const [config, setConfig] = useState<NtfyConfig>({ server: '', topic: 'agentsmith' });
+    const [config, setConfig] = useState<NtfyConfig>({ server: '', topic: 'agentsmith', user: '' });
+    const [password, setPassword] = useState('');
     const [busy, setBusy] = useState('');
     const [error, setError] = useState('');
     const [sent, setSent] = useState(false);
@@ -52,14 +53,18 @@ function NtfyChannel({ call }: {
   <Label title={t("Endereço do servidor ntfy")} hint={t("Como https://ntfy.seudominio.com. O conteúdo fica nesse servidor.")}><input value={config.server} onChange={e => { setConfig({ ...config, server: e.target.value }); setSent(false); }} placeholder="https://ntfy.exemplo.com" autoComplete="off" spellCheck={false}/></Label>
   <Label title={t("Tópico")} hint={replyTopic ? t("As respostas chegam em {topic}, um tópico separado. Quem só lê os avisos não consegue decidir por você.", { topic: replyTopic }) : t("Um nome difícil de adivinhar, porque quem souber o tópico recebe os avisos.")}><input value={config.topic} onChange={e => { setConfig({ ...config, topic: e.target.value }); setSent(false); }} placeholder="agentsmith" autoComplete="off" spellCheck={false}/></Label>
  </div>
+ <div className="form-grid wide">
+  <Label title={t("Usuário")} hint={t("Deixe em branco se o servidor aceita publicação sem conta.")}><input value={config.user ?? ''} onChange={e => { setConfig({ ...config, user: e.target.value }); setSent(false); }} placeholder="ale" autoComplete="off"/></Label>
+  <Label title={t("Senha")} hint={t("Guardada no Chaves do macOS. Deixe em branco para manter a que já está salva.")}><input type="password" value={password} onChange={e => { setPassword(e.target.value); setSent(false); }} autoComplete="new-password" placeholder={t("Senha salva · não exibida")}/></Label>
+ </div>
  {error && <div className="login-error" role="alert">{systemText(error)}</div>}
  <div className="machine-meta"><span>{active ? t("Canal ligado") : t("Canal desligado")}</span><span>{active ? t("Ouvindo respostas") : t("Sem escuta")}</span></div>
  <div className="button-row">
-  <button className="button primary" disabled={!!busy || !config.server.trim() || !config.topic.trim()} onClick={() => void run('save', () => call('ntfy_save', { config }))}><Check size={15}/>{busy === 'save' ? t("Ligando…") : t(" Salvar e ligar")}</button>
+  <button className="button primary" disabled={!!busy || !config.server.trim() || !config.topic.trim()} onClick={() => void run('save', async () => { await call('ntfy_save', { config, password: password || null }); setPassword(''); })}><Check size={15}/>{busy === 'save' ? t("Ligando…") : t(" Salvar e ligar")}</button>
   <button className="button secondary" disabled={!!busy || !active} onClick={() => void run('test', async () => { await call('ntfy_test'); setSent(true); })}>{busy === 'test' ? t("Enviando…") : sent ? t("Aviso enviado") : t(" Enviar aviso de teste")}</button>
   {active && <button className="button secondary" disabled={!!busy} onClick={() => void run('stop', () => call('ntfy_stop'))}>{t("Desligar canal")}</button>}
  </div>
- <div className="info-strip">{t("No Android os dois links viram botões na própria notificação. No iPhone eles aparecem no corpo da mensagem, porque o iOS não mostra botões de ação. Cada decisão vale uma vez só.")}</div>
+ <div className="info-strip">{t("No Android os dois links viram botões na própria notificação. No iPhone eles aparecem no corpo da mensagem, porque o iOS não mostra botões de ação. Cada decisão vale uma vez só, e o link de resposta carrega a credencial — use uma conta que só possa escrever no tópico de respostas.")}</div>
 </div>;
 }
 function OperatorChannel({ call, attempt }: {
