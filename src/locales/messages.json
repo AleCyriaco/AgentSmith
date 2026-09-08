@@ -2575,17 +2575,9 @@
     "en": "Your SimpleX server",
     "es": "Su servidor SimpleX"
   },
-  "Cole o endereço smp:// do servidor que você mantém. Ele contém uma senha, então é guardado no Chaves do macOS e nunca aparece nas configurações.": {
-    "en": "Paste the smp:// address of the server you run. It contains a password, so it is kept in the macOS Keychain and never appears in settings.",
-    "es": "Pegue la dirección smp:// del servidor que usted mantiene. Contiene una contraseña, así que se guarda en el Llavero de macOS y nunca aparece en la configuración."
-  },
   "Endereço do servidor": {
     "en": "Server address",
     "es": "Dirección del servidor"
-  },
-  "Só o seu servidor é usado. AgentSmith nunca recorre aos servidores públicos do SimpleX.": {
-    "en": "Only your server is used. AgentSmith never falls back to SimpleX's public servers.",
-    "es": "Solo se usa su servidor. AgentSmith nunca recurre a los servidores públicos de SimpleX."
   },
   " Salvar e ligar": {
     "en": "Save and start",
@@ -2670,5 +2662,13 @@
   "O alcance depende da Tailscale ativa no aparelho, porque o certificado do servidor foi emitido para o endereço dela. Fora da Tailscale, o aviso fica na fila do servidor até o aparelho voltar.": {
     "en": "Reach depends on Tailscale being active on the device, because the server's certificate was issued for its Tailscale address. Off Tailscale, an alert waits in the server's queue until the device returns.",
     "es": "El alcance depende de que Tailscale esté activo en el dispositivo, porque el certificado del servidor se emitió para su dirección de Tailscale. Fuera de Tailscale, el aviso espera en la cola del servidor hasta que el dispositivo vuelva."
+  },
+  "Define onde ficam as filas que o AgentSmith cria. A fila de resposta é escolhida pelo cliente do outro lado, então configure o mesmo servidor no seu SimpleX para que os dois sentidos fiquem no seu relay.": {
+    "en": "Sets where the queues AgentSmith creates live. The reply queue is chosen by the client on the other side, so configure the same server in your own SimpleX to keep both directions on your relay.",
+    "es": "Define dónde viven las colas que crea AgentSmith. La cola de respuesta la elige el cliente del otro lado, así que configure el mismo servidor en su propio SimpleX para mantener ambos sentidos en su relay."
+  },
+  "Cole o endereço smp:// do servidor que você mantém. Ele contém uma senha que permite criar filas no seu relay, então é guardado no Chaves do macOS e nunca aparece nas configurações.": {
+    "en": "Paste the smp:// address of the server you run. It contains a password that allows creating queues on your relay, so it is kept in the macOS Keychain and never appears in settings.",
+    "es": "Pegue la dirección smp:// del servidor que usted mantiene. Contiene una contraseña que permite crear colas en su relay, así que se guarda en el Llavero de macOS y nunca aparece en la configuración."
   }
 }

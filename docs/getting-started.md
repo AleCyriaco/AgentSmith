@@ -62,4 +62,8 @@ Unattended work has nobody at the screen, so AgentSmith can reach you over Simpl
 
 Every task that ends produces a notice saying what happened and how far it got. A task that blocks is put as a question instead: answer **1** to resume it or **2** to stop it, from wherever you are. Only an unambiguous reply counts — anything else is left unanswered rather than guessed.
 
-This needs the official `simplex-chat` client at `~/.local/bin/simplex-chat`; there is no Homebrew formula for it, and the desktop app exposes no API. Only your own server is used, never SimpleX's public ones. The server address carries a password and is kept in the Keychain.
+This needs the official `simplex-chat` client at `~/.local/bin/simplex-chat`; there is no Homebrew formula for it, and the desktop app exposes no API. The server address carries a password that allows creating queues on that relay, so it is kept in the Keychain and never written to settings.
+
+Setting a server decides where the queues AgentSmith creates live. The reply queue is chosen by the client on the other side, so configure the same server in your own SimpleX — under its network and servers settings — to keep both directions on your relay, and test it there before leaving the screen. Changing a server later affects new contacts only; existing ones stay where they were.
+
+Reach depends on whatever network the server's certificate was issued for. If it names a private address, every device needs to be on that network, which is the most common reason an alert does not arrive.
