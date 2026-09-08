@@ -60,9 +60,17 @@ Reconnect manually, inspect the Windows state, and resume only when the task is 
 
 Unattended work has nobody at the screen, so AgentSmith can reach you on your phone instead. Open **Alerts and decisions** and configure either channel, or both — every one is told, and the first answer settles a question.
 
-**ntfy** is the simpler of the two. Point it at an ntfy server you run, choose a topic, and give the account it needs — a server worth running refuses anonymous writes, and the password is kept in the Keychain rather than in settings. Alerts are published there; a decision goes out carrying two addresses, one to continue and one to stop, so it works on a phone whose notifications cannot show buttons. Answers come back on a separate topic, so being able to read the alerts does not also grant the ability to answer them, and each question carries a one-time ticket its answer must repeat — an answer authorises a machine to resume acting on its own, so a stray or replayed message decides nothing.
+**ntfy** is the simpler of the two. Point it at an ntfy server you run and choose a topic. A server worth running refuses anonymous access, which takes three accounts, each able to do one thing:
 
-The answer link has to carry the credential, since the phone opens it without AgentSmith in the middle. Give this channel an account that can do nothing but write to the answer topic, so a link read off a notification grants no more than publishing an answer that a ticket still has to match.
+| Account | Permission | Used by |
+| --- | --- | --- |
+| AgentSmith's own | write the topic, read the answer topic | this app |
+| the answer account | write the answer topic only | the link inside a question |
+| the phone's account | read the topic only | the ntfy app on your phone |
+
+Passwords are kept in the Keychain; only the addresses and user names go to settings. Alerts are published there; a decision goes out carrying two addresses, one to continue and one to stop, so it works on a phone whose notifications cannot show buttons. Answers come back on a separate topic, so being able to read the alerts does not also grant the ability to answer them, and each question carries a one-time ticket its answer must repeat — an answer authorises a machine to resume acting on its own, so a stray or replayed message decides nothing.
+
+The answer link has to carry a credential, since the phone opens it with nothing in between, which is why the answer account exists and why it must be able to do nothing else. Were the link to carry the account that reads the topic, whoever saw a notification could read every question ever asked. As it stands, a link read off a notification grants no more than publishing an answer, which a one-time ticket still has to match. AgentSmith never falls back to its own account for that link: with no answer account set, the link goes out bare and the server refuses it, which fails visibly rather than quietly leaking.
 
 For instant notifications on iOS a self-hosted ntfy forwards a wake-up to ntfy.sh carrying only a message id and a hash of the topic; the content stays on your server and the phone fetches it from there.
 

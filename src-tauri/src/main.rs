@@ -619,30 +619,39 @@ async fn ntfy_save(
     state: tauri::State<'_, AppState>,
     config: ntfy::Config,
     password: Option<String>,
+    reply_password: Option<String>,
 ) -> Result<ntfy::Config, String> {
-    // The password is a secret; only the address and topic go to settings.
-    let password = match password.filter(|p| !p.is_empty()) {
-        Some(fresh) => {
-            let keep = fresh.clone();
-            tauri::async_runtime::spawn_blocking(move || {
-                store::save_secret(ntfy::SECRET_ID, ntfy::SECRET_BINDING, &keep)
-            })
-            .await
-            .map_err(|_| "Não foi possível acessar o Chaves.")??;
-            fresh
-        }
-        None => ntfy_password().await?,
-    };
-    state.simplex.ntfy.start(config.clone(), password).await?;
+    // Passwords are secrets; only the address, topic and user names go to
+    // settings. The two accounts are kept apart all the way down.
+    let password = keep_password(ntfy::SECRET_BINDING, password).await?;
+    let reply_password = keep_password(ntfy::REPLY_SECRET_BINDING, reply_password).await?;
+    state
+        .simplex
+        .ntfy
+        .start(config.clone(), password, reply_password)
+        .await?;
     let mut settings = state.store.settings()?;
     settings.ntfy = config.clone();
     state.store.save_settings(&settings)?;
     Ok(config)
 }
-async fn ntfy_password() -> Result<String, String> {
+/// Saves a password when one was typed, and otherwise keeps the stored one.
+async fn keep_password(binding: &'static str, typed: Option<String>) -> Result<String, String> {
+    if let Some(fresh) = typed.filter(|p| !p.is_empty()) {
+        let keep = fresh.clone();
+        tauri::async_runtime::spawn_blocking(move || {
+            store::save_secret(ntfy::SECRET_ID, binding, &keep)
+        })
+        .await
+        .map_err(|_| "Não foi possível acessar o Chaves.")??;
+        return Ok(fresh);
+    }
+    ntfy_password(binding).await
+}
+async fn ntfy_password(binding: &'static str) -> Result<String, String> {
     Ok(
-        tauri::async_runtime::spawn_blocking(|| {
-            store::optional_secret(ntfy::SECRET_ID, ntfy::SECRET_BINDING)
+        tauri::async_runtime::spawn_blocking(move || {
+            store::optional_secret(ntfy::SECRET_ID, binding)
         })
         .await
         .map_err(|_| "Não foi possível acessar o Chaves.")??
@@ -930,8 +939,10 @@ fn main() {
                 if settings.ntfy.ready() {
                     let channels = state.simplex.clone();
                     tauri::async_runtime::spawn(async move {
-                        if let Ok(password) = ntfy_password().await {
-                            let _ = channels.ntfy.start(settings.ntfy, password).await;
+                        let password = ntfy_password(ntfy::SECRET_BINDING).await;
+                        let reply = ntfy_password(ntfy::REPLY_SECRET_BINDING).await;
+                        if let (Ok(password), Ok(reply)) = (password, reply) {
+                            let _ = channels.ntfy.start(settings.ntfy, password, reply).await;
                         }
                     });
                 }

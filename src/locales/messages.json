@@ -2715,14 +2715,6 @@
     "en": "Not listening",
     "es": "Sin escucha"
   },
-  "Usuário": {
-    "en": "Username",
-    "es": "Usuario"
-  },
-  "Deixe em branco se o servidor aceita publicação sem conta.": {
-    "en": "Leave empty if the server accepts publishing without an account.",
-    "es": "Déjelo vacío si el servidor acepta publicar sin cuenta."
-  },
   "Senha": {
     "en": "Password",
     "es": "Contraseña"
@@ -2731,8 +2723,32 @@
     "en": "Kept in the macOS Keychain. Leave empty to keep the one already saved.",
     "es": "Se guarda en el Llavero de macOS. Déjelo vacío para conservar la ya guardada."
   },
-  "No Android os dois links viram botões na própria notificação. No iPhone eles aparecem no corpo da mensagem, porque o iOS não mostra botões de ação. Cada decisão vale uma vez só, e o link de resposta carrega a credencial — use uma conta que só possa escrever no tópico de respostas.": {
-    "en": "On Android the two links become buttons on the notification itself. On iPhone they appear in the message body, because iOS shows no action buttons. Each decision is good once only, and the answer link carries the credential — use an account that can do nothing but write to the answer topic.",
-    "es": "En Android los dos enlaces se convierten en botones de la propia notificación. En iPhone aparecen en el cuerpo del mensaje, porque iOS no muestra botones de acción. Cada decisión vale una sola vez, y el enlace de respuesta lleva la credencial: use una cuenta que solo pueda escribir en el tema de respuestas."
+  "Conta do AgentSmith": {
+    "en": "AgentSmith's account",
+    "es": "Cuenta de AgentSmith"
+  },
+  "Precisa escrever no tópico e ler o de respostas. Em branco, se o servidor aceita publicação sem conta.": {
+    "en": "Needs to write to the topic and read the answer topic. Leave empty if the server accepts publishing without an account.",
+    "es": "Necesita escribir en el tema y leer el de respuestas. Déjelo vacío si el servidor acepta publicar sin cuenta."
+  },
+  "Conta do link de resposta": {
+    "en": "Answer link account",
+    "es": "Cuenta del enlace de respuesta"
+  },
+  "Precisa ser outra, capaz apenas de escrever no tópico de respostas. É a credencial que viaja dentro do link.": {
+    "en": "Must be a different one, able only to write to the answer topic. This is the credential that travels inside the link.",
+    "es": "Debe ser otra, capaz solo de escribir en el tema de respuestas. Es la credencial que viaja dentro del enlace."
+  },
+  "Senha do link": {
+    "en": "Link password",
+    "es": "Contraseña del enlace"
+  },
+  "Também guardada no Chaves. Sem ela o link vai sem credencial e o servidor recusa a resposta.": {
+    "en": "Also kept in the Keychain. Without it the link carries no credential and the server refuses the answer.",
+    "es": "También se guarda en el Llavero. Sin ella el enlace no lleva credencial y el servidor rechaza la respuesta."
+  },
+  "No Android os dois links viram botões na própria notificação. No iPhone eles aparecem no corpo da mensagem, porque o iOS não mostra botões de ação. Cada decisão vale uma vez só. O link carrega a credencial da conta de resposta, então ela precisa ser separada: se fosse a mesma que lê os avisos, quem visse o link leria todas as suas perguntas.": {
+    "en": "On Android the two links become buttons on the notification itself. On iPhone they appear in the message body, because iOS shows no action buttons. Each decision is good once only. The link carries the answer account's credential, which is why it has to be a separate one: were it the account that reads the alerts, whoever saw the link could read every question.",
+    "es": "En Android los dos enlaces se convierten en botones de la propia notificación. En iPhone aparecen en el cuerpo del mensaje, porque iOS no muestra botones de acción. Cada decisión vale una sola vez. El enlace lleva la credencial de la cuenta de respuesta, por eso debe ser otra: si fuera la que lee los avisos, quien viera el enlace leería todas sus preguntas."
   }
 }

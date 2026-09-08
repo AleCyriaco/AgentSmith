@@ -18,6 +18,7 @@ const TOPIC_SUFFIX: &str = "-respostas";
 /// channel is a single fixed entity rather than one per machine.
 pub const SECRET_ID: &str = "b7c04e21-3f9a-4d75-8c16-9ae2f0d5b34c";
 pub const SECRET_BINDING: &str = "ntfy://password";
+pub const REPLY_SECRET_BINDING: &str = "ntfy://reply-password";
 
 /// Where notices go and where answers come back.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
@@ -27,13 +28,23 @@ pub struct Config {
     pub server: String,
     /// Topic that receives the notices.
     pub topic: String,
-    /// Account on that server, when it requires one. A server that refuses
-    /// anonymous writes is the sane way to run this, so it is expected.
+    /// AgentSmith's own account: it publishes the alerts and reads the
+    /// answers, so it needs write on the topic and read on the answer topic.
     #[serde(default)]
     pub user: String,
     /// Access token, used instead of a password when present.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub token: String,
+    /// The account whose credential travels inside the answer link.
+    ///
+    /// It must be a different one, able to do nothing but write to the answer
+    /// topic. The phone opens that link with nothing in between, so whatever
+    /// it carries is exposed; an account that could also read would hand over
+    /// every question along with it.
+    #[serde(default)]
+    pub reply_user: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub reply_token: String,
 }
 
 impl Config {
@@ -41,27 +52,26 @@ impl Config {
         !self.server.trim().is_empty() && !self.topic.trim().is_empty()
     }
 
-    /// The `Authorization` header value, when the server wants one.
+    /// The `Authorization` header for AgentSmith's own requests.
     ///
     /// A token stands for the whole account, so it is the credential to hand
     /// out sparingly; a password is accepted for a server that has no tokens.
     pub fn authorization(&self, password: &str) -> Option<String> {
-        let token = self.token.trim();
-        if !token.is_empty() {
-            return Some(format!("Bearer {token}"));
-        }
-        let user = self.user.trim();
-        (!user.is_empty() && !password.is_empty())
-            .then(|| format!("Basic {}", STANDARD.encode(format!("{user}:{password}"))))
+        header_value(&self.token, &self.user, password)
     }
 
-    /// The same credential as a query parameter, for a link a phone opens.
-    ///
-    /// The server reads `?auth=` as base64url without padding of the whole
-    /// `Authorization` header value.
-    pub fn auth_param(&self, password: &str) -> String {
-        match self.authorization(password) {
-            Some(header) => format!("&auth={}", URL_SAFE_NO_PAD.encode(header)),
+    /// The `Authorization` for the answer link, from the reply account alone.
+    /// It never falls back to AgentSmith's own account: a link that carried
+    /// that credential would let whoever read it read every question too.
+    pub fn reply_authorization(&self, password: &str) -> Option<String> {
+        header_value(&self.reply_token, &self.reply_user, password)
+    }
+
+    /// A credential as a query parameter, for a link a phone opens. The server
+    /// reads `?auth=` as base64url without padding of the whole header value.
+    fn auth_param(header: Option<String>) -> String {
+        match header {
+            Some(value) => format!("&auth={}", URL_SAFE_NO_PAD.encode(value)),
             None => String::new(),
         }
     }
@@ -86,7 +96,7 @@ impl Config {
 
     /// The address that answers a question, carrying its one-time ticket and
     /// whatever credential the server needs to accept the write.
-    pub fn answer_url(&self, ticket: &str, answer: Answer, password: &str) -> String {
+    pub fn answer_url(&self, ticket: &str, answer: Answer, reply_password: &str) -> String {
         let word = match answer {
             Answer::Continue => "continuar",
             Answer::Stop => "parar",
@@ -95,7 +105,7 @@ impl Config {
             "{}/{}/trigger?message={ticket}%20{word}{}",
             self.base(),
             self.reply_topic(),
-            self.auth_param(password)
+            Self::auth_param(self.reply_authorization(reply_password))
         )
     }
 
@@ -124,9 +134,10 @@ struct Waiting {
 
 pub struct Ntfy {
     config: Mutex<Config>,
-    /// Held only in memory. The password is a secret and belongs in the
-    /// Keychain, not in the settings file the configuration lives in.
+    /// Held only in memory. Passwords are secrets and belong in the Keychain,
+    /// not in the settings file the configuration lives in.
     password: Mutex<String>,
+    reply_password: Mutex<String>,
     waiting: Arc<Mutex<HashMap<String, Waiting>>>,
     listening: Mutex<Option<tokio::task::JoinHandle<()>>>,
     http: reqwest::Client,
@@ -137,6 +148,7 @@ impl Ntfy {
         Self {
             config: Mutex::new(Config::default()),
             password: Mutex::new(String::new()),
+            reply_password: Mutex::new(String::new()),
             waiting: Default::default(),
             listening: Mutex::new(None),
             http: reqwest::Client::new(),
@@ -148,7 +160,12 @@ impl Ntfy {
     }
 
     /// Points the channel at a server and starts listening for answers.
-    pub async fn start(&self, config: Config, password: String) -> Result<(), String> {
+    pub async fn start(
+        &self,
+        config: Config,
+        password: String,
+        reply_password: String,
+    ) -> Result<(), String> {
         if !config.ready() {
             return Err("Informe o endereço do servidor ntfy e o tópico.".into());
         }
@@ -158,6 +175,7 @@ impl Ntfy {
         self.stop().await;
         *self.config.lock().await = config.clone();
         *self.password.lock().await = password.clone();
+        *self.reply_password.lock().await = reply_password;
         let waiting = self.waiting.clone();
         let http = self.http.clone();
         let url = config.listen_url();
@@ -210,9 +228,10 @@ impl Ntfy {
             return None;
         }
         let password = self.password.lock().await.clone();
+        let reply_password = self.reply_password.lock().await.clone();
         let ticket = operator::ticket();
-        let resume = config.answer_url(&ticket, Answer::Continue, &password);
-        let stop = config.answer_url(&ticket, Answer::Stop, &password);
+        let resume = config.answer_url(&ticket, Answer::Continue, &reply_password);
+        let stop = config.answer_url(&ticket, Answer::Stop, &reply_password);
         let (sender, receiver) = oneshot::channel();
         self.waiting.lock().await.insert(
             question.run_id.clone(),
@@ -247,6 +266,16 @@ impl Ntfy {
         self.waiting.lock().await.remove(&question.run_id);
         answer.ok().and_then(Result::ok)
     }
+}
+
+fn header_value(token: &str, user: &str, password: &str) -> Option<String> {
+    let token = token.trim();
+    if !token.is_empty() {
+        return Some(format!("Bearer {token}"));
+    }
+    let user = user.trim();
+    (!user.is_empty() && !password.is_empty())
+        .then(|| format!("Basic {}", STANDARD.encode(format!("{user}:{password}"))))
 }
 
 /// A header carries one line: a title with a newline would end the request.
@@ -325,6 +354,8 @@ mod tests {
             topic: "agentsmith".into(),
             user: String::new(),
             token: String::new(),
+            reply_user: String::new(),
+            reply_token: String::new(),
         }
     }
 
@@ -350,18 +381,35 @@ mod tests {
         let mut c = config();
         // No account: nothing is sent, rather than an empty header.
         assert_eq!(c.authorization(""), None);
-        assert_eq!(c.auth_param("segredo"), "");
+        assert_eq!(Config::auth_param(c.authorization("segredo")), "");
         c.user = "ale".into();
         // Basic, exactly as the server reads it from the header.
         assert_eq!(c.authorization("segredo").unwrap(), "Basic YWxlOnNlZ3JlZG8=");
-        // And in a link, base64url without padding of that whole value, which
-        // is what the server decodes the auth parameter as.
-        let link = c.answer_url("abc123", Answer::Continue, "segredo");
-        assert!(link.contains("&auth=QmFzaWMgWVd4bE9uTmxaM0psWkc4PQ"));
-        assert!(!link.contains('='.to_string().as_str().repeat(2).as_str()));
         // A token stands for the account and wins over a password.
         c.token = "tk_exemplo".into();
         assert_eq!(c.authorization("segredo").unwrap(), "Bearer tk_exemplo");
+    }
+
+    #[test]
+    fn the_answer_link_carries_only_the_reply_account() {
+        let mut c = config();
+        c.user = "smith".into();
+        c.token = "tk_da_conta_principal".into();
+        // With no reply account, the link carries nothing rather than falling
+        // back to the account that can also read every question.
+        let bare = c.answer_url("abc123", Answer::Continue, "segredo");
+        assert!(!bare.contains("auth="));
+        assert!(!bare.contains("tk_da_conta_principal"));
+        c.reply_user = "smith-resposta".into();
+        let link = c.answer_url("abc123", Answer::Continue, "segredo");
+        // base64url without padding of `Basic base64(smith-resposta:segredo)`,
+        // which is how the server decodes the auth parameter.
+        assert!(link.contains("&auth=QmFzaWMgYzIxcGRHZ3RjbVZ6Y0c5emRHRTZjMlZuY21Wa2J3"));
+        assert!(!link.contains("tk_da_conta_principal"));
+        assert_eq!(
+            c.reply_authorization("segredo").unwrap(),
+            "Basic c21pdGgtcmVzcG9zdGE6c2VncmVkbw=="
+        );
     }
 
     #[test]
