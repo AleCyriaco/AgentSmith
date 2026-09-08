@@ -58,7 +58,7 @@ Reconnect manually, inspect the Windows state, and resume only when the task is 
 
 ## Alerts and decisions
 
-Unattended work has nobody at the screen, so AgentSmith can reach you over SimpleX instead. Open **Alerts and decisions** and follow the three steps: paste the `smp://` address of a SimpleX server you run, pair your own SimpleX with the address AgentSmith shows, and send a test alert to prove the path.
+Unattended work has nobody at the screen, so AgentSmith can reach you over SimpleX instead. Open **Alerts and decisions** and follow the three steps: paste the `smp://` address of a SimpleX server you run, pair your own SimpleX with the address AgentSmith shows, and send a test alert to prove the path. The address is handed over as an `https://simplex.chat/` link, which pastes into any SimpleX client; the app-scheme form the client answers with is not accepted pasted and macOS does not open it.
 
 Every task that ends produces a notice saying what happened and how far it got. A task that blocks is put as a question instead: answer **1** to resume it or **2** to stop it, from wherever you are. Only an unambiguous reply counts — anything else is left unanswered rather than guessed.
 

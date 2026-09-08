@@ -193,7 +193,14 @@ pub fn messages(event: &Value) -> Vec<Incoming> {
         .unwrap_or_default()
 }
 
-/// The contact address out of a `/show_address` or `/address` answer.
+/// The contact address out of a `/show_address` or `/address` answer, in the
+/// form that can be pasted anywhere.
+///
+/// A link carries either scheme — `simplex:` or `https://<host>` — followed by
+/// the same body, and SimpleX parses both. The client answers with the
+/// `simplex:` form, which the desktop app will not accept pasted and which
+/// macOS does not open, since the app registers no such URL scheme. The
+/// `https://simplex.chat` form is the same link and works everywhere.
 pub fn address(value: &Value) -> Option<String> {
     fn search(value: &Value) -> Option<String> {
         match value {
@@ -208,7 +215,10 @@ pub fn address(value: &Value) -> Option<String> {
             _ => None,
         }
     }
-    search(value)
+    search(value).map(|link| match link.strip_prefix("simplex:/") {
+        Some(body) => format!("https://simplex.chat/{body}"),
+        None => link,
+    })
 }
 
 #[cfg(test)]
@@ -251,11 +261,12 @@ mod tests {
                 "connFullLink": "simplex:/contact#/?v=2-7&smp=smp%3A%2F%2Fexemplo",
                 "connShortLink": null}}
         });
+        // Answered in the app-scheme form, handed over in the form that pastes.
         assert_eq!(
             address(&answer).unwrap(),
-            "simplex:/contact#/?v=2-7&smp=smp%3A%2F%2Fexemplo"
+            "https://simplex.chat/contact#/?v=2-7&smp=smp%3A%2F%2Fexemplo"
         );
-        // And the shape `/address` answers with when it creates one.
+        // A link already in the web form is passed through untouched.
         assert_eq!(
             address(&json!({"type": "userContactLinkCreated", "contactLink": {"connLinkContact": {
                 "connFullLink": "https://simplex.chat/contact#/?v=2&smp=exemplo"}}}))
