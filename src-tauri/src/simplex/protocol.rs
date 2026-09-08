@@ -98,6 +98,14 @@ mod tests {
     }
 
     #[test]
+    fn the_channels_keychain_identity_passes_the_secret_guard() {
+        // Secret ids must be UUIDs; a plain name is refused, which silently
+        // broke saving the server address.
+        crate::model::valid_id(crate::simplex::SECRET_ID).unwrap();
+        assert!(crate::model::valid_id("simplex").is_err());
+    }
+
+    #[test]
     fn a_notice_without_detail_stays_one_line() {
         assert_eq!(notice("Tarefa concluída", ""), "AgentSmith · Tarefa concluída");
         assert!(notice("Conexão perdida", "O par encerrou.").contains("O par encerrou."));

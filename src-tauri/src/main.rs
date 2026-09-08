@@ -556,7 +556,7 @@ async fn start_machine_connection(
 #[tauri::command]
 async fn simplex_start(state: tauri::State<'_, AppState>) -> Result<simplex::Status, String> {
     let server = tauri::async_runtime::spawn_blocking(|| {
-        store::optional_secret("simplex", "simplex://server")
+        store::optional_secret(simplex::SECRET_ID, simplex::SECRET_BINDING)
     })
     .await
     .map_err(|_| "Não foi possível acessar o Chaves.")??
@@ -584,7 +584,7 @@ async fn simplex_save_server(
     }
     let saved = server.clone();
     tauri::async_runtime::spawn_blocking(move || {
-        store::save_secret("simplex", "simplex://server", &saved)
+        store::save_secret(simplex::SECRET_ID, simplex::SECRET_BINDING, &saved)
     })
     .await
     .map_err(|_| "Não foi possível acessar o Chaves.")??;
