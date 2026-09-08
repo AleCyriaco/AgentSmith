@@ -19,6 +19,10 @@
 
 When reporting a bug, include AgentSmith version, macOS/chip, connection type, authentication method, model identifier, a sanitized task, and expected versus observed behavior. Never attach tokens, passwords, the live SQLite database, or an unreviewed remote screenshot. See [Contributing](../CONTRIBUTING.md).
 
+## Pairing fails with a private routing error
+
+The message names a forwarding server, not yours. SimpleX reaches servers it does not know through a public forwarder so they never see your address, and a public forwarder cannot reach a server that only exists on a private network such as a VPN or an overlay network. Add your server to the client's own server list, which makes it known, and if that is not enough, allow a direct connection to it. Connecting directly reveals your address only to a server you already run.
+
 ## Diagnostics files
 
 Two files under `~/Library/Logs/AgentSmith/` hold what the interface deliberately does not show:
