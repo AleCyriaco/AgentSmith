@@ -58,7 +58,13 @@ Reconnect manually, inspect the Windows state, and resume only when the task is 
 
 ## Alerts and decisions
 
-Unattended work has nobody at the screen, so AgentSmith can reach you over SimpleX instead. Open **Alerts and decisions** and follow the three steps: paste the `smp://` address of a SimpleX server you run, pair your own SimpleX with the address AgentSmith shows, and send a test alert to prove the path. The address is handed over as an `https://simplex.chat/` link, which pastes into any SimpleX client; the app-scheme form the client answers with is not accepted pasted and macOS does not open it.
+Unattended work has nobody at the screen, so AgentSmith can reach you on your phone instead. Open **Alerts and decisions** and configure either channel, or both — every one is told, and the first answer settles a question.
+
+**ntfy** is the simpler of the two. Point it at an ntfy server you run and choose a topic. Alerts are published there; a decision goes out carrying two addresses, one to continue and one to stop, so it works on a phone whose notifications cannot show buttons. Answers come back on a separate topic, so being able to read the alerts does not also grant the ability to answer them, and each question carries a one-time ticket its answer must repeat — an answer authorises a machine to resume acting on its own, so a stray or replayed message decides nothing.
+
+For instant notifications on iOS a self-hosted ntfy forwards a wake-up to ntfy.sh carrying only a message id and a hash of the topic; the content stays on your server and the phone fetches it from there.
+
+**SimpleX** is the other channel. Follow its three steps: paste the `smp://` address of a SimpleX server you run, pair your own SimpleX with the address AgentSmith shows, and send a test alert to prove the path. The address is handed over as an `https://simplex.chat/` link, which pastes into any SimpleX client; the app-scheme form the client answers with is not accepted pasted and macOS does not open it.
 
 Every task that ends produces a notice saying what happened and how far it got. A task that blocks is put as a question instead: answer **1** to resume it or **2** to stop it, from wherever you are. Only an unambiguous reply counts — anything else is left unanswered rather than guessed.
 

@@ -2555,10 +2555,6 @@
     "en": "Smith speaks up when it needs you.",
     "es": "Smith te avisa cuando te necesita."
   },
-  "Um canal SimpleX no seu próprio servidor. Recebe o desfecho de cada tarefa e, quando uma para, pergunta o que fazer — você responde do celular.": {
-    "en": "A SimpleX channel on your own server. It reports how each task ended and, when one stops, asks what to do — you answer from your phone.",
-    "es": "Un canal SimpleX en su propio servidor. Informa cómo terminó cada tarea y, cuando una se detiene, pregunta qué hacer: usted responde desde el móvil."
-  },
   "PASSO 1": {
     "en": "STEP 1",
     "es": "PASO 1"
@@ -2670,5 +2666,57 @@
   "Cole o endereço smp:// do servidor que você mantém. Ele contém uma senha que permite criar filas no seu relay, então é guardado no Chaves do macOS e nunca aparece nas configurações.": {
     "en": "Paste the smp:// address of the server you run. It contains a password that allows creating queues on your relay, so it is kept in the macOS Keychain and never appears in settings.",
     "es": "Pegue la dirección smp:// del servidor que usted mantiene. Contiene una contraseña que permite crear colas en su relay, así que se guarda en el Llavero de macOS y nunca aparece en la configuración."
+  },
+  "Recebe o desfecho de cada tarefa e, quando uma para, pergunta o que fazer — você responde do celular. Configure um canal ou os dois: todos são avisados, e a primeira resposta decide.": {
+    "en": "Reports how each task ended and, when one stops, asks what to do — you answer from your phone. Configure one channel or both: every one is told, and the first answer settles it.",
+    "es": "Informa cómo terminó cada tarea y, cuando una se detiene, pregunta qué hacer: usted responde desde el móvil. Configure un canal o ambos: todos reciben aviso, y la primera respuesta decide."
+  },
+  "RECOMENDADO": {
+    "en": "RECOMMENDED",
+    "es": "RECOMENDADO"
+  },
+  "ALTERNATIVA": {
+    "en": "ALTERNATIVE",
+    "es": "ALTERNATIVA"
+  },
+  "Avisos por ntfy": {
+    "en": "Alerts over ntfy",
+    "es": "Avisos por ntfy"
+  },
+  "Publica no servidor ntfy que você mantém. O aviso chega como notificação no celular, e uma decisão vira dois links: um para continuar, outro para parar.": {
+    "en": "Publishes to the ntfy server you run. The alert arrives as a notification on your phone, and a decision becomes two links: one to continue, one to stop.",
+    "es": "Publica en el servidor ntfy que usted mantiene. El aviso llega como notificación al móvil, y una decisión se convierte en dos enlaces: uno para continuar, otro para detener."
+  },
+  "Endereço do servidor ntfy": {
+    "en": "ntfy server address",
+    "es": "Dirección del servidor ntfy"
+  },
+  "Como https://ntfy.seudominio.com. O conteúdo fica nesse servidor.": {
+    "en": "Such as https://ntfy.yourdomain.com. The content stays on that server.",
+    "es": "Como https://ntfy.sudominio.com. El contenido permanece en ese servidor."
+  },
+  "Tópico": {
+    "en": "Topic",
+    "es": "Tema"
+  },
+  "As respostas chegam em {topic}, um tópico separado. Quem só lê os avisos não consegue decidir por você.": {
+    "en": "Answers arrive on {topic}, a separate topic. Reading the alerts does not let anyone decide for you.",
+    "es": "Las respuestas llegan a {topic}, un tema aparte. Leer los avisos no permite decidir por usted."
+  },
+  "Um nome difícil de adivinhar, porque quem souber o tópico recebe os avisos.": {
+    "en": "A name that is hard to guess, since whoever knows the topic receives the alerts.",
+    "es": "Un nombre difícil de adivinar, ya que quien conozca el tema recibe los avisos."
+  },
+  "Ouvindo respostas": {
+    "en": "Listening for answers",
+    "es": "Escuchando respuestas"
+  },
+  "Sem escuta": {
+    "en": "Not listening",
+    "es": "Sin escucha"
+  },
+  "No Android os dois links viram botões na própria notificação. No iPhone eles aparecem no corpo da mensagem, porque o iOS não mostra botões de ação. Cada decisão vale uma vez só.": {
+    "en": "On Android the two links become buttons on the notification itself. On iPhone they appear in the message body, because iOS shows no action buttons. Each decision is good once only.",
+    "es": "En Android los dos enlaces se convierten en botones de la propia notificación. En iPhone aparecen en el cuerpo del mensaje, porque iOS no muestra botones de acción. Cada decisión vale una sola vez."
   }
 }
