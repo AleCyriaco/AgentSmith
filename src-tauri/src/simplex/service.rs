@@ -54,6 +54,22 @@ impl Simplex {
         }
     }
 
+    /// The contact address, asking for the existing one before trying to
+    /// create it: creating a second is an error, not a new address.
+    async fn address(client: &Client) -> String {
+        for command in ["/show_address", "/address"] {
+            if let Some(found) = client
+                .command(command)
+                .await
+                .ok()
+                .and_then(|value| client::address(&value))
+            {
+                return found;
+            }
+        }
+        String::new()
+    }
+
     fn data_dir() -> Result<PathBuf, String> {
         let home = std::env::var_os("HOME").ok_or("Pasta pessoal indisponível.")?;
         Ok(PathBuf::from(home)
@@ -69,22 +85,21 @@ impl Simplex {
         self.stop().await;
         let (sender, receiver) = mpsc::channel(64);
         let client = Client::start(&binary, &Self::data_dir()?, server, PORT, sender).await?;
-        // The address exists after the first run; creating it again is an
-        // error, so ask for the existing one first.
-        let mut address = client
-            .command("/show_address")
-            .await
-            .ok()
-            .and_then(|value| client::address(&value))
-            .unwrap_or_default();
-        if address.is_empty() {
-            address = client
-                .command("/address")
+        // The client accepts the connection before it has finished creating
+        // its profile, so asking straight away fails and the channel would be
+        // left without an address for good.
+        for _ in 0..20 {
+            let ready = client
+                .command("/u")
                 .await
                 .ok()
-                .and_then(|value| client::address(&value))
-                .unwrap_or_default();
+                .and_then(|value| value.get("type").and_then(|t| t.as_str()).map(str::to_string));
+            if ready.as_deref() == Some("activeUser") {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(500)).await;
         }
+        let address = Self::address(&client).await;
         // Anyone holding the address is the operator; without this a pairing
         // request would wait for a click in an app that has no interface here.
         let _ = client.command("/auto_accept on").await;
@@ -135,6 +150,16 @@ impl Simplex {
     }
 
     pub async fn status(&self) -> Status {
+        // An address that could not be read at startup is retried here, so a
+        // slow start costs a refresh rather than the whole channel.
+        {
+            let mut guard = self.live.lock().await;
+            if let Some(live) = guard.as_mut() {
+                if live.address.is_empty() {
+                    live.address = Self::address(&live.client).await;
+                }
+            }
+        }
         match self.live.lock().await.as_ref() {
             Some(live) => Status {
                 active: true,

@@ -243,16 +243,31 @@ mod tests {
 
     #[test]
     fn the_contact_address_is_found_wherever_the_client_puts_it() {
+        // The shape a real client answers `/show_address` with.
         let answer = json!({
-            "type": "userContactLinkCreated",
-            "contactLink": {"connLinkContact": {
-                "connFullLink": "https://simplex.chat/contact#/?v=2&smp=exemplo",
+            "type": "userContactLink",
+            "user": {"userId": 1, "localDisplayName": "AgentSmith"},
+            "contactLink": {"userContactLinkId": 1, "connLinkContact": {
+                "connFullLink": "simplex:/contact#/?v=2-7&smp=smp%3A%2F%2Fexemplo",
                 "connShortLink": null}}
         });
         assert_eq!(
             address(&answer).unwrap(),
+            "simplex:/contact#/?v=2-7&smp=smp%3A%2F%2Fexemplo"
+        );
+        // And the shape `/address` answers with when it creates one.
+        assert_eq!(
+            address(&json!({"type": "userContactLinkCreated", "contactLink": {"connLinkContact": {
+                "connFullLink": "https://simplex.chat/contact#/?v=2&smp=exemplo"}}}))
+                .unwrap(),
             "https://simplex.chat/contact#/?v=2&smp=exemplo"
         );
-        assert!(address(&json!({"type": "chatCmdError"})).is_none());
+        // A refusal carries no address, and the profile in the answer must not
+        // be mistaken for one.
+        assert!(address(&json!({"type": "chatCmdError", "chatError": {
+            "type": "errorStore", "storeError": {"type": "duplicateContactLink"}}}))
+            .is_none());
+        assert!(address(&json!({"type": "activeUser", "user": {"localDisplayName": "AgentSmith"}}))
+            .is_none());
     }
 }
